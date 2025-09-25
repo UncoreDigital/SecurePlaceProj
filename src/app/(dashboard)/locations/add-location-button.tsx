@@ -28,7 +28,7 @@ export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
   const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+    // event.preventDefault();
     setError(null);
 
     // Security Check: Make sure the user is a firm admin
@@ -61,7 +61,7 @@ export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
 
       setIsOpen(false);
       onLocationAdded(); // Close dialog on success
-      router.refresh(); // Refresh the page to show the new location
+      // router.refresh(); // Refresh the page to show the new location
     } catch (e: any) {
       setError(e.message || "An unknown error occurred.");
     }

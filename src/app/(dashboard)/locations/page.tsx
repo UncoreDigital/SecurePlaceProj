@@ -26,10 +26,9 @@ export default function LocationsPage() {
         const { data, error: fetchError } = await supabase
           .from('locations')
           .select('*')
-          .eq('firm_id', user.firmId)
+          .eq('firm_id', user?.firmId)
           .eq('is_active', true)
           .order('created_at', { ascending: false });
-
         if (fetchError) {
           throw fetchError;
         }
@@ -48,10 +47,10 @@ export default function LocationsPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && user && user.firmId) {
       fetchLocations();
     }
-  }, [fetchLocations, authLoading]);
+  }, [authLoading, user, user?.firmId, fetchLocations]);
 
   // Display a loading state while authenticating or fetching data
   if (authLoading || loading) {
