@@ -1,0 +1,71 @@
+import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase/server";
+import SafetyClassDetails from "./SafetyClassDetails";
+import { SafetyClass } from "../types";
+
+async function requireAdmin() {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/");
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, firm_id")
+    .eq("id", user.id)
+    .single();
+
+  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
+  return {
+    role: me!.role as "super_admin" | "firm_admin",
+    firmId: me!.firm_id as string | null,
+  };
+}
+
+async function getSafetyClass(id: string, firmId: string | null): Promise<SafetyClass | null> {
+  const supabase = await createServerSupabase();
+  
+  let query = supabase
+    .from("safety_classes")
+    .select("*")
+    .eq("id", id)
+    .eq("is_active", true);
+
+  if (firmId) {
+    query = query.eq("firm_id", firmId);
+  }
+
+  const { data: safetyClass, error } = await query.single();
+
+  if (error) {
+    console.error("Error fetching safety class:", error);
+    return null;
+  }
+
+  return safetyClass;
+}
+
+export default async function SafetyClassPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const me = await requireAdmin();
+  const { id } = await params;
+
+  const safetyClass = await getSafetyClass(id, me.firmId);
+
+  if (!safetyClass) {
+    redirect("/safety-classes");
+  }
+
+  return (
+    <div className="container mx-auto">
+      <SafetyClassDetails
+        safetyClass={safetyClass}
+        isSuperAdmin={me.role === "super_admin"}
+      />
+    </div>
+  );
+}

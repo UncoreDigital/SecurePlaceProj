@@ -1,0 +1,2 @@
+ALTER TABLE safety_classes
+ALTER COLUMN firm_id DROP NOT NULL;
