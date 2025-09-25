@@ -26,7 +26,7 @@ async function getDashboardData() {
       workshopsRes,
     ] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "employee"),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "employee").eq("is_volunteer", true),
       supabase.from("incidents").select("*", { count: "exact", head: true }),
       supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "completed"),
       supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "pending"),

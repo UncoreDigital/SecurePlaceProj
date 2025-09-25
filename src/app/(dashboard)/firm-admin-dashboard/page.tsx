@@ -10,6 +10,12 @@ import { Users, UserCheck, Siren } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyEmergenciesChart from "../components/MonthlyEmergenciesChart";
 import SafetyClassesTable from "../components/SafetyClassesTable";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 
 // Define the colors for our charts
 const COLORS = ["#001D49", "#FF5F15", "#F1F5F9", "#64748B"]; // Brand Blue, Orange, Slates
@@ -50,97 +56,71 @@ const FirmAdminDashboardPage = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-        const usersCollectionId =
-          process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!;
-        const drillsCollectionId =
-          process.env.NEXT_PUBLIC_APPWRITE_DRILLS_COLLECTION_ID!;
-        const trainingsCollectionId =
-          process.env.NEXT_PUBLIC_APPWRITE_TRAININGS_COLLECTION_ID!;
-        const incidentsCollectionId =
-          process.env.NEXT_PUBLIC_APPWRITE_INCIDENTS_COLLECTION_ID!;
-
         // --- Fetch Stat Card Data ---
-        const employeePromise = databases.listDocuments(
-          databaseId,
-          usersCollectionId
-        );
-        const volunteerPromise = databases.listDocuments(
-          databaseId,
-          usersCollectionId,
-          [Query.equal("isVolunteer", true)]
-        );
-        const emergenciesPromise = databases.listDocuments(
-          databaseId,
-          incidentsCollectionId
-        );
+        const employeeRes = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "employee")
+          .eq("firm_id", user?.firmId);
+
+        const volunteerRes = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "employee")
+          .eq("firm_id", user?.firmId)
+          .eq("is_volunteer", true);
+
+        const emergencyRes = await supabase
+          .from("incidents")
+          .select("*", { count: "exact", head: true }).eq("firm_id", user?.firmId);;
 
         // --- Fetch Chart Data ---
-        const completedDrillsPromise = databases.listDocuments(
-          databaseId,
-          drillsCollectionId,
-          [Query.equal("status", "completed")]
-        );
-        const pendingDrillsPromise = databases.listDocuments(
-          databaseId,
-          drillsCollectionId,
-          [Query.equal("status", "pending")]
-        );
+        const completedDrillsRes = await supabase
+          .from("drills")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "completed").eq("firm_id", user?.firmId);;
 
-        // UPDATED: Fetch all safety training documents to process them
-        const workshopsPromise = databases.listDocuments<SafetyTraining>(
-          databaseId,
-          trainingsCollectionId
-        );
+        const pendingDrillsRes = await supabase
+          .from("drills")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending").eq("firm_id", user?.firmId);;
 
-        const [
-          employeeData,
-          volunteerData,
-          emergencyData,
-          completedDrills,
-          pendingDrills,
-          workshopsData,
-        ] = await Promise.all([
-          employeePromise,
-          volunteerPromise,
-          emergenciesPromise,
-          completedDrillsPromise,
-          pendingDrillsPromise,
-          workshopsPromise,
-        ]);
+        // Fetch all safety training documents
+        const workshopsRes = await supabase
+          .from("trainings")
+          .select("*").eq("firm_id", user?.firmId);;
 
         // Set state for stat cards
         setStats({
-          employees: employeeData.total,
-          volunteers: volunteerData.total,
-          emergencies: emergencyData.total,
+          employees: employeeRes.count ?? 0,
+          volunteers: volunteerRes.count ?? 0,
+          emergencies: emergencyRes.count ?? 0,
         });
 
-        // --- NEW: Process workshop data to group by type ---
+        // Process workshop data to group by type
         const workshopTypes: { [key: string]: number } = {};
-        workshopsData.documents.forEach((doc) => {
+        (workshopsRes.data ?? []).forEach((doc: SafetyTraining) => {
           workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
         });
         const processedWorkshops = Object.entries(workshopTypes).map(
           ([name, value]) => ({ name, value })
         );
-        // --- End of new processing logic ---
 
         // Process and set state for charts
         setChartData({
           drills: [
-            { name: "Completed", value: completedDrills.total },
-            { name: "Pending", value: pendingDrills.total },
+            { name: "Completed", value: completedDrillsRes.count ?? 0 },
+            { name: "Pending", value: pendingDrillsRes.count ?? 0 },
           ],
-          workshops: processedWorkshops, // Use the new processed data
+          workshops: processedWorkshops,
           compliance: [
             {
               name: "Workshops Done",
-              value: workshopsData.documents.filter(
-                (d) => d.status === "completed"
+              value: (workshopsRes.data ?? []).filter(
+                (d: SafetyTraining) => d.status === "completed"
               ).length,
             },
-            { name: "Drills Done", value: completedDrills.total },
+            { name: "Drills Done", value: completedDrillsRes.count ?? 0 },
           ],
         });
       } catch (error) {
