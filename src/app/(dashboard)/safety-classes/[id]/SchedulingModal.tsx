@@ -144,7 +144,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass }: Schedu
       <Card className="w-full max-w-4xl bg-white max-h-[90vh] overflow-hidden">
         <CardContent className="p-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b" style={{ paddingTop: "0px" }}>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Schedule Safety Class</h2>
               <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{safetyClass.title}</p>
