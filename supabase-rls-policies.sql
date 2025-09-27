@@ -119,11 +119,11 @@ CREATE POLICY "Super admins can manage all safety classes" ON safety_classes
     FOR ALL USING (is_super_admin(auth.uid()));
 
 -- Firm admins can manage safety classes in their firm
-CREATE POLICY "Firm admins can manage safety classes in their firm" ON safety_classes
-    FOR ALL USING (
-        firm_id = get_user_firm_id(auth.uid()) AND 
-        is_firm_admin(auth.uid())
-    );
+-- CREATE POLICY "Firm admins can manage safety classes in their firm" ON safety_classes
+--     FOR ALL USING (
+--         firm_id = get_user_firm_id(auth.uid()) AND 
+--         is_firm_admin(auth.uid())
+--     );
 
 -- Employees can view safety classes in their firm
 CREATE POLICY "Employees can view safety classes in their firm" ON safety_classes

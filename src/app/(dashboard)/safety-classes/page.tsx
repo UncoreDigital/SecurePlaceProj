@@ -38,9 +38,9 @@ async function getSafetyClasses({
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
-  if (firmId) {
-    query = query.eq("firm_id", firmId);
-  }
+  // if (firmId) {
+  //   query = query.eq("firm_id", firmId);
+  // }
 
   const { data: safetyClasses, error } = await query;
 

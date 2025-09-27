@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 interface SchedulingModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface SchedulingModalProps {
     duration: number;
     isRemote: boolean;
   };
+  firmId: string;
 }
 
 interface TimeSlot {
@@ -29,18 +31,38 @@ interface Location {
   address: string;
 }
 
-export default function SchedulingModal({ isOpen, onClose, safetyClass }: SchedulingModalProps) {
+export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }: SchedulingModalProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const fetchedRef = useRef(false);
 
-  // Mock data
-  const locations: Location[] = [
-    { id: "1", name: "Laan van Wateringse", address: "123 Main Street, City" },
-    { id: "2", name: "Downtown Training Center", address: "456 Business Ave, Downtown" },
-    { id: "3", name: "Virtual Session", address: "Online via Zoom" },
-  ];
+  // Fetch locations when modal opens and firmId is present, only once per open
+  if (isOpen && firmId && !fetchedRef.current) {
+    fetchedRef.current = true;
+    setLoadingLocations(true);
+    const supabase = createBrowserSupabase();
+    supabase
+      .from("locations")
+      .select("id, name, address")
+      .eq("firm_id", firmId)
+      .eq("is_active", true)
+      .then(({ data, error }) => {
+        if (!error) setLocations(data || []);
+        setLoadingLocations(false);
+      });
+  }
+  // Reset fetchedRef when modal closes
+  if (!isOpen && fetchedRef.current) {
+    fetchedRef.current = false;
+    setLocations([]);
+    setSelectedLocation("");
+  }
+
+  if (!isOpen) return null;
 
   const timeSlots: TimeSlot[] = [
     { id: "1", time: "09:00 AM TO 10:00 AM", available: true },
@@ -184,11 +206,20 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass }: Schedu
                     className="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent text-sm"
                   >
                     <option value="">Select a location</option>
-                    {locations.map((location) => (
+                   {loadingLocations ? (
+                      <option disabled>Loading...</option>
+                    ) : (
+                      locations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name}
+                        </option>
+                      ))
+                    )}
+                    {/* {locations.map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.name}
                       </option>
-                    ))}
+                    ))} */}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>

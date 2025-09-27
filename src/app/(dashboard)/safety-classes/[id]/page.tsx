@@ -32,9 +32,9 @@ async function getSafetyClass(id: string, firmId: string | null): Promise<Safety
     .eq("id", id)
     .eq("is_active", true);
 
-  if (firmId) {
-    query = query.eq("firm_id", firmId);
-  }
+  // if (firmId) {
+  //   query = query.eq("firm_id", firmId);
+  // }
 
   const { data: safetyClass, error } = await query.single();
 
@@ -55,7 +55,7 @@ export default async function SafetyClassPage({
   const { id } = await params;
 
   const safetyClass = await getSafetyClass(id, me.firmId);
-
+  console.log("Fetched safety class:", safetyClass);
   if (!safetyClass) {
     redirect("/safety-classes");
   }
@@ -65,6 +65,7 @@ export default async function SafetyClassPage({
       <SafetyClassDetails
         safetyClass={safetyClass}
         isSuperAdmin={me.role === "super_admin"}
+        currentFirmId={me.firmId || ""}
       />
     </div>
   );

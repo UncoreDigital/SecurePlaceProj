@@ -12,9 +12,10 @@ import { SafetyClass } from "../types";
 interface SafetyClassDetailsProps {
   safetyClass: SafetyClass;
   isSuperAdmin: boolean;
+  currentFirmId: string;
 }
 
-export default function SafetyClassDetails({ safetyClass, isSuperAdmin }: SafetyClassDetailsProps) {
+export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentFirmId }: SafetyClassDetailsProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -310,7 +311,13 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin }: Safety
       <SchedulingModal
         isOpen={isSchedulingModalOpen}
         onClose={() => setIsSchedulingModalOpen(false)}
-        safetyClass={safetyClass}
+        safetyClass={{
+          id: safetyClass.id,
+          title: safetyClass.title,
+          duration: safetyClass.duration_minutes,
+          isRemote: safetyClass?.isRemote ?? false,
+        }}
+        firmId={currentFirmId}
       />
     </div>
   );

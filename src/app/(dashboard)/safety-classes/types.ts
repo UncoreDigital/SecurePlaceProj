@@ -8,6 +8,7 @@ export type SafetyClass = {
   is_active: boolean;
   created_at: string;
   firm_id: string | null;
+  isRemote?: boolean; // New field to indicate if the class is remote
 };
 
 export type SafetyClassFormData = {
