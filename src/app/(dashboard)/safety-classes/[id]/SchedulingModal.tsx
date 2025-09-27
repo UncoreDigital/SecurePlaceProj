@@ -82,7 +82,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     return { daysInMonth, startingDayOfWeek };
   };
 
@@ -94,10 +94,10 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
   };
 
   const isSelectedDate = (date: Date) => {
-    return selectedDate && 
-           date.getDate() === selectedDate.getDate() &&
-           date.getMonth() === selectedDate.getMonth() &&
-           date.getFullYear() === selectedDate.getFullYear();
+    return selectedDate &&
+      date.getDate() === selectedDate.getDate() &&
+      date.getMonth() === selectedDate.getMonth() &&
+      date.getFullYear() === selectedDate.getFullYear();
   };
 
   const formatMonthYear = (date: Date) => {
@@ -105,18 +105,18 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
   };
 
   const formatSelectedDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
   const formatSelectedDateShort = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -137,17 +137,61 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
     }
   };
 
-  const handleSchedule = () => {
+  const parseTimeSlot = (date: Date, slot: string) => {
+    // Example slot: "09:00 AM TO 10:00 AM"
+    const [start, , end] = slot.split(" ");
+    const [startTime, startPeriod] = [start, slot.split(" ")[1]];
+    const [endTime, endPeriod] = [slot.split(" ")[3], slot.split(" ")[4]];
+
+    // Helper to parse "09:00 AM" to 24h time
+    const to24Hour = (time: string, period: string) => {
+      let [hours, minutes] = time.split(":").map(Number);
+      if (period === "PM" && hours !== 12) hours += 12;
+      if (period === "AM" && hours === 12) hours = 0;
+      return { hours, minutes };
+    };
+
+    const { hours: startHours, minutes: startMinutes } = to24Hour(startTime, startPeriod);
+    const { hours: endHours, minutes: endMinutes } = to24Hour(endTime, endPeriod);
+
+    const startDate = new Date(date);
+    startDate.setHours(startHours, startMinutes, 0, 0);
+
+    const endDate = new Date(date);
+    endDate.setHours(endHours, endMinutes, 0, 0);
+
+    return { startDate, endDate };
+  };
+
+  const handleSchedule = async () => {
     if (selectedLocation && selectedDate && selectedTimeSlot) {
-      // In a real implementation, this would save the booking
-      console.log("Scheduling:", {
-        safetyClassId: safetyClass.id,
-        location: selectedLocation,
-        date: selectedDate,
-        timeSlot: selectedTimeSlot,
-      });
-      alert("Class scheduled successfully!");
-      onClose();
+      setLoadingLocations(true); // Optionally show loading
+      // Insert scheduling logic here (e.g., call an API or Supabase)
+      const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
+      const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
+
+      const supabase = createBrowserSupabase();
+    
+      const { error } = await supabase
+        .from("scheduled_classes") // <-- your table name
+        .insert([
+          {
+            safety_class_id: safetyClass.id,
+            location_id: selectedLocation,
+            scheduled_date: selectedDate.toISOString().split("T")[0],
+            start_time: startDate.toISOString(),
+            end_time: endDate.toISOString(),
+            firm_id: firmId,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      setLoadingLocations(false);
+      if (!error) {
+        alert("Class scheduled successfully!");
+        onClose();
+      } else {
+        alert("Failed to schedule class: " + error.message);
+      }
     } else {
       alert("Please select location, date, and time slot");
     }
@@ -155,7 +199,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
 
   const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
   const daysOfWeek = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  
+
   // Adjust starting day to Monday (0 = Sunday, 1 = Monday, etc.)
   const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
 
@@ -206,7 +250,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent text-sm"
                   >
                     <option value="">Select a location</option>
-                   {loadingLocations ? (
+                    {loadingLocations ? (
                       <option disabled>Loading...</option>
                     ) : (
                       locations.map((location) => (
@@ -257,7 +301,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
                   </div>
                 </div>
 
-                                {/* Days of Week Header */}
+                {/* Days of Week Header */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                   {daysOfWeek.map((day) => (
                     <div key={day} className="text-center text-xs sm:text-sm font-medium text-gray-500 py-1 sm:py-2">
@@ -272,14 +316,14 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
                   {Array.from({ length: adjustedStartingDay }, (_, i) => (
                     <div key={`empty-${i}`} className="h-8 sm:h-10"></div>
                   ))}
-                  
+
                   {/* Days of the month */}
                   {Array.from({ length: daysInMonth }, (_, i) => {
                     const day = i + 1;
                     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                     const isAvailable = isDateAvailable(date);
                     const isSelected = isSelectedDate(date);
-                    
+
                     return (
                       <button
                         key={day}
@@ -287,10 +331,10 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
                         disabled={!isAvailable}
                         className={`
                           h-8 sm:h-10 w-full rounded-md text-xs sm:text-sm font-medium transition-colors calendar-day
-                          ${isSelected 
-                            ? 'bg-brand-orange text-white' 
-                            : isAvailable 
-                              ? 'text-brand-orange hover:bg-orange-50' 
+                          ${isSelected
+                            ? 'bg-brand-orange text-white'
+                            : isAvailable
+                              ? 'text-brand-orange hover:bg-orange-50'
                               : 'text-gray-400 cursor-not-allowed'
                           }
                         `}
@@ -303,10 +347,10 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
               </div>
             </div>
 
-                        {/* Right Section - Time Slots */}
+            {/* Right Section - Time Slots */}
             <div className="p-4 sm:p-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Select Time</h3>
-              
+
               <div className="space-y-2">
                 {timeSlots.map((slot) => (
                   <button

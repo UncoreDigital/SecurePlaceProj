@@ -293,13 +293,14 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                       </li>
                     ))}
                   </ul>
-
-                  <Button
-                    onClick={handleSchedule}
-                    className="mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white"
-                  >
-                    Schedule
-                  </Button>
+                  {!isSuperAdmin && currentFirmId && (
+                    <Button
+                      onClick={handleSchedule}
+                      className="mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white"
+                    >
+                      Schedule
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
