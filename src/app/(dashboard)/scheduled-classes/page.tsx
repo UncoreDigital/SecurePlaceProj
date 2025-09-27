@@ -1,38 +1,9 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2 } from "lucide-react";
-
-const scheduledClasses = [
-  {
-    id: "1",
-    title: "Workplace Safety Training: Proactive Steps for Preventing ...",
-    date: "17 Aug, 2025",
-    time: "09:00 PM to 10:00 PM",
-    status: "approved",
-    type: "In-Person",
-    thumbnailUrl: "/images/safety-class-demo.png",
-  },
-  {
-    id: "2",
-    title: "Workplace Safety Training: Proactive Steps for Preventing ...",
-    date: "17 Aug, 2025",
-    time: "09:00 PM to 10:00 PM",
-    status: "pending",
-    type: "In-Person",
-    thumbnailUrl: "/images/safety-class-demo.png",
-  },
-  {
-    id: "3",
-    title: "Workplace Safety Training: Proactive Steps for Preventing ...",
-    date: "17 Aug, 2025",
-    time: "09:00 PM to 10:00 PM",
-    status: "approved",
-    type: "In-Person",
-    thumbnailUrl: "/images/safety-class-demo.png",
-  },
-];
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 const statusBtnStyles: Record<string, string> = {
   approved: "bg-emerald-500 text-white hover:bg-emerald-600",
@@ -70,7 +41,58 @@ function CancelModal({
 }
 
 export default function ScheduledClassesPage() {
+  const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchScheduledClasses = async () => {
+      console.log("Fetching scheduled classes...");
+      setLoading(true);
+      const supabase = createBrowserSupabase();
+      const { data, error } = await supabase
+        .from("scheduled_classes")
+        .select("*, safety_class: safety_class_id(title)")
+        .order("start_time", { ascending: false });
+      console.log("Fetch result:", { data, error });
+      if (error) {
+        console.error("Failed to fetch scheduled classes:", error);
+        setScheduledClasses([]);
+      } else {
+        // Format data for UI
+        const formatted = (data || []).map((cls: any) => ({
+          id: cls.id,
+          title: cls.safety_class?.title ?? "Untitled",
+          date: cls.start_time
+            ? new Date(cls.start_time).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+            : "",
+          time:
+            cls.start_time && cls.end_time
+              ? `${new Date(cls.start_time).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })} to ${new Date(cls.end_time).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+              : "",
+          status: cls.status ?? "pending",
+          type: cls.type ?? "In-Person",
+          thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
+        }));
+        setScheduledClasses(formatted);
+      }
+      setLoading(false);
+    };
+
+    fetchScheduledClasses();
+  }, []);
 
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
@@ -116,8 +138,8 @@ export default function ScheduledClassesPage() {
                 {cls.status === "approved"
                   ? "Approved"
                   : cls.status === "pending"
-                  ? "Pending"
-                  : ""}
+                    ? "Pending"
+                    : ""}
               </Button>
               <Button
                 variant="outline"

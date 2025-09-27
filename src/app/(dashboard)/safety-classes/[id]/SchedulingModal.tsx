@@ -183,6 +183,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
             end_time: endDate.toISOString(),
             firm_id: firmId,
             created_at: new Date().toISOString(),
+            status: "pending",
           },
         ]);
       setLoadingLocations(false);

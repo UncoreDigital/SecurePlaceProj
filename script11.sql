@@ -18,3 +18,12 @@ CREATE POLICY "Admins can insert scheduled classes"
         AND (profiles.role = 'super_admin' OR profiles.role = 'firm_admin')
     )
   );
+
+
+--  update your enum in the database to include "pending"
+ALTER TYPE class_status ADD VALUE 'pending';
+
+-- Enable read access for all users for scheduled_classes
+create policy "Enable read access for all users"
+on "public"."scheduled_classes"
+for select using (true);
