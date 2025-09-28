@@ -28,3 +28,6 @@ ALTER TYPE class_status ADD VALUE 'approved';
 create policy "Enable read access for all users"
 on "public"."scheduled_classes"
 for select using (true);
+
+-- Migration: Add thumbnailUrl column to safety_classes
+ALTER TABLE safety_classes ADD COLUMN thumbnail_url TEXT;

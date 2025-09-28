@@ -45,6 +45,7 @@ export default function SafetyClassesClient({
   isSuperAdmin: boolean;
   createSafetyClass: (formData: FormData) => Promise<void>;
 }) {
+  console.log({ safetyClasses });
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -80,6 +81,9 @@ export default function SafetyClassesClient({
       formData.append("videoUrl", data.videoUrl);
       formData.append("isRequired", data.isRequired ? "on" : "");
       
+      if (data.thumbnailUrl) {
+        formData.append("thumbnailUrl", data.thumbnailUrl);
+      }
       await createSafetyClass(formData);
       setIsAddFormOpen(false);
     } catch (error) {
@@ -158,21 +162,22 @@ export default function SafetyClassesClient({
           {safetyClasses.map((safetyClass, index) => (
             <Card key={safetyClass.id} className="py-0 overflow-hidden hover:shadow-lg transition-shadow gap-3">
               <div className="relative aspect-video bg-gray-100 h-40">
-                {/* Placeholder for video thumbnail */}
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-brand-orange rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Play className="h-8 w-8 text-white ml-1" />
+                {safetyClass.thumbnail_url ? (
+                  <img
+                    src={safetyClass.thumbnail_url}
+                    alt={safetyClass.title + " thumbnail"}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-brand-orange rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Play className="h-8 w-8 text-white ml-1" />
+                      </div>
+                      <p className="text-sm text-gray-600 font-medium">Safety Training</p>
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">Safety Training</p>
                   </div>
-                </div>
-
-                {/* Duration badge */}
-                {/* <div className="absolute top-3 right-3 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {safetyClass.duration} min
-                </div> */}
+                )}
 
                 {/* Required badge */}
                 {safetyClass.is_required && (

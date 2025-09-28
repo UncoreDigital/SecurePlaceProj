@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SafetyClassFormData } from "./types";
+import { uploadImageToSupabase } from "@/lib/supabase/browser";
 
 interface AddSafetyClassFormProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export default function AddSafetyClassForm({
     duration: 0,
     videoUrl: "",
     isRequired: false,
+    thumbnailUrl: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,6 +50,7 @@ export default function AddSafetyClassForm({
       duration: 0,
       videoUrl: "",
       isRequired: false,
+      thumbnailUrl: "",
     });
     onClose();
   };
@@ -126,6 +129,36 @@ export default function AddSafetyClassForm({
                 placeholder="Enter video URL (MP4, WebM, etc.)"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="thumbnailUpload">Thumbnail Image Upload</Label>
+              <Input
+                id="thumbnailUpload"
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // Show local preview
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      handleInputChange("thumbnailUrl", reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                    // Upload to Supabase Storage
+                    try {
+                      const publicUrl = await uploadImageToSupabase(file);
+                      handleInputChange("thumbnailUrl", publicUrl);
+                    } catch (err) {
+                      // alert("Image upload failed");
+                    }
+                  }
+                }}
+              />
+              {formData.thumbnailUrl && (
+                <img src={formData.thumbnailUrl} alt="Thumbnail Preview" className="mt-2 max-h-32 rounded border" />
+              )}
             </div>
 
             <div className="flex items-center space-x-2">

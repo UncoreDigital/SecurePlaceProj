@@ -65,6 +65,7 @@ export async function createSafetyClass(formData: FormData) {
   const videoUrl = String(formData.get("videoUrl") || "").trim();
   const duration = parseInt(String(formData.get("duration") || "0"));
   const isRequired = String(formData.get("isRequired") || "") === "on";
+  const thumbnailUrl = String(formData.get("thumbnailUrl") || "").trim();
 
   if (!title || !description || !videoUrl || duration <= 0) {
     throw new Error("Please fill in all required fields");
@@ -75,7 +76,7 @@ export async function createSafetyClass(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-
+  console.log({ thumbnailUrl });
   const { error } = await admin.from("safety_classes").insert({
     firm_id: firmId ?? null, // Allow null
     title,
@@ -83,6 +84,7 @@ export async function createSafetyClass(formData: FormData) {
     video_url: videoUrl,
     duration_minutes: duration,
     is_required: isRequired,
+    thumbnail_url: thumbnailUrl || null,
   });
 
   if (error) {
