@@ -226,18 +226,6 @@ export default function SafetyClassesClient({
         </div>
       )}
 
-      {/* Add New Safety Class Button (for admins) */}
-      {isSuperAdmin && (
-        <div className="flex justify-center pt-6">
-          <Button
-            className="bg-brand-blue hover:bg-brand-blue/90"
-            onClick={() => setIsAddFormOpen(true)}
-          >
-            Add New Safety Class
-          </Button>
-        </div>
-      )}
-
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
