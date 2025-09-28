@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
@@ -45,12 +45,19 @@ function CancelModal({
 export default function ScheduledClassesPage() {
   const { user, loading } = useUser();
   const pathname = usePathname();
+  const router = useRouter();
   const isSuperAdmin = user?.role === "super_admin";
 
   const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
   const [loadingClasses, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+
+  // Refs to track component state
+  const mountedRef = useRef(true);
+  const lastPathnameRef = useRef<string>('');
+  const fetchCountRef = useRef(0);
   const handleApprove = async (id: string) => {
     setApprovingId(id);
     const supabase = createBrowserSupabase();
@@ -72,14 +79,23 @@ export default function ScheduledClassesPage() {
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const fetchScheduledClasses = useCallback(async () => {
+  const fetchScheduledClasses = useCallback(async (force = false) => {
+    if (!mountedRef.current) return;
+
+    const now = Date.now();
+    const fetchId = ++fetchCountRef.current;
+
     setLoading(true);
+
     try {
       const supabase = createBrowserSupabase();
       const { data, error } = await supabase
         .from("scheduled_classes")
         .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
         .order("start_time", { ascending: false });
+
+      // if (!mountedRef.current) return;
+
       if (error) {
         console.error("Failed to fetch scheduled classes:", error);
         setScheduledClasses([]);
@@ -112,41 +128,65 @@ export default function ScheduledClassesPage() {
           thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
         }));
         setScheduledClasses(formatted);
+        setLastFetchTime(now);
       }
     } catch (err) {
-      console.error('Error in fetchScheduledClasses:', err);
-      setScheduledClasses([]);
+      console.error(`❌ Fetch #${fetchId} - Error:`, err);
+      if (mountedRef.current) {
+        setScheduledClasses([]);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
-  // Main effect to fetch data
-  useEffect(() => {
-    if (!loading && user) {
-      fetchScheduledClasses();
-    }
-  }, [loading, user, fetchScheduledClasses]);
+  // Cleanup on unmount
+  // useEffect(() => {
+  //   return () => {
+  //     mountedRef.current = false;
+  //   };
+  // }, []);
 
-  // Additional effect for pathname changes (navigation)
+  // Main effect - fetch data when user is authenticated
   useEffect(() => {
-    // Only refetch if we're on the scheduled-classes page and user is ready
-    if (!loading && user && pathname.includes('scheduled-classes')) {
-      fetchScheduledClasses();
-    }
+    const fetchData = async () => {
+      await fetchScheduledClasses(true);
+    };
+    fetchData();
+  }, [loading, user]);
+
+  // Navigation effect - refetch when returning to this page
+  useEffect(() => {
+    fetchScheduledClasses(true);
+
   }, [pathname]);
 
-  // Refetch data when page becomes visible again (user switches back to tab)
+  // Visibility change effect - refetch when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && !loading && user) {
-        fetchScheduledClasses();
+
+      if (!document.hidden && !loading && user && pathname.includes('scheduled-classes')) {
+        fetchScheduledClasses(true);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [loading, user, fetchScheduledClasses]);
+  }, []);
+
+  // Window focus effect - additional safety net
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading && user && pathname.includes('scheduled-classes')) {
+        fetchScheduledClasses(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
@@ -203,12 +243,13 @@ export default function ScheduledClassesPage() {
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              fetchScheduledClasses();
+              fetchScheduledClasses(true);
             }}
             variant="outline"
             className="bg-blue-50 hover:bg-blue-100"
+            disabled={loadingClasses}
           >
-            Refresh Data
+            {loadingClasses ? 'Refreshing...' : 'Refresh Data'}
           </Button>
           <Button
             onClick={async () => {
