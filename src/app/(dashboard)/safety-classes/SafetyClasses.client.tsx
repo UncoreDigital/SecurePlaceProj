@@ -73,14 +73,14 @@ export default function SafetyClassesClient({
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       const formData = new FormData();
       formData.append("title", data.title);
       formData.append("description", data.description);
       formData.append("duration", data.duration.toString());
       formData.append("videoUrl", data.videoUrl);
       formData.append("isRequired", data.isRequired ? "on" : "");
-      
+
       if (data.thumbnailUrl) {
         formData.append("thumbnailUrl", data.thumbnailUrl);
       }
@@ -122,27 +122,39 @@ export default function SafetyClassesClient({
             <span className="text-3xl font-bold text-brand-blue">Safety Classes</span>
             <span className="text-gray-600 mt-1 ml-2">(Plan before 2 weeks)</span>
           </div>
+          {/* Add New Safety Class Button (for admins) */}
+
         </div>
 
-        <div className="flex w-48 bg-gray-100 rounded-lg overflow-hidden border border-[#D8D8D8]">
-          <button
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "remote"
-              ? "bg-brand-orange text-white"
-              : "text-gray-700 hover:bg-gray-200"
-              }`}
-            onClick={() => handleTypeChange("remote")}
-          >
-            Remote
-          </button>
-          <button
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "in-person"
-              ? "bg-brand-orange text-white"
-              : "text-gray-700 hover:bg-gray-200"
-              }`}
-            onClick={() => handleTypeChange("in-person")}
-          >
-            In-person
-          </button>
+        <div className="flex items-center gap-3">
+          {isSuperAdmin && (
+            <Button
+              className="bg-brand-blue hover:bg-brand-blue/90"
+              onClick={() => setIsAddFormOpen(true)}
+            >
+              Add New Safety Class
+            </Button>
+          )}
+          <div className="flex w-48 bg-gray-100 rounded-lg overflow-hidden border border-[#D8D8D8]">
+            <button
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "remote"
+                ? "bg-brand-orange text-white"
+                : "text-gray-700 hover:bg-gray-200"
+                }`}
+              onClick={() => handleTypeChange("remote")}
+            >
+              Remote
+            </button>
+            <button
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "in-person"
+                ? "bg-brand-orange text-white"
+                : "text-gray-700 hover:bg-gray-200"
+                }`}
+              onClick={() => handleTypeChange("in-person")}
+            >
+              In-person
+            </button>
+          </div>
         </div>
       </div>
 
