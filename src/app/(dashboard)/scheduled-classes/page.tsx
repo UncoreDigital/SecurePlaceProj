@@ -77,7 +77,7 @@ export default function ScheduledClassesPage() {
       const supabase = createBrowserSupabase();
       const { data, error } = await supabase
         .from("scheduled_classes")
-        .select("*, safety_class: safety_class_id(title)")
+        .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
         .order("start_time", { ascending: false });
       console.log("Fetch result:", { data, error });
       if (error) {

@@ -188,7 +188,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
         ]);
       setLoadingLocations(false);
       if (!error) {
-        alert("Class scheduled successfully!");
+        // alert("Class scheduled successfully!");
         onClose();
       } else {
         alert("Failed to schedule class: " + error.message);
