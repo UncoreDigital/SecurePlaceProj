@@ -22,6 +22,7 @@ CREATE POLICY "Admins can insert scheduled classes"
 
 --  update your enum in the database to include "pending"
 ALTER TYPE class_status ADD VALUE 'pending';
+ALTER TYPE class_status ADD VALUE 'approved';
 
 -- Enable read access for all users for scheduled_classes
 create policy "Enable read access for all users"

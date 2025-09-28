@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { useUser } from "@/hooks/useUser";
 
 const statusBtnStyles: Record<string, string> = {
   approved: "bg-emerald-500 text-white hover:bg-emerald-600",
@@ -41,9 +42,33 @@ function CancelModal({
 }
 
 export default function ScheduledClassesPage() {
+  const { user, loading } = useUser();
+  const isSuperAdmin = user?.role === "super_admin";
+
   const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingClasses, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const handleApprove = async (id: string) => {
+    console.log("Approving class with ID:", id);
+    setApprovingId(id);
+    const supabase = createBrowserSupabase();
+    const { error } = await supabase
+      .from("scheduled_classes")
+      .update({ status: "approved" })
+      .eq("id", id);
+    console.log("Approve result:", { error });
+    if (error) {
+      console.error("Failed to approve class:", error);
+    } else {
+      setScheduledClasses((prev) =>
+        prev.map((cls) =>
+          cls.id === id ? { ...cls, status: "approved" } : cls
+        )
+      );
+    }
+    setApprovingId(null);
+  };
 
   useEffect(() => {
     const fetchScheduledClasses = async () => {
@@ -96,8 +121,25 @@ export default function ScheduledClassesPage() {
 
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
-  const handleConfirm = () => {
-    // Add your cancel logic here (API call, state update, etc.)
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const handleConfirm = async () => {
+    if (!cancelId) return;
+    setCancellingId(cancelId);
+    const supabase = createBrowserSupabase();
+    const { error } = await supabase
+      .from("scheduled_classes")
+      .update({ status: "cancelled" })
+      .eq("id", cancelId);
+    if (error) {
+      console.error("Failed to cancel class:", error);
+    } else {
+      setScheduledClasses((prev) =>
+        prev.map((cls) =>
+          cls.id === cancelId ? { ...cls, status: "cancelled" } : cls
+        )
+      );
+    }
+    setCancellingId(null);
     setCancelId(null);
   };
 
@@ -130,25 +172,33 @@ export default function ScheduledClassesPage() {
               <span className="mx-2">|</span>
               <span>{cls.time}</span>
             </div>
-            <div className="flex gap-2 mt-2">
-              <Button
-                className={`flex-1 ${statusBtnStyles[cls.status]}`}
-                disabled={cls.status !== "approved" && cls.status !== "pending"}
-              >
-                {cls.status === "approved"
-                  ? "Approved"
-                  : cls.status === "pending"
+            {isSuperAdmin && (
+              <div className="flex gap-2 mt-2">
+                <Button
+                  className={`flex-1 ${statusBtnStyles[cls.status]}`}
+                  disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
+                  onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
+                >
+                  {approvingId === cls.id
+                    ? "Approving..."
+                    : cls.status === "approved"
+                    ? "Approved"
+                    : cls.status === "pending"
                     ? "Pending"
+                    : cls.status === "cancelled"
+                    ? "Cancelled"
                     : ""}
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 border-gray-300 text-gray-700"
-                onClick={() => handleCancel(cls.id)}
-              >
-                Cancel
-              </Button>
-            </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-300 text-gray-700"
+                  disabled={cancellingId === cls.id || cls.status === "cancelled"}
+                  onClick={() => handleCancel(cls.id)}
+                >
+                  {cancellingId === cls.id ? "Cancelling..." : "Cancel"}
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </div>
