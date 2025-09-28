@@ -45,7 +45,6 @@ export default function SafetyClassesClient({
   isSuperAdmin: boolean;
   createSafetyClass: (formData: FormData) => Promise<void>;
 }) {
-  console.log({ safetyClasses });
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();

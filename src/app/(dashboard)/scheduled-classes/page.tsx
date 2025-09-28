@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
@@ -43,6 +44,7 @@ function CancelModal({
 
 export default function ScheduledClassesPage() {
   const { user, loading } = useUser();
+  const pathname = usePathname();
   const isSuperAdmin = user?.role === "super_admin";
 
   const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
@@ -50,14 +52,12 @@ export default function ScheduledClassesPage() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const handleApprove = async (id: string) => {
-    console.log("Approving class with ID:", id);
     setApprovingId(id);
     const supabase = createBrowserSupabase();
     const { error } = await supabase
       .from("scheduled_classes")
       .update({ status: "approved" })
       .eq("id", id);
-    console.log("Approve result:", { error });
     if (error) {
       console.error("Failed to approve class:", error);
     } else {
@@ -70,16 +70,16 @@ export default function ScheduledClassesPage() {
     setApprovingId(null);
   };
 
-  useEffect(() => {
-    const fetchScheduledClasses = async () => {
-      console.log("Fetching scheduled classes...");
-      setLoading(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const fetchScheduledClasses = useCallback(async () => {
+    setLoading(true);
+    try {
       const supabase = createBrowserSupabase();
       const { data, error } = await supabase
         .from("scheduled_classes")
         .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
         .order("start_time", { ascending: false });
-      console.log("Fetch result:", { data, error });
       if (error) {
         console.error("Failed to fetch scheduled classes:", error);
         setScheduledClasses([]);
@@ -113,15 +113,44 @@ export default function ScheduledClassesPage() {
         }));
         setScheduledClasses(formatted);
       }
+    } catch (err) {
+      console.error('Error in fetchScheduledClasses:', err);
+      setScheduledClasses([]);
+    } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Main effect to fetch data
+  useEffect(() => {
+    if (!loading && user) {
+      fetchScheduledClasses();
+    }
+  }, [loading, user, fetchScheduledClasses]);
+
+  // Additional effect for pathname changes (navigation)
+  useEffect(() => {
+    // Only refetch if we're on the scheduled-classes page and user is ready
+    if (!loading && user && pathname.includes('scheduled-classes')) {
+      fetchScheduledClasses();
+    }
+  }, [pathname]);
+
+  // Refetch data when page becomes visible again (user switches back to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !loading && user) {
+        fetchScheduledClasses();
+      }
     };
 
-    fetchScheduledClasses();
-  }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loading, user, fetchScheduledClasses]);
 
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
   const handleConfirm = async () => {
     if (!cancelId) return;
     setCancellingId(cancelId);
@@ -143,64 +172,118 @@ export default function ScheduledClassesPage() {
     setCancelId(null);
   };
 
+  // Show loading state while user authentication is loading or data is being fetched
+  if (loading || loadingClasses) {
+    return (
+      <div>
+        <nav className="text-sm text-gray-500 mb-2">Home &gt; Scheduled Classes</nav>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-brand-blue">Scheduled Classes</h1>
+          <div className="text-sm text-gray-500">Loading...</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow p-4 animate-pulse">
+              <div className="w-full h-40 bg-gray-200 rounded-lg mb-3"></div>
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <nav className="text-sm text-gray-500 mb-2">Home &gt; Scheduled Classes</nav>
-      <h1 className="text-3xl font-bold text-brand-blue mb-6">Scheduled Classes</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {scheduledClasses.map((cls) => (
-          <div
-            key={cls.id}
-            className="bg-white rounded-xl shadow p-4 flex flex-col gap-3"
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-brand-blue">Scheduled Classes</h1>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              fetchScheduledClasses();
+            }}
+            variant="outline"
+            className="bg-blue-50 hover:bg-blue-100"
           >
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-2 h-40">
-              <Image
-                src={cls.thumbnailUrl}
-                alt={cls.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 33vw"
-              />
-              <span className="absolute top-3 right-3 bg-brand-orange text-white text-xs px-3 py-1 rounded font-medium">
-                {cls.type}
-              </span>
-            </div>
-            <div className="font-semibold text-lg mb-1 line-clamp-2">{cls.title}</div>
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <Calendar className="w-4 h-4" />
-              <span>{cls.date}</span>
-              <span className="mx-2">|</span>
-              <span>{cls.time}</span>
-            </div>
-            {isSuperAdmin && (
-              <div className="flex gap-2 mt-2">
-                <Button
-                  className={`flex-1 ${statusBtnStyles[cls.status]}`}
-                  disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                  onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
-                >
-                  {approvingId === cls.id
-                    ? "Approving..."
-                    : cls.status === "approved"
-                    ? "Approved"
-                    : cls.status === "pending"
-                    ? "Pending"
-                    : cls.status === "cancelled"
-                    ? "Cancelled"
-                    : ""}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-gray-300 text-gray-700"
-                  disabled={cancellingId === cls.id || cls.status === "cancelled"}
-                  onClick={() => handleCancel(cls.id)}
-                >
-                  {cancellingId === cls.id ? "Cancelling..." : "Cancel"}
-                </Button>
-              </div>
-            )}
+            Refresh Data
+          </Button>
+          <Button
+            onClick={async () => {
+              const supabase = createBrowserSupabase();
+              const { data, error, count } = await supabase
+                .from("scheduled_classes")
+                .select("*", { count: 'exact' });
+            }}
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100"
+          >
+            Test DB
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {scheduledClasses.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <p className="text-gray-500 text-lg">No scheduled classes found.</p>
           </div>
-        ))}
+        ) : (
+          scheduledClasses.map((cls) => (
+            <div
+              key={cls.id}
+              className="bg-white rounded-xl shadow p-4 flex flex-col gap-3"
+            >
+              <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-2 h-40">
+                <Image
+                  src={cls.thumbnailUrl}
+                  alt={cls.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                <span className="absolute top-3 right-3 bg-brand-orange text-white text-xs px-3 py-1 rounded font-medium">
+                  {cls.type}
+                </span>
+              </div>
+              <div className="font-semibold text-lg mb-1 line-clamp-2">{cls.title}</div>
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <Calendar className="w-4 h-4" />
+                <span>{cls.date}</span>
+                <span className="mx-2">|</span>
+                <span>{cls.time}</span>
+              </div>
+              {isSuperAdmin && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    className={`flex-1 ${statusBtnStyles[cls.status]}`}
+                    disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
+                    onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
+                  >
+                    {approvingId === cls.id
+                      ? "Approving..."
+                      : cls.status === "approved"
+                        ? "Approved"
+                        : cls.status === "pending"
+                          ? "Pending"
+                          : cls.status === "cancelled"
+                            ? "Cancelled"
+                            : ""}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-gray-300 text-gray-700"
+                    disabled={cancellingId === cls.id || cls.status === "cancelled"}
+                    onClick={() => handleCancel(cls.id)}
+                  >
+                    {cancellingId === cls.id ? "Cancelling..." : "Cancel"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
       <CancelModal
         open={!!cancelId}
