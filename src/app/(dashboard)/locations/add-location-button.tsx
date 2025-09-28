@@ -27,16 +27,17 @@ export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
   const { user } = useUser(); // Get the logged-in user from Supabase
   const router = useRouter();
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    // event.preventDefault();
-    setError(null);
+  if (!user?.firmId) {
+    return null;
+  }
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    setError(null);
     // Security Check: Make sure the user is a firm admin
     if (user?.role !== "firm_admin" || !user.firmId) {
       setError("Unauthorized: Only firm admins can create locations.");
       return;
     }
-
     const formData = new FormData(event.currentTarget);
     const data = {
       name: formData.get("name") as string,

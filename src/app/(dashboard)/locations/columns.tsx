@@ -12,6 +12,10 @@ export interface Location {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  firms?: {
+    id: string;
+    name: string;
+  };
 }
 
 // We are keeping this file for the type definition, but the columns are no longer needed for the card layout.
