@@ -117,22 +117,39 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                   onMouseMove={handleMouseMove}
                   onMouseLeave={() => setShowControls(false)}
                 >
-                  <video
-                    ref={videoRef}
-                    className="w-full aspect-video rounded-t-lg h-100"
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
-                    onError={() => {
-                      setIsLoading(false);
-                      setHasError(true);
-                    }}
-                  >
-                    <source src={safetyClass.video_url} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
+                  {safetyClass.video_url.includes("youtube.com") || safetyClass.video_url.includes("youtu.be") ? (
+                    <iframe
+                      width="100%"
+                      height="400"
+                      src={
+                        safetyClass.video_url.includes("youtube.com")
+                          ? safetyClass.video_url.replace("watch?v=", "embed/")
+                          : `https://www.youtube.com/embed/${safetyClass.video_url.split("/").pop()}`
+                      }
+                      title="YouTube video player"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full aspect-video rounded-t-lg h-100"
+                    ></iframe>
+                  ) : (
+                    <video
+                      ref={videoRef}
+                      className="w-full aspect-video rounded-t-lg h-100"
+                      onTimeUpdate={handleTimeUpdate}
+                      onLoadedMetadata={handleLoadedMetadata}
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                      onEnded={() => setIsPlaying(false)}
+                      onError={() => {
+                        setIsLoading(false);
+                        setHasError(true);
+                      }}
+                    >
+                      <source src={safetyClass.video_url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
 
                   {/* Video Controls Overlay */}
                   {showControls && (
