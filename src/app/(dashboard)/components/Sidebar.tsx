@@ -66,7 +66,7 @@ function getSupabase() {
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const { user } = useUser(); // should contain role: "super_admin" | "firm_admin" | etc.
+  const { user, logout } = useUser(); // Get logout function from useUser hook
   const pathname = usePathname();
   const router = useRouter();
 
@@ -82,15 +82,20 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/signout", { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Failed to sign out");
-      }
-      // Hard navigate to clear all client state
-      window.location.assign("/");
+      console.log('🚐 Initiating logout from sidebar...');
+      
+      // Use the useUser logout function which clears localStorage
+      await logout();
+      
+      // Navigate to home page after successful logout
+      router.push('/');
+      
+      console.log('✅ Logout completed successfully');
     } catch (err) {
       console.error("Failed to log out:", err);
+      
+      // Force navigation even if logout fails
+      window.location.assign("/");
     }
   };
 

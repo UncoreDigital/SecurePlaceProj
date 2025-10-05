@@ -4,28 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import FirmManagement from "./FirmManagement.client";
 import type { Firm } from "@/lib/types";
+import { SuperAdminGuard } from "@/components/AuthGuard";
 
 const REVALIDATE_PATH = "/dashboard/super-admin/firm-management";
-
-/** Guard: only super_admin may access this page */
-async function requireSuperAdmin() {
-  const supabase = await createServerSupabase();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (me?.role !== "super_admin") {
-    redirect("/");
-  }
-}
 
 /** SSR fetch with server-side filter from URL (?q=) */
 async function getFirms(q?: string): Promise<Firm[]> {
@@ -134,24 +115,25 @@ export default async function Page({
 }: {
   searchParams?: { q?: string };
 }) {
-  await requireSuperAdmin();
   const sp = await searchParams;
   const q = sp?.q ?? "";
 
   const firms = await getFirms(q);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold text-brand-blue mb-6">
-        Firm Management
-      </h1>
-      <FirmManagement
-        firms={firms}
-        initialQuery={q}
-        createFirm={createFirm}
-        updateFirm={updateFirm}
-        deleteFirm={deleteFirm}
-      />
-    </div>
+    <SuperAdminGuard>
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-brand-blue mb-6">
+          Firm Management
+        </h1>
+        <FirmManagement
+          firms={firms}
+          initialQuery={q}
+          createFirm={createFirm}
+          updateFirm={updateFirm}
+          deleteFirm={deleteFirm}
+        />
+      </div>
+    </SuperAdminGuard>
   );
 }

@@ -1,32 +1,12 @@
 // app/dashboard/super-admin/firm-admins/page.tsx
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import FirmAdminsClient from "./FirmAdmins.client";
+import { SuperAdminGuard } from "@/components/AuthGuard";
 import { createClient } from "@supabase/supabase-js";
 import type { FirmOption, FirmAdminRow } from "@/lib/types";
 
 const REVALIDATE_PATH = "/dashboard/super-admin/firm-admins";
-
-/** Guard: only super_admin may access this page */
-async function requireSuperAdmin() {
-  const supabase = await createServerSupabase();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("user_profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (me?.role !== "super_admin") {
-    redirect("/");
-  }
-}
 
 /** SSR: list firm admins with server-side filters from URL (?q=, ?firm=) */
 async function getFirmAdmins(
@@ -206,8 +186,8 @@ export default async function Page({
 }: {
   searchParams?: { q?: string; firm?: string };
 }) {
-  await requireSuperAdmin();
-
+  // No server-side auth check - handled by AuthGuard using localStorage
+  
   const sp = await searchParams;
   const q = sp?.q ?? "";
   const firm = sp?.firm ?? "__ALL__";
@@ -218,19 +198,21 @@ export default async function Page({
   ]);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold text-brand-blue mb-6">
-        Firm Admin Management
-      </h1>
-      <FirmAdminsClient
-        admins={admins}
-        firms={firms}
-        initialQuery={q}
-        initialFirm={firm}
-        createFirmAdmin={createFirmAdmin}
-        updateFirmAdmin={updateFirmAdmin}
-        deleteFirmAdmin={deleteFirmAdmin}
-      />
-    </div>
+    <SuperAdminGuard>
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-brand-blue mb-6">
+          Firm Admin Management
+        </h1>
+        <FirmAdminsClient
+          admins={admins}
+          firms={firms}
+          initialQuery={q}
+          initialFirm={firm}
+          createFirmAdmin={createFirmAdmin}
+          updateFirmAdmin={updateFirmAdmin}
+          deleteFirmAdmin={deleteFirmAdmin}
+        />
+      </div>
+    </SuperAdminGuard>
   );
 }

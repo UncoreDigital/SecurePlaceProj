@@ -71,9 +71,42 @@ const loadUserFromStorage = (): UserSession | null => {
 
 const clearUserFromStorage = () => {
   if (typeof window !== 'undefined') {
+    // Clear the main user session
     localStorage.removeItem(STORAGE_KEY);
-    console.log('🗑️ User cleared from localStorage');
+    
+    // Clear any other user-related storage items
+    localStorage.removeItem('supabase.auth.token');
+    sessionStorage.removeItem('supabase.auth.token');
+    
+    // Clear any cached data that might be user-specific
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('user') || key.includes('session') || key.includes('auth')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    console.log('🗑️ All user data cleared from localStorage');
   }
+};
+
+const loadUserDetailLocalStorage = (): any | null => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const { user, timestamp, expiresAt } = JSON.parse(stored);
+        if (Date.now() < expiresAt) {
+          return JSON.parse(stored);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load user from localStorage:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return null;
 };
 
 export const useUser = () => {
@@ -246,18 +279,38 @@ export const useUser = () => {
   const logout = async () => {
     if (supabase) {
       try {
-        console.log('🚐 Logging out user...');
+        console.log('� Logging out user...');
+        
+        // Clear local storage first
+        clearUserFromStorage();
+        
+        // Sign out from Supabase
         await supabase.auth.signOut();
+        
+        // Reset component state
+        setUser(null);
+        setError(null);
+        setLoading(false);
+        
+        console.log('✅ User logged out successfully - all storage cleared');
+      } catch (error) {
+        console.error('❌ Logout error:', error);
+        
+        // Force clear everything even if signOut fails
         clearUserFromStorage();
         setUser(null);
         setError(null);
-        console.log('✅ User logged out successfully');
-      } catch (error) {
-        console.error('❌ Logout error:', error);
-        // Force clear even if signOut fails
-        clearUserFromStorage();
-        setUser(null);
+        setLoading(false);
+        
+        console.log('⚠️ Forced logout - storage cleared despite error');
       }
+    } else {
+      // If no supabase client, still clear storage
+      clearUserFromStorage();
+      setUser(null);
+      setError(null);
+      setLoading(false);
+      console.log('🧹 Storage cleared (no supabase client available)');
     }
   };
 
@@ -265,4 +318,4 @@ export const useUser = () => {
 };
 
 // Export helper functions for manual storage management
-export { saveUserToStorage, loadUserFromStorage, clearUserFromStorage };
+export { saveUserToStorage, loadUserFromStorage, clearUserFromStorage, loadUserDetailLocalStorage };
