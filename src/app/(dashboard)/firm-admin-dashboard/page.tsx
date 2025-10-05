@@ -70,25 +70,29 @@ const FirmAdminDashboardPage = () => {
           .eq("firm_id", user?.firmId)
           .eq("is_volunteer", true);
 
-        const emergencyRes = await supabase
-          .from("incidents")
-          .select("*", { count: "exact", head: true }).eq("firm_id", user?.firmId);;
+        const emergencyRes = { count: 0 };
+        // await supabase
+        //   .from("incidents")
+        //   .select("*", { count: "exact", head: true }).eq("firm_id", user?.firmId);;
 
         // --- Fetch Chart Data ---
-        const completedDrillsRes = await supabase
-          .from("drills")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "completed").eq("firm_id", user?.firmId);;
+        const completedDrillsRes: any = { count: 0 };
+          // await supabase
+          // .from("drills")
+          // .select("*", { count: "exact", head: true })
+          // .eq("status", "completed").eq("firm_id", user?.firmId);;
 
-        const pendingDrillsRes = await supabase
-          .from("drills")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending").eq("firm_id", user?.firmId);;
+        const pendingDrillsRes: any = { count: 0 };
+        // await supabase
+        //   .from("drills")
+        //   .select("*", { count: "exact", head: true })
+        //   .eq("status", "pending").eq("firm_id", user?.firmId);;
 
         // Fetch all safety training documents
-        const workshopsRes = await supabase
-          .from("trainings")
-          .select("*").eq("firm_id", user?.firmId);;
+        const workshopsRes: any = { count: 0 };
+        //  await supabase
+        //   .from("trainings")
+        //   .select("*").eq("firm_id", user?.firmId);;
 
         // Set state for stat cards
         setStats({
@@ -99,7 +103,7 @@ const FirmAdminDashboardPage = () => {
 
         // Process workshop data to group by type
         const workshopTypes: { [key: string]: number } = {};
-        (workshopsRes.data ?? []).forEach((doc: SafetyTraining) => {
+        (workshopsRes?.data ?? []).forEach((doc: SafetyTraining) => {
           workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
         });
         const processedWorkshops = Object.entries(workshopTypes).map(
