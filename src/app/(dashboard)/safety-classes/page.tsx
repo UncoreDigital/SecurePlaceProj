@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import { SafetyClass } from "./types";
 import { cache } from "react";
 
+// Force dynamic rendering for this page since it uses auth
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function requireAdmin() {
   const supabase = await createServerSupabase();
   const {
@@ -121,20 +125,17 @@ export async function createSafetyClass(formData: FormData) {
 export default async function SafetyClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; type?: string }>;
+  searchParams: { category?: string; type?: string };
 }) {
   const startTime = Date.now();
   console.log('🚀 SafetyClassesPage: Starting render');
   
   try {
-    // Run auth check and search params in parallel
-    const [me, sp] = await Promise.all([
-      requireAdmin(),
-      searchParams
-    ]);
+    // Run auth check
+    const me = await requireAdmin();
     
-    const category = sp?.category ?? "all";
-    const type = sp?.type ?? "in-person";
+    const category = searchParams?.category ?? "all";
+    const type = searchParams?.type ?? "in-person";
     
     console.log('👤 Auth check completed:', { role: me.role, firmId: me.firmId });
     
@@ -166,20 +167,14 @@ export default async function SafetyClassesPage({
   } catch (error) {
     console.error('❌ SafetyClassesPage: Error:', error);
     
-    // Return a fallback UI on error
+    // Return a fallback UI on error without event handlers
     return (
       <div className="container mx-auto p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h2 className="text-red-800 font-semibold mb-2">Unable to load safety classes</h2>
           <p className="text-red-600">
-            We're experiencing technical difficulties. Please try refreshing the page.
+            We're experiencing technical difficulties. Please refresh the page manually.
           </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            Refresh Page
-          </button>
         </div>
       </div>
     );
