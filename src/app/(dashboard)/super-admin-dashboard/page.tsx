@@ -27,10 +27,10 @@ async function getDashboardData() {
     ] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact" }),
       supabase.from("profiles").select("*", { count: "exact" }).eq("role", "employee").eq("is_volunteer", true),
-      supabase.from("incidents").select("*", { count: "exact" }),
+      0, // supabase.from("incidents").select("*", { count: "exact" }),
       supabase.from("drills").select("*", { count: "exact" }).eq("status", "completed"),
       supabase.from("drills").select("*", { count: "exact" }).eq("status", "pending"),
-      supabase.from("trainings").select("type, status", { count: "exact" }), // Remove head: true to get actual data
+      supabase.from("scheduled_classes").select("*", { count: "exact" }), // Remove head: true to get actual data
     ]);
     console.log("Workshops Data:", employeeRes);
     // Process chart data
