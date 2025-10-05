@@ -206,9 +206,9 @@ export default function ScheduledClassesPage() {
   if (loading || loadingClasses) {
     return (
       <div>
-        <nav className="text-sm text-gray-500 mb-2">Home &gt; Scheduled Classes</nav>
+        <nav className="text-sm text-gray-500 mb-2">Home &gt; Requested Classes</nav>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-brand-blue">Scheduled Classes</h1>
+          <h1 className="text-3xl font-bold text-brand-blue">Requested Classes</h1>
           <div className="text-sm text-gray-500">Loading...</div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
