@@ -12,6 +12,11 @@ const statusBtnStyles: Record<string, string> = {
   pending: "bg-yellow-400 text-white hover:bg-yellow-500",
 };
 
+const statusLabelStyles: Record<string, string> = {
+  approved: "text-emerald-600",
+  pending: "text-yellow-500",
+};
+
 function CancelModal({
   open,
   onClose,
@@ -312,6 +317,21 @@ export default function ScheduledClassesPage() {
                     {cancellingId === cls.id ? "Cancelling..." : "Cancel"}
                   </Button>
                 </div>
+              )}
+              {!isSuperAdmin && (
+                <label
+                    className={`flex-1 ${statusLabelStyles[cls.status]}`} style={{fontWeight: '600'}}
+                  >
+                    {approvingId === cls.id
+                      ? "Approving..."
+                      : cls.status === "approved"
+                        ? "Approved"
+                        : cls.status === "pending"
+                          ? "Pending"
+                          : cls.status === "cancelled"
+                            ? "Cancelled"
+                            : ""}
+                  </label>
               )}
             </div>
           ))
