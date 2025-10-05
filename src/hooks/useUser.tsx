@@ -26,15 +26,10 @@ function makeSupabase() {
   return createBrowserClient(url, anon);
 }
 
-// Cache user data across components to prevent multiple API calls
-let cachedUser: UserSession | null = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export const useUser = () => {
   const supabase = useMemo(makeSupabase, []);
-  const [user, setUser] = useState<UserSession | null>(cachedUser);
-  const [loading, setLoading] = useState(!cachedUser); // If cached, don't show loading
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Turn a Supabase user + profile row into your UserSession shape
@@ -58,19 +53,9 @@ export const useUser = () => {
 
   useEffect(() => {
     let unsubscribed = false;
-    
     const init = async () => {
       try {
         setError(null);
-        
-        // Check cache first for faster loading
-        const now = Date.now();
-        if (cachedUser && (now - cacheTimestamp) < CACHE_DURATION) {
-          console.log('⚡ useUser: Using cached data');
-          setUser(cachedUser);
-          setLoading(false);
-          return;
-        }
         
         if (!supabase) {
           const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
@@ -80,7 +65,7 @@ export const useUser = () => {
           return;
         }
 
-        console.log('🔐 useUser: Fetching fresh auth data...');
+        console.log('🔐 useUser: Checking authentication...');
         
         // Check if we have valid environment variables
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -133,15 +118,7 @@ export const useUser = () => {
         }
 
         console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
-
-        // Cache the user data for better performance
-        const sessionData = buildSession(authUser, profile);
-        cachedUser = sessionData;
-        cacheTimestamp = Date.now();
-        
-        if (!unsubscribed) {
-          setUser(sessionData);
-        }
+        if (!unsubscribed) setUser(buildSession(authUser, profile));
         
       } catch (err: any) {
         console.error('❌ useUser init error:', err);
