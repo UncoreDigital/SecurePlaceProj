@@ -52,7 +52,7 @@ const FIRM_ADMIN_ITEMS: NavItem[] = [
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
-  { href: "/emergencies", label: "Emergencies", icon: Siren },
+  // { href: "/emergencies", label: "Emergencies", icon: Siren },
   // { href: "/dashboard/alerts", label: "Alerts", icon: BellRing },
   // { href: "/drills", label: "Drills", icon: UserSquare },
 ];
