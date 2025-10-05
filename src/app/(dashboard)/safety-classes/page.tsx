@@ -170,12 +170,12 @@ export default async function SafetyClassesPage({
     // Return a fallback UI on error without event handlers
     return (
       <div className="container mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        {/* <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h2 className="text-red-800 font-semibold mb-2">Unable to load safety classes</h2>
           <p className="text-red-600">
             We're experiencing technical difficulties. Please refresh the page manually.
           </p>
-        </div>
+        </div> */}
       </div>
     );
   }
