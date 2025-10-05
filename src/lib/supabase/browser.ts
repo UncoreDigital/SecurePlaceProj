@@ -15,8 +15,33 @@ export async function uploadImageToSupabase(file: File, folder = "thumbnails") {
 import { createBrowserClient } from "@supabase/ssr";
 
 export function createBrowserSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!url || !key) {
+    console.error('🚨 Missing Supabase environment variables:', { 
+      url: !!url, 
+      key: !!key 
+    });
+    throw new Error('Supabase environment variables are not configured');
+  }
+  
+  console.log('🔧 Creating Supabase browser client:', {
+    url: url.substring(0, 30) + '...',
+    keyLength: key.length
+  });
+  
+  return createBrowserClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'implicit'
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'secure-place-web'
+      }
+    }
+  });
 }

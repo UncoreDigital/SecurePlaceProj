@@ -30,6 +30,7 @@ export const useUser = () => {
   const supabase = useMemo(makeSupabase, []);
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Turn a Supabase user + profile row into your UserSession shape
   const buildSession = (
@@ -54,27 +55,52 @@ export const useUser = () => {
     let unsubscribed = false;
     const init = async () => {
       try {
+        setError(null);
+        
         if (!supabase) {
-          console.error(
-            "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server."
-          );
+          const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
+          console.error(errorMsg);
+          setError(errorMsg);
           setUser(null);
           return;
         }
 
-        // 1) Who is logged in?
+        console.log('🔐 useUser: Checking authentication...');
+        
+        // Check if we have valid environment variables
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        console.log('🔑 Supabase config:', { 
+          url: url ? `${url.substring(0, 20)}...` : 'MISSING',
+          key: key ? `${key.substring(0, 20)}...` : 'MISSING'
+        });
+
+        // 1) Check authentication with better error handling
         const {
           data: { user: authUser },
           error: userErr,
         } = await supabase.auth.getUser();
-        if (userErr) throw userErr;
+        
+        if (userErr) {
+          console.error('🚨 Auth error:', userErr);
+          if (userErr.message.includes('403') || userErr.message.includes('Forbidden')) {
+            setError('Authentication failed. Please check your Supabase configuration or try logging in again.');
+            // Try to clear any bad session
+            await supabase.auth.signOut();
+          }
+          throw userErr;
+        }
+
+        console.log('👤 Auth user:', authUser ? `${authUser.email} (${authUser.id})` : 'No user');
 
         if (!authUser) {
+          console.log('❌ No authenticated user found');
           setUser(null);
           return;
         }
 
-        // 2) Load profile (RLS allows user to read their own profile)
+        // 2) Load profile with better error handling
+        console.log('📝 Fetching user profile...');
         const { data: profile, error: profileErr } = await supabase
           .from("profiles")
           .select("full_name, role, firm_id")
@@ -82,16 +108,25 @@ export const useUser = () => {
           .maybeSingle();
 
         if (profileErr) {
-          // If the row isn't there yet, just return auth info
-          console.warn("Profile fetch warning:", profileErr.message);
-          setUser(buildSession(authUser, null));
+          console.warn('⚠️ Profile fetch warning:', profileErr.message);
+          if (profileErr.message.includes('403') || profileErr.message.includes('Forbidden')) {
+            setError('Access denied. Please check your permissions or contact an administrator.');
+          }
+          // Still try to set user with auth info only
+          if (!unsubscribed) setUser(buildSession(authUser, null));
           return;
         }
 
+        console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
         if (!unsubscribed) setUser(buildSession(authUser, profile));
-      } catch (err) {
-        console.error("useUser init error:", err);
-        if (!unsubscribed) setUser(null);
+        
+      } catch (err: any) {
+        console.error('❌ useUser init error:', err);
+        const errorMessage = err?.message || 'Unknown authentication error';
+        if (!unsubscribed) {
+          setError(errorMessage);
+          setUser(null);
+        }
       } finally {
         if (!unsubscribed) setLoading(false);
       }
@@ -125,10 +160,12 @@ export const useUser = () => {
 
     return () => {
       unsubscribed = true;
-      sub.unsubscribe?.();
+      if (sub?.subscription) {
+        sub.subscription.unsubscribe();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]); // supabase instance is memoized
 
-  return { user, loading };
+  return { user, loading, error };
 };
