@@ -60,7 +60,7 @@ async function getDashboardData() {
           {
             name: "Workshops Done",
             value: (workshopsRes.data ?? []).filter(
-              (d: { status: string }) => d.status === "completed"
+              (d: { status: string }) => d.status === "approved" || d.status === "completed"
             ).length,
           },
           { name: "Drills Done", value: completedDrillsRes.count ?? 0 },
