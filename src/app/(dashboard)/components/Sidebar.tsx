@@ -66,17 +66,21 @@ function getSupabase() {
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const { user } = useUser(); // should contain role: "super_admin" | "firm_admin" | etc.
+  const { user, loading } = useUser();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Choose nav items based on role (memoized)
+  // Optimized nav items - show basic structure immediately, then update
   const navItems = useMemo<NavItem[]>(() => {
-    if (user?.role === "super_admin") return SUPER_ADMIN_ITEMS;
-    if (user?.role === "firm_admin") return FIRM_ADMIN_ITEMS;
-    // Unknown/Loading role → empty list (prevents flash of wrong items)
-    return [];
-  }, [user?.role]);
+    // If still loading, show all items (prevents layout shift)
+    if (loading || !user?.role) {
+      return SUPER_ADMIN_ITEMS; // Default to full menu while loading
+    }
+    
+    if (user.role === "super_admin") return SUPER_ADMIN_ITEMS;
+    if (user.role === "firm_admin") return FIRM_ADMIN_ITEMS;
+    return SUPER_ADMIN_ITEMS; // Fallback
+  }, [user?.role, loading]);
 
   const toggleSidebar = () => setIsOpen((v) => !v);
 
@@ -144,9 +148,9 @@ const Sidebar = () => {
           );
         })}
 
-        {/* Optional: show a subtle hint while role is loading */}
-        {navItems.length === 0 && (
-          <div className="text-sm text-slate-400 px-2">Loading menu…</div>
+        {/* Show loading state only if needed */}
+        {loading && (
+          <div className="text-sm text-slate-400 px-2 animate-pulse">Loading menu…</div>
         )}
       </nav>
 
