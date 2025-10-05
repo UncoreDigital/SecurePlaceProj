@@ -236,7 +236,7 @@ export default function ScheduledClassesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-brand-blue">Scheduled Classes</h1>
         <div className="flex gap-2">
-          <Button
+          {/* <Button
             onClick={() => {
               console.log('🔄 Manual refresh clicked');
               fetchScheduledClasses();
@@ -246,7 +246,7 @@ export default function ScheduledClassesPage() {
             disabled={loadingClasses}
           >
             {loadingClasses ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
+          </Button> */}
           <Button
             onClick={async () => {
               const supabase = createBrowserSupabase();

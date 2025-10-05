@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,58 +12,50 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle } from "lucide-react";
-import { useUser } from "@/hooks/useUser"; // Import the useUser hook from Supabase
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { useUser } from "@/hooks/useUser";
 
 interface AddLocationButtonProps {
   onLocationAdded: () => void;
+  createLocation: (formData: FormData) => Promise<void>;
 }
 
-export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
+export function AddLocationButton({ onLocationAdded, createLocation }: AddLocationButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useUser(); // Get the logged-in user from Supabase
-  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useUser();
 
-  if (!user?.firmId) {
+  // Only show for firm admins
+  if (!user || user.role !== "firm_admin") {
     return null;
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError(null);
-    // Security Check: Make sure the user is a firm admin
-    if (user?.role !== "firm_admin" || !user.firmId) {
-      setError("Unauthorized: Only firm admins can create locations.");
-      return;
-    }
-    const formData = new FormData(event.currentTarget);
-    const data = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      latitude: parseFloat(formData.get("latitude") as string),
-      longitude: parseFloat(formData.get("longitude") as string),
-      description: formData.get("contact") as string, // Using description field for contact
-      firm_id: user.firmId, // Add the firm_id from the logged-in user
-      is_active: true,
-    };
+    setIsSubmitting(true);
 
     try {
-      const supabase = createBrowserSupabase();
-
-      const { error: insertError } = await supabase
-        .from('locations')
-        .insert([data]);
-
-      if (insertError) {
-        throw insertError;
+      const formData = new FormData(event.currentTarget);
+      
+      // Add firm_id for firm_admin (automatically use their firm)
+      if (user.firmId) {
+        formData.append("firmId", user.firmId);
       }
 
+      await createLocation(formData);
+      
       setIsOpen(false);
-      onLocationAdded(); // Close dialog on success
-      // router.refresh(); // Refresh the page to show the new location
+      onLocationAdded();
+      
+      // Reset form
+      (event.target as HTMLFormElement).reset();
     } catch (e: any) {
-      setError(e.message || "An unknown error occurred.");
+      setError(e.message || "Failed to create location. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,7 +75,7 @@ export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
               Name
             </Label>
@@ -133,13 +124,39 @@ export function AddLocationButton({ onLocationAdded }: AddLocationButtonProps) {
             </Label>
             <Input id="contact" name="contact" className="col-span-3" />
           </div>
+
           {error && (
-            <p className="col-span-4 text-center text-sm text-red-600">
-              {error}
-            </p>
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
           )}
-          <div className="flex justify-end mt-4">
-            <Button type="submit">Save Location</Button>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="bg-brand-blue hover:bg-brand-blue/90"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Location
+                </>
+              )}
+            </Button>
           </div>
         </form>
       </DialogContent>
