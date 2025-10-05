@@ -26,9 +26,60 @@ function makeSupabase() {
   return createBrowserClient(url, anon);
 }
 
+// localStorage configuration
+const STORAGE_KEY = 'secure_place_user_session';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// Helper functions for localStorage operations
+const saveUserToStorage = (user: UserSession) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const userSession = {
+        user,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + CACHE_DURATION
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userSession));
+      console.log('💾 User saved to localStorage:', user.email, user.role);
+    } catch (error) {
+      console.warn('Failed to save user to localStorage:', error);
+    }
+  }
+};
+
+const loadUserFromStorage = (): UserSession | null => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const { user, timestamp, expiresAt } = JSON.parse(stored);
+        if (Date.now() < expiresAt) {
+          console.log('📱 User loaded from localStorage:', user.email, user.role);
+          return user;
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          console.log('⏰ Cached user expired, removed from localStorage');
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load user from localStorage:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return null;
+};
+
+const clearUserFromStorage = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('🗑️ User cleared from localStorage');
+  }
+};
+
 export const useUser = () => {
   const supabase = useMemo(makeSupabase, []);
-  const [user, setUser] = useState<UserSession | null>(null);
+  // Initialize user from localStorage if available
+  const [user, setUser] = useState<UserSession | null>(() => loadUserFromStorage());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +107,15 @@ export const useUser = () => {
     const init = async () => {
       try {
         setError(null);
+        
+        // Check localStorage first for faster loading
+        const cachedUser = loadUserFromStorage();
+        if (cachedUser) {
+          console.log('⚡ Using cached user from localStorage');
+          setUser(cachedUser);
+          setLoading(false);
+          return;
+        }
         
         if (!supabase) {
           const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
@@ -118,7 +178,13 @@ export const useUser = () => {
         }
 
         console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
-        if (!unsubscribed) setUser(buildSession(authUser, profile));
+        
+        // Build session and save to localStorage
+        const sessionData = buildSession(authUser, profile);
+        if (sessionData && !unsubscribed) {
+          saveUserToStorage(sessionData); // Save to localStorage
+          setUser(sessionData);
+        }
         
       } catch (err: any) {
         console.error('❌ useUser init error:', err);
@@ -135,25 +201,34 @@ export const useUser = () => {
     init();
 
     // 3) Subscribe to auth state changes so the hook stays in sync
-    const { data: sub } = supabase?.auth.onAuthStateChange(async (event) => {
-      // Re-run the same fetch on sign-in/out/token refresh
+    const { data: sub } = supabase?.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      
       try {
-        const {
-          data: { user: authUser },
-        } = await supabase!.auth.getUser();
-        if (!authUser) {
+        if (event === 'SIGNED_OUT' || !session?.user) {
+          console.log('👋 User signed out, clearing storage');
+          clearUserFromStorage();
           setUser(null);
           return;
         }
-        const { data: profile } = await supabase!
-          .from("profiles")
-          .select("full_name, role, firm_id")
-          .eq("id", authUser.id)
-          .maybeSingle();
+        
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          console.log('🔐 User signed in/refreshed, fetching profile');
+          const { data: profile } = await supabase!
+            .from("profiles")
+            .select("full_name, role, firm_id")
+            .eq("id", session.user.id)
+            .maybeSingle();
 
-        setUser(buildSession(authUser, profile ?? null));
+          const sessionData = buildSession(session.user, profile ?? null);
+          if (sessionData) {
+            saveUserToStorage(sessionData);
+            setUser(sessionData);
+          }
+        }
       } catch (e) {
         console.error("useUser listener error:", e);
+        clearUserFromStorage();
         setUser(null);
       }
     }) ?? { unsubscribe: () => {} };
@@ -167,5 +242,27 @@ export const useUser = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]); // supabase instance is memoized
 
-  return { user, loading, error };
+  // Logout function that clears everything
+  const logout = async () => {
+    if (supabase) {
+      try {
+        console.log('🚐 Logging out user...');
+        await supabase.auth.signOut();
+        clearUserFromStorage();
+        setUser(null);
+        setError(null);
+        console.log('✅ User logged out successfully');
+      } catch (error) {
+        console.error('❌ Logout error:', error);
+        // Force clear even if signOut fails
+        clearUserFromStorage();
+        setUser(null);
+      }
+    }
+  };
+
+  return { user, loading, error, logout };
 };
+
+// Export helper functions for manual storage management
+export { saveUserToStorage, loadUserFromStorage, clearUserFromStorage };
