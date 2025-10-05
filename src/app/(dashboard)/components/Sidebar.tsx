@@ -47,7 +47,7 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
 
 const FIRM_ADMIN_ITEMS: NavItem[] = [
   { href: "/firm-admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/firm-profile", label: "Firm Profile", icon: Building },
+  { href: "/firm-profile", label: "Firm Profile", icon: Building },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
