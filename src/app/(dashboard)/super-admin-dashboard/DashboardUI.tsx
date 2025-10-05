@@ -4,7 +4,7 @@ import StatCard from "../components/StatCard";
 import CircularGraph from "../components/CircularGraph";
 import MonthlyEmergenciesChart from "../components/MonthlyEmergenciesChart";
 import SafetyClassesTable from "../components/SafetyClassesTable";
-import { Users, UserCheck, Siren } from "lucide-react";
+import { Users, UserCheck, Siren, MapPin } from "lucide-react";
 
 const COLORS = ["#001D49", "#FF5F15", "#F1F5F9", "#64748B"];
 
@@ -41,10 +41,18 @@ export function DashboardUI({
           change="+2"
           changeType="positive"
         />
-        <StatCard
+        {/* <StatCard
           title="Total Emergencies"
           value={stats.emergencies}
           icon={Siren}
+          href="#"
+          change="-1"
+          changeType="negative"
+        /> */}
+         <StatCard
+          title="Total Locations"
+          value={stats.locations}
+          icon={MapPin}
           href="#"
           change="-1"
           changeType="negative"

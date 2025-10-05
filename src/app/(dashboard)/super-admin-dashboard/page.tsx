@@ -24,13 +24,15 @@ async function getDashboardData() {
       completedDrillsRes,
       pendingDrillsRes,
       workshopsRes,
+      locationsRes
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "employee").eq("is_volunteer", true),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "employee").eq("is_volunteer", true),
       Promise.resolve({ count: 0 }), // Static value for incidents
-      supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "completed"),
-      supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "completed"),
+      supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
+      supabase.from('locations').select('*', { count: 'exact', head: true })
     ]);
     // console.log("Workshops Data:", workshopsRes);
     // console.log("Test Data:", workshopsRes);
@@ -42,13 +44,14 @@ async function getDashboardData() {
     const processedWorkshops = Object.entries(workshopTypes).map(
       ([name, value]) => ({ name, value })
     );
-
+    console.log("NEHA", locationsRes);
     // Return all processed data
     return {
       stats: {
         employees: employeeRes.count ?? 0,
         volunteers: volunteerRes.count ?? 0,
         emergencies: emergencyRes.count ?? 0,
+        locations: locationsRes.count ?? 0,
       },
       chartData: {
         drills: [
@@ -71,7 +74,7 @@ async function getDashboardData() {
     console.error("Failed to fetch dashboard data:", error);
     // Return empty data on error
     return {
-      stats: { employees: 0, volunteers: 0, emergencies: 0 },
+      stats: { employees: 0, volunteers: 0, emergencies: 0, locations: 0 },
       chartData: { drills: [], workshops: [], compliance: [] },
     };
   }
