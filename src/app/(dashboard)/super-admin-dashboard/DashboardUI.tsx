@@ -29,7 +29,7 @@ export function DashboardUI({
           title="Total Employees"
           value={stats.employees}
           icon={Users}
-          href="/dashboard/employees"
+          href="#"
           change="+15"
           changeType="positive"
         />
@@ -45,7 +45,7 @@ export function DashboardUI({
           title="Total Emergencies"
           value={stats.emergencies}
           icon={Siren}
-          href="/dashboard/emergencies"
+          href="#"
           change="-1"
           changeType="negative"
         />
