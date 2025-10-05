@@ -25,18 +25,18 @@ async function getDashboardData() {
       pendingDrillsRes,
       workshopsRes,
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact" }),
-      supabase.from("profiles").select("*", { count: "exact" }).eq("role", "employee").eq("is_volunteer", true),
-      0, // supabase.from("incidents").select("*", { count: "exact" }),
-      supabase.from("drills").select("*", { count: "exact" }).eq("status", "completed"),
-      supabase.from("drills").select("*", { count: "exact" }).eq("status", "pending"),
-      supabase.from("scheduled_classes").select("*", { count: "exact" }), // Remove head: true to get actual data
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "employee").eq("is_volunteer", true),
+      Promise.resolve({ count: 0 }), // Static value for incidents
+      supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "completed"),
+      supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
     ]);
-    console.log("Workshops Data:", employeeRes);
+    console.log("Workshops Data:", workshopsRes);
     // Process chart data
     const workshopTypes: { [key: string]: number } = {};
-    (workshopsRes.data ?? []).forEach((doc: { type: string }) => {
-      workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
+    (workshopsRes.data ?? []).forEach((doc: { status: string }) => {
+      workshopTypes[doc.status] = (workshopTypes[doc.status] || 0) + 1;
     });
     const processedWorkshops = Object.entries(workshopTypes).map(
       ([name, value]) => ({ name, value })
