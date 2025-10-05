@@ -32,7 +32,8 @@ async function getDashboardData() {
       supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
     ]);
-    console.log("Workshops Data:", workshopsRes);
+    // console.log("Workshops Data:", workshopsRes);
+    console.log("Test Data:", workshopsRes);
     // Process chart data
     const workshopTypes: { [key: string]: number } = {};
     (workshopsRes.data ?? []).forEach((doc: { status: string }) => {
