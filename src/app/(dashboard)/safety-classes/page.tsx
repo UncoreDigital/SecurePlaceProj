@@ -59,11 +59,6 @@ const getSafetyClasses = cache(async ({
       .order("created_at", { ascending: false })
       .limit(50); // Add reasonable limit to prevent large data loads
 
-    // Apply firm filter if needed
-    if (firmId) {
-      query = query.eq("firm_id", firmId);
-    }
-
     const { data: safetyClasses, error } = await query;
 
     if (error) {
