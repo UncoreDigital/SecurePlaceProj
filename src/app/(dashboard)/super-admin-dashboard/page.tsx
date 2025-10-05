@@ -30,7 +30,7 @@ async function getDashboardData() {
       supabase.from("incidents").select("*", { count: "exact", head: true }),
       supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "completed"),
       supabase.from("drills").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("trainings").select("*"),
+      supabase.from("trainings").select("type, status", { count: "exact" }), // Remove head: true to get actual data
     ]);
     console.log("Workshops Data:", employeeRes);
     // Process chart data
