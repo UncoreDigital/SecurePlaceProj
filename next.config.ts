@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // you can increase to 5mb, 10mb, etc
+    },
+  },
 };
 
 export default nextConfig;
