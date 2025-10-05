@@ -53,11 +53,6 @@ export default function ScheduledClassesPage() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
-
-  // Refs to track component state
-  const mountedRef = useRef(true);
-  const lastPathnameRef = useRef<string>('');
-  const fetchCountRef = useRef(0);
   const handleApprove = async (id: string) => {
     setApprovingId(id);
     const supabase = createBrowserSupabase();
@@ -79,114 +74,109 @@ export default function ScheduledClassesPage() {
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const fetchScheduledClasses = useCallback(async (force = false) => {
-    if (!mountedRef.current) return;
-
-    const now = Date.now();
-    const fetchId = ++fetchCountRef.current;
-
+  const fetchScheduledClasses = useCallback(async () => {
+    console.log('🔄 Starting fetchScheduledClasses...');
     setLoading(true);
 
     try {
       const supabase = createBrowserSupabase();
-      const { data, error } = await supabase
+      console.log('📡 Making Supabase query...');
+      
+      let { data, error }: any = await supabase
         .from("scheduled_classes")
         .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
         .order("start_time", { ascending: false });
 
-      // if (!mountedRef.current) return;
-
       if (error) {
-        console.error("Failed to fetch scheduled classes:", error);
+        console.error("❌ Failed to fetch scheduled classes:", error);
         setScheduledClasses([]);
-      } else {
-        // Format data for UI
-        const formatted = (data || []).map((cls: any) => ({
-          id: cls.id,
-          title: cls.safety_class?.title ?? "Untitled",
-          date: cls.start_time
-            ? new Date(cls.start_time).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
+        return;
+      }
+
+      console.log('✅ Raw data received:', data?.length, 'classes');
+
+      // Format data for UI
+      data = user?.firmId ? data?.filter((cls: any) => cls?.firm_id === user?.firmId) : data;
+      const formatted = (data || []).map((cls: any) => ({
+        id: cls.id,
+        title: cls.safety_class?.title ?? "Untitled",
+        date: cls.start_time
+          ? new Date(cls.start_time).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })
+          : "",
+        time:
+          cls.start_time && cls.end_time
+            ? `${new Date(cls.start_time).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })} to ${new Date(cls.end_time).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })}`
             : "",
-          time:
-            cls.start_time && cls.end_time
-              ? `${new Date(cls.start_time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })} to ${new Date(cls.end_time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-              : "",
-          status: cls.status ?? "pending",
-          type: cls.type ?? "In-Person",
-          thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
-        }));
-        setScheduledClasses(formatted);
-        setLastFetchTime(now);
-      }
+        status: cls.status ?? "pending",
+        type: cls.type ?? "In-Person",
+        thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
+      }));
+      
+      console.log('📊 Formatted data:', formatted.length, 'classes');
+      setScheduledClasses(formatted);
+      
     } catch (err) {
-      console.error(`❌ Fetch #${fetchId} - Error:`, err);
-      if (mountedRef.current) {
-        setScheduledClasses([]);
-      }
+      console.error("❌ Error in fetchScheduledClasses:", err);
+      setScheduledClasses([]);
     } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
+      console.log('✅ fetchScheduledClasses completed');
     }
   }, []);
 
-  // Cleanup on unmount
-  // useEffect(() => {
-  //   return () => {
-  //     mountedRef.current = false;
-  //   };
-  // }, []);
-
   // Main effect - fetch data when user is authenticated
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchScheduledClasses(true);
-    };
-    fetchData();
-  }, [loading, user]);
+    if (!loading && user) {
+      console.log('👤 User authenticated, fetching scheduled classes...');
+      fetchScheduledClasses();
+    }
+  }, [loading, user, fetchScheduledClasses]);
 
   // Navigation effect - refetch when returning to this page
   useEffect(() => {
-    fetchScheduledClasses(true);
-
-  }, [pathname]);
+    if (!loading && user && pathname.includes('scheduled-classes')) {
+      console.log('🧭 Navigation to scheduled-classes, fetching data...');
+      fetchScheduledClasses();
+    }
+  }, [pathname, loading, user, fetchScheduledClasses]);
 
   // Visibility change effect - refetch when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-
       if (!document.hidden && !loading && user && pathname.includes('scheduled-classes')) {
-        fetchScheduledClasses(true);
+        console.log('👁️ Tab visible, fetching data...');
+        fetchScheduledClasses();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [loading, user, pathname, fetchScheduledClasses]);
 
   // Window focus effect - additional safety net
   useEffect(() => {
     const handleFocus = () => {
       if (!loading && user && pathname.includes('scheduled-classes')) {
-        fetchScheduledClasses(true);
+        console.log('🎯 Window focused, fetching data...');
+        fetchScheduledClasses();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [loading, user, pathname, fetchScheduledClasses]);
 
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
@@ -243,7 +233,8 @@ export default function ScheduledClassesPage() {
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              fetchScheduledClasses(true);
+              console.log('🔄 Manual refresh clicked');
+              fetchScheduledClasses();
             }}
             variant="outline"
             className="bg-blue-50 hover:bg-blue-100"
