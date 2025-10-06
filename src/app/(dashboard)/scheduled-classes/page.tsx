@@ -1,109 +1,70 @@
-"use client";
-import Image from "next/image";
-import { useEffect, useState, useCallback, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Calendar, Trash2 } from "lucide-react";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+// // import SafetyClassesClient from "./SafetyClasses.client";
+import { revalidatePath } from "next/cache";
+// import { SafetyClass } from "./types";
+import { cache } from "react";
+import ScheduledClassesClient from "./ScheduledClasses.client";
 import { useUser } from "@/hooks/useUser";
 
-const statusBtnStyles: Record<string, string> = {
-  approved: "bg-emerald-500 text-white hover:bg-emerald-600",
-  pending: "bg-yellow-400 text-white hover:bg-yellow-500",
-};
+// Force dynamic rendering for this page since it uses auth
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-const statusLabelStyles: Record<string, string> = {
-  approved: "text-emerald-600",
-  pending: "text-yellow-500",
-};
+async function requireAdmin() {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/");
 
-function CancelModal({
-  open,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
-      <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-lg min-w-[350px]">
-        <Trash2 className="w-16 h-16 text-brand-orange mb-4" />
-        <div className="text-lg font-medium mb-6 text-center">
-          Are you sure cancel this classes
-        </div>
-        <div className="flex gap-4">
-          <Button variant="outline" className="min-w-[70px]" onClick={onClose}>
-            No
-          </Button>
-          <Button className="bg-brand-orange min-w-[70px]" onClick={onConfirm}>
-            Yes
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, firm_id")
+    .eq("id", user.id)
+    .single();
+
+  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
+  return {
+    role: me!.role as "super_admin" | "firm_admin",
+    firmId: me!.firm_id as string | null,
+  };
 }
 
-export default function ScheduledClassesPage() {
-  const { user, loading } = useUser();
-  const pathname = usePathname();
-  const router = useRouter();
-  const isSuperAdmin = user?.role === "super_admin";
+// Cache the function to avoid repeated database calls
+const getScheduledClasses = cache(async ({
+  firmId,
+}: {
+  firmId?: string | null;
+}): Promise<any[]> => {
+  const supabase = await createServerSupabase();
 
-  const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
-  const [loadingClasses, setLoading] = useState(true);
-  const [cancelId, setCancelId] = useState<string | null>(null);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
-  const handleApprove = async (id: string) => {
-    setApprovingId(id);
-    const supabase = createBrowserSupabase();
-    const { error } = await supabase
+  const {
+    data: { user },
+  }: any = await supabase.auth.getUser();
+  if (!user) redirect("/");
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("firm_id, full_name, role")
+    .eq("id", user.id)
+    .single();
+  console.log('👤 Current user role:', me);
+  try {
+    // Optimized query with specific columns and better indexing
+    // .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
+    let query = supabase
       .from("scheduled_classes")
-      .update({ status: "approved" })
-      .eq("id", id);
-    if (error) {
-      console.error("Failed to approve class:", error);
-    } else {
-      setScheduledClasses((prev) =>
-        prev.map((cls) =>
-          cls.id === id ? { ...cls, status: "approved" } : cls
-        )
-      );
-    }
-    setApprovingId(null);
-  };
+      .select("*, safety_class: safety_class_id(title), firms:firm_id ( name )")
+      .order("start_time", { ascending: false }); // Add reasonable limit to prevent large data loads
 
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+    let { data: scheduledClasses, error }: any = await query;
 
-  const fetchScheduledClasses = useCallback(async () => {
-    console.log('🔄 Starting fetchScheduledClasses...');
-    setLoading(true);
-
-    try {
-      const supabase = createBrowserSupabase();
-      console.log('📡 Making Supabase query...');
-      
-      let { data, error }: any = await supabase
-        .from("scheduled_classes")
-        .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
-        .order("start_time", { ascending: false });
-
-      if (error) {
-        console.error("❌ Failed to fetch scheduled classes:", error);
-        setScheduledClasses([]);
-        return;
-      }
-
-      console.log('✅ Raw data received:', data?.length, 'classes');
-
-      // Format data for UI
-      data = user?.firmId ? data?.filter((cls: any) => cls?.firm_id === user?.firmId) : data;
-      const formatted = (data || []).map((cls: any) => ({
-        id: cls.id,
+    // Format data for UI
+    scheduledClasses = user?.firm_id ? scheduledClasses?.filter((cls: any) => cls?.firm_id === user?.firm_id) : scheduledClasses;
+    const formatted = (scheduledClasses || []).map((cls: any) => ({
+      id: cls.id,
         title: cls.safety_class?.title ?? "Untitled",
         date: cls.start_time
           ? new Date(cls.start_time).toLocaleDateString("en-GB", {
@@ -127,221 +88,120 @@ export default function ScheduledClassesPage() {
         status: cls.status ?? "pending",
         type: cls.type ?? "In-Person",
         thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
+        firm: cls.firms?.name || "-",
+        currentUserRole: me?.role || "employee",
       }));
-      
-      console.log('📊 Formatted data:', formatted.length, 'classes');
-      setScheduledClasses(formatted);
-      
-    } catch (err) {
-      console.error("❌ Error in fetchScheduledClasses:", err);
-      setScheduledClasses([]);
-    } finally {
-      setLoading(false);
-      console.log('✅ fetchScheduledClasses completed');
-    }
-  }, []);
-
-  // Main effect - fetch data when user is authenticated
-  useEffect(() => {
-    if (!loading && user) {
-      console.log('👤 User authenticated, fetching scheduled classes...');
-      fetchScheduledClasses();
-    }
-  }, [loading, user, fetchScheduledClasses]);
-
-  // Navigation effect - refetch when returning to this page
-  useEffect(() => {
-    if (!loading && user && pathname.includes('scheduled-classes')) {
-      console.log('🧭 Navigation to scheduled-classes, fetching data...');
-      fetchScheduledClasses();
-    }
-  }, [pathname, loading, user, fetchScheduledClasses]);
-
-  // Visibility change effect - refetch when tab becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && !loading && user && pathname.includes('scheduled-classes')) {
-        console.log('👁️ Tab visible, fetching data...');
-        fetchScheduledClasses();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [loading, user, pathname, fetchScheduledClasses]);
-
-  // Window focus effect - additional safety net
-  useEffect(() => {
-    const handleFocus = () => {
-      if (!loading && user && pathname.includes('scheduled-classes')) {
-        console.log('🎯 Window focused, fetching data...');
-        fetchScheduledClasses();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [loading, user, pathname, fetchScheduledClasses]);
-
-  const handleCancel = (id: string) => setCancelId(id);
-  const handleClose = () => setCancelId(null);
-
-  const handleConfirm = async () => {
-    if (!cancelId) return;
-    setCancellingId(cancelId);
-    const supabase = createBrowserSupabase();
-    const { error } = await supabase
-      .from("scheduled_classes")
-      .update({ status: "cancelled" })
-      .eq("id", cancelId);
+      scheduledClasses = formatted
     if (error) {
-      console.error("Failed to cancel class:", error);
-    } else {
-      setScheduledClasses((prev) =>
-        prev.map((cls) =>
-          cls.id === cancelId ? { ...cls, status: "cancelled" } : cls
-        )
-      );
+      console.error("Error fetching Scheduled classes:", error);
+      throw new Error(`Failed to fetch Scheduled classes: ${error.message}`);
     }
-    setCancellingId(null);
-    setCancelId(null);
-  };
 
-  // Show loading state while user authentication is loading or data is being fetched
-  if (loading || loadingClasses) {
+    console.log(`✅ Fetched ${scheduledClasses?.length || 0} Scheduled classes`);
+    return scheduledClasses || [];
+  } catch (error) {
+    console.error("Unexpected error in getScheduledClasses:", error);
+    return [];
+  }
+});
+
+// Server action to create a new safety class
+// export async function createSafetyClass(formData: FormData) {
+//   "use server";
+//   const me = await requireAdmin();
+
+//   // For super admins, firmId can be null
+//   const firmId = me.firmId;
+
+//   const title = String(formData.get("title") || "").trim();
+//   const description = String(formData.get("description") || "").trim();
+//   const videoUrl = String(formData.get("videoUrl") || "").trim();
+//   const duration = parseInt(String(formData.get("duration") || "0"));
+//   const isRequired = String(formData.get("isRequired") || "") === "on";
+//   const thumbnailUrl = String(formData.get("thumbnailUrl") || "").trim();
+
+//   if (!title || !description || !videoUrl || duration <= 0) {
+//     throw new Error("Please fill in all required fields");
+//   }
+
+//   const admin = createClient(
+//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+//     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+//     { auth: { autoRefreshToken: false, persistSession: false } }
+//   );
+//   console.log({ thumbnailUrl });
+//   const { error } = await admin.from("safety_classes").insert({
+//     firm_id: firmId ?? null, // Allow null
+//     title,
+//     description,
+//     video_url: videoUrl,
+//     duration_minutes: duration,
+//     is_required: isRequired,
+//     thumbnail_url: thumbnailUrl || null,
+//   });
+
+//   if (error) {
+//     console.error("Error creating safety class:", error);
+//     throw new Error("Failed to create safety class");
+//   }
+
+//   revalidatePath("/safety-classes");
+// }
+
+export default async function ScheduledClassesPage({
+  searchParams,
+}: {
+  searchParams: { category?: string; type?: string };
+}) {
+  const startTime = Date.now();
+  console.log('🚀 ScheduledClassesPage: Starting render');
+
+  try {
+    // Run auth check
+    const me = await requireAdmin();
+
+    const category = searchParams?.category ?? "all";
+    const type = searchParams?.type ?? "in-person";
+
+    console.log('👤 Auth check completed:', { role: me.role, firmId: me.firmId });
+
+    // Fetch scheduled classes with timeout to prevent hanging
+    const scheduledClassesPromise = Promise.race([
+      getScheduledClasses({ firmId: me.firmId }),
+      // 10 second timeout
+      new Promise<any[]>((_, reject) =>
+        setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
+      )
+    ]);
+
+    const scheduledClasses = await scheduledClassesPromise;
+
+    const endTime = Date.now();
+    console.log(`⚡ ScheduledClassesPage: Completed in ${endTime - startTime}ms with ${scheduledClasses.length} classes`);
+
     return (
-      <div>
-        <nav className="text-sm text-gray-500 mb-2">Home &gt; Requested Classes</nav>
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-brand-blue">Requested Classes</h1>
-          <div className="text-sm text-gray-500">Loading...</div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl shadow p-4 animate-pulse">
-              <div className="w-full h-40 bg-gray-200 rounded-lg mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
+      <div className="container mx-auto">
+        <ScheduledClassesClient
+          scheduledClasses={scheduledClasses}
+          initialCategory={category}
+          initialType={type}
+          isSuperAdmin={me.role === "super_admin"}
+        />
+      </div>
+    );
+  } catch (error) {
+    console.error('❌ ScheduledClassesPage: Error:', error);
+
+    // Return a fallback UI on error without event handlers
+    return (
+      <div className="container mx-auto p-6">
+        {/* <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-red-800 font-semibold mb-2">Unable to load safety classes</h2>
+          <p className="text-red-600">
+            We're experiencing technical difficulties. Please refresh the page manually.
+          </p>
+        </div> */}
       </div>
     );
   }
-
-  return (
-    <div>
-      <nav className="text-sm text-gray-500 mb-2">Home &gt; Scheduled Classes</nav>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-brand-blue">Scheduled Classes</h1>
-        <div className="flex gap-2">
-          {/* <Button
-            onClick={() => {
-              console.log('🔄 Manual refresh clicked');
-              fetchScheduledClasses();
-            }}
-            variant="outline"
-            className="bg-blue-50 hover:bg-blue-100"
-            disabled={loadingClasses}
-          >
-            {loadingClasses ? 'Refreshing...' : 'Refresh Data'}
-          </Button> */}
-          <Button
-            onClick={async () => {
-              const supabase = createBrowserSupabase();
-              const { data, error, count } = await supabase
-                .from("scheduled_classes")
-                .select("*", { count: 'exact' });
-            }}
-            variant="outline"
-            className="bg-green-50 hover:bg-green-100"
-          >
-            Test DB
-          </Button>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {scheduledClasses.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <p className="text-gray-500 text-lg">No scheduled classes found.</p>
-          </div>
-        ) : (
-          scheduledClasses.map((cls) => (
-            <div
-              key={cls.id}
-              className="bg-white rounded-xl shadow p-4 flex flex-col gap-3"
-            >
-              <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-2 h-40">
-                <Image
-                  src={cls.thumbnailUrl}
-                  alt={cls.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                <span className="absolute top-3 right-3 bg-brand-orange text-white text-xs px-3 py-1 rounded font-medium">
-                  {cls.type}
-                </span>
-              </div>
-              <div className="font-semibold text-lg mb-1 line-clamp-2">{cls.title}</div>
-              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                <Calendar className="w-4 h-4" />
-                <span>{cls.date}</span>
-                <span className="mx-2">|</span>
-                <span>{cls.time}</span>
-              </div>
-              {isSuperAdmin && (
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    className={`flex-1 ${statusBtnStyles[cls.status]}`}
-                    disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                    onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
-                  >
-                    {approvingId === cls.id
-                      ? "Approving..."
-                      : cls.status === "approved"
-                        ? "Approved"
-                        : cls.status === "pending"
-                          ? "Pending"
-                          : cls.status === "cancelled"
-                            ? "Cancelled"
-                            : ""}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-gray-300 text-gray-700"
-                    disabled={cancellingId === cls.id || cls.status === "cancelled"}
-                    onClick={() => handleCancel(cls.id)}
-                  >
-                    {cancellingId === cls.id ? "Cancelling..." : "Cancel"}
-                  </Button>
-                </div>
-              )}
-              {!isSuperAdmin && (
-                <label
-                    className={`flex-1 ${statusLabelStyles[cls.status]}`} style={{fontWeight: '600'}}
-                  >
-                    {approvingId === cls.id
-                      ? "Approving..."
-                      : cls.status === "approved"
-                        ? "Approved"
-                        : cls.status === "pending"
-                          ? "Pending"
-                          : cls.status === "cancelled"
-                            ? "Cancelled"
-                            : ""}
-                  </label>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-      <CancelModal
-        open={!!cancelId}
-        onClose={handleClose}
-        onConfirm={handleConfirm}
-      />
-    </div>
-  );
 }
