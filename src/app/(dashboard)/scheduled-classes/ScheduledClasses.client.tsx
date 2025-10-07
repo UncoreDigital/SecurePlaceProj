@@ -78,6 +78,7 @@ export default function ScheduledClassesClient({
       .from("scheduled_classes")
       .update({ status: "approved" })
       .eq("id", id);
+    console.log({ error });
     if (error) {
       console.error("Failed to approve class:", error);
     } else {

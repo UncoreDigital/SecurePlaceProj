@@ -13,9 +13,10 @@ interface SafetyClassDetailsProps {
   safetyClass: SafetyClass;
   isSuperAdmin: boolean;
   currentFirmId: string;
+  locations: Location[];
 }
 
-export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentFirmId }: SafetyClassDetailsProps) {
+export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentFirmId, locations }: SafetyClassDetailsProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -336,6 +337,7 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
           isRemote: safetyClass?.isRemote ?? false,
         }}
         firmId={currentFirmId}
+        locations={locations}
       />
     </div>
   );

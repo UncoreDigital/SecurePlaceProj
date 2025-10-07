@@ -17,6 +17,7 @@ interface SchedulingModalProps {
     isRemote: boolean;
   };
   firmId: string;
+  locations: any[];
 }
 
 interface TimeSlot {
@@ -31,12 +32,12 @@ interface Location {
   address: string;
 }
 
-export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }: SchedulingModalProps) {
+export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, locations }: SchedulingModalProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locationList, setLocationList] = useState<Location[]>(locations || []);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const fetchedRef = useRef(false);
 
@@ -51,14 +52,14 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
       .eq("firm_id", firmId)
       .eq("is_active", true)
       .then(({ data, error }) => {
-        if (!error) setLocations(data || []);
+        if (!error) setLocationList(data || []);
         setLoadingLocations(false);
       });
   }
   // Reset fetchedRef when modal closes
   if (!isOpen && fetchedRef.current) {
     fetchedRef.current = false;
-    setLocations([]);
+    setLocationList([]);
     setSelectedLocation("");
   }
 
@@ -126,7 +127,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
   };
 
   const getSelectedLocationName = () => {
-    const location = locations.find(l => l.id === selectedLocation);
+    const location = locationList.find(l => l.id === selectedLocation);
     return location ? location.name : '';
   };
 
@@ -254,7 +255,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId }
                     {loadingLocations ? (
                       <option disabled>Loading...</option>
                     ) : (
-                      locations.map((location) => (
+                      locationList.map((location) => (
                         <option key={location.id} value={location.id}>
                           {location.name}
                         </option>

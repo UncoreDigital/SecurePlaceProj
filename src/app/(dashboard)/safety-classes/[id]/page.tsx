@@ -25,7 +25,7 @@ async function requireAdmin() {
 
 async function getSafetyClass(id: string, firmId: string | null): Promise<SafetyClass | null> {
   const supabase = await createServerSupabase();
-  
+
   let query = supabase
     .from("safety_classes")
     .select("*")
@@ -46,6 +46,31 @@ async function getSafetyClass(id: string, firmId: string | null): Promise<Safety
   return safetyClass;
 }
 
+async function getFirmLocations(id: string, firmId: string | null): Promise<any[] | null> {
+  const supabase = await createServerSupabase();
+  //Get locations according to logged in user's firm
+  let query = supabase
+    .from("locations")
+    .select("id, name, address")
+    .eq("firm_id", firmId)
+    .eq("is_active", true)
+    .limit(20);
+
+  // if (firmId) {  
+  //   query = query.eq("firm_id", firmId);
+  // }
+
+  const { data: locations, error } = await query;
+  
+  console.log("Fetched locations for firm:", locations);
+  if (error) {
+    console.error("Error fetching locations:", error);
+    return null;
+  }
+
+  return locations;
+}
+
 export default async function SafetyClassPage({
   params,
 }: {
@@ -55,6 +80,7 @@ export default async function SafetyClassPage({
   const { id } = await params;
 
   const safetyClass = await getSafetyClass(id, me.firmId);
+  const locations = await getFirmLocations(id, me.firmId);
   console.log("Fetched safety class:", safetyClass);
   if (!safetyClass) {
     redirect("/safety-classes");
@@ -66,6 +92,7 @@ export default async function SafetyClassPage({
         safetyClass={safetyClass}
         isSuperAdmin={me.role === "super_admin"}
         currentFirmId={me.firmId || ""}
+        locations={locations ?? []}
       />
     </div>
   );
