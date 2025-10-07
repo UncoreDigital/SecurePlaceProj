@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, HelpCircle, Menu, X, Mail, Phone } from "lucide-react";
+import { Bell, Headphones, Menu, X, Mail, Phone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/useUser"; // ⬅️ uses Supabase (no Appwrite)
@@ -49,7 +49,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
           title="Support"
           onClick={() => setShowSupportModal(true)}
         >
-          <HelpCircle className="h-6 w-6" />
+          <Headphones className="h-6 w-6" />
         </button>
 
         <div className="flex items-center">
