@@ -87,10 +87,30 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   };
 
   const isDateAvailable = (date: Date) => {
-    // Mock logic - some dates are available (orange), others are not
-    const day = date.getDate();
-    const availableDays = [1, 2, 6, 8, 10, 13, 15, 16, 17, 20, 22, 24, 27, 29, 31];
-    return availableDays.includes(day);
+    // Only allow future dates (today and onwards)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to beginning of day for comparison
+    
+    const dateToCheck = new Date(date);
+    dateToCheck.setHours(0, 0, 0, 0);
+    
+    // Check if date is in the past
+    if (dateToCheck < today) {
+      return false;
+    }
+    
+    // Business logic restrictions
+    const dayOfWeek = dateToCheck.getDay();
+    
+    // Disable Sundays (Sunday = 0)
+    if (dayOfWeek === 0) {
+      return false;
+    }
+    
+    // Optional: Add holiday restrictions here
+    // Optional: Check for existing scheduled classes conflicts here
+    
+    return true; // Available for scheduling
   };
 
   const isSelectedDate = (date: Date) => {
