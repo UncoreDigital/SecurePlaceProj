@@ -56,47 +56,48 @@ const getScheduledClasses = cache(async ({
     // .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
     let query = supabase
       .from("scheduled_classes")
-      .select("*, safety_class: safety_class_id(title), firms:firm_id ( name )")
+      .select("*, safety_class: safety_class_id(title, id), firms:firm_id ( name )")
       .order("start_time", { ascending: false }); // Add reasonable limit to prevent large data loads
 
     let { data: scheduledClasses, error }: any = await query;
     // Format data for UI
     scheduledClasses = me?.firm_id ? scheduledClasses?.filter((cls: any) => cls?.firm_id === me?.firm_id) : scheduledClasses;
+    console.log(scheduledClasses, `✅ Fetched Scheduled classes`);
     const formatted = (scheduledClasses || []).map((cls: any) => ({
       id: cls.id,
-        title: cls.safety_class?.title ?? "Untitled",
-        date: cls.start_time
-          ? new Date(cls.start_time).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })
+      title: cls.safety_class?.title ?? "Untitled",
+      date: cls.start_time
+        ? new Date(cls.start_time).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+        : "",
+      time:
+        cls.start_time && cls.end_time
+          ? `${new Date(cls.start_time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })} to ${new Date(cls.end_time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })}`
           : "",
-        time:
-          cls.start_time && cls.end_time
-            ? `${new Date(cls.start_time).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })} to ${new Date(cls.end_time).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}`
-            : "",
-        status: cls.status ?? "pending",
-        type: cls.type ?? "In-Person",
-        thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
-        firm: cls.firms?.name || "-",
-        currentUserRole: me?.role || "employee",
-      }));
-      scheduledClasses = formatted
+      status: cls.status ?? "pending",
+      type: cls.type ?? "In-Person",
+      thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
+      firm: cls.firms?.name || "-",
+      currentUserRole: me?.role || "employee",
+      safetyClassId: cls?.safety_class?.id || null,
+    }));
+    scheduledClasses = formatted
     if (error) {
       console.error("Error fetching Scheduled classes:", error);
       throw new Error(`Failed to fetch Scheduled classes: ${error.message}`);
     }
 
-    console.log(`✅ Fetched ${scheduledClasses?.length || 0} Scheduled classes`);
     return scheduledClasses || [];
   } catch (error) {
     console.error("Unexpected error in getScheduledClasses:", error);
@@ -107,10 +108,10 @@ const getScheduledClasses = cache(async ({
 // Server action to approve a scheduled class
 export async function approveScheduledClass(scheduledClassId: string) {
   "use server";
-  
+
   try {
     const me = await requireAdmin();
-    
+
     // Use service role key to bypass RLS for admin operations
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -143,7 +144,7 @@ export async function approveScheduledClass(scheduledClassId: string) {
     // Update the status to approved
     const { error: updateError } = await admin
       .from("scheduled_classes")
-      .update({ 
+      .update({
         status: "approved",
         updated_at: new Date().toISOString()
       })
@@ -155,10 +156,10 @@ export async function approveScheduledClass(scheduledClassId: string) {
     }
 
     console.log('✅ Successfully approved scheduled class:', scheduledClassId);
-    
+
     // Revalidate the page to show updated data
     revalidatePath("/scheduled-classes");
-    
+
     return { success: true };
   } catch (error) {
     console.error("Server action error:", error);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter, Calendar } from "lucide-react";
+import { Play, Clock, Users, Filter, Calendar, Edit, X, Check, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -193,8 +193,7 @@ export default function ScheduledClassesClient({
                         <th className="px-4 py-2 text-left font-semibold">Date</th>
                         <th className="px-4 py-2 text-left font-semibold">Time</th>
                         <th className="px-4 py-2 text-left font-semibold">Status</th>
-                        {/* <th className="px-4 py-2 text-left font-semibold">Active</th> */}
-                        {/* <th className="px-4 py-2 text-center font-semibold">Actions</th> */}
+                        <th className="px-4 py-2 text-left font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -213,7 +212,7 @@ export default function ScheduledClassesClient({
                           <td className="gap-2 mt-2">
                             <Button
                               className={`flex-1 ${statusBtnStyles[cls.status]}`} style={{ padding: '0px 9px' }}
-                              disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
+                              // disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
                               onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
                             >
                               {approvingId === cls.id
@@ -236,34 +235,51 @@ export default function ScheduledClassesClient({
                                 {location.is_active ? 'Active' : 'Inactive'}
                               </span>
                             </td> */}
-                          {/* <td className="px-4 py-2">
-                          <div className="flex gap-2 justify-center">
-                            {user.role === "firm_admin" ? (
+                          <td className="px-4 py-2">
+                          <div className="flex gap-2">
+                            {/* View button - available for all users */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push(`/safety-classes/${cls?.safetyClassId}`)}
+                              className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                              title="View Class Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            
+                            {cls.currentUserRole === "super_admin" && cls.status === "pending" ? (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleEdit(location)}
-                                  className="h-8 w-8 p-0"
-                                  title="Edit Location"
+                                  onClick={() => handleApprove(cls.id)}
+                                  disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Edit Class"                                  
                                 >
-                                  <Edit3 className="h-4 w-4" />
+                                  {approvingId === cls.id ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                  ) : (
+                                    <Check className="h-5 w-5 stroke-[2.5]" style={{ color: "#00bc7d" }} />
+                                  )}
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleDelete(location)}
+                                  onClick={() => handleCancel(cls.id)}
                                   className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  title="Delete Location"
+                                  title="Cancel Class"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <X className="h-5 w-5 stroke-[2.5]" />
                                 </Button>
                               </>
                             ) : (
-                              <span className="text-gray-500 text-sm">View Only</span>
+                              <></>
+                              // <span className="text-gray-500 text-sm">View Only</span>
                             )}
                           </div>
-                        </td> */}
+                        </td>
                         </tr>
                       ))}
                     </tbody>
