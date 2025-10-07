@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Location } from "./columns";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { supabase } from "@/lib/supabaseClient";
 
 interface EditLocationDialogProps {
   location: Location;
@@ -43,8 +43,6 @@ export function EditLocationDialog({
     };
 
     try {
-      const supabase = createBrowserSupabase();
-
       const { error } = await supabase
         .from('locations')
         .update(data)

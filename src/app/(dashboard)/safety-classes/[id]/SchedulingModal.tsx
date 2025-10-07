@@ -5,7 +5,7 @@ import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { supabase } from "@/lib/supabaseClient";
 
 interface SchedulingModalProps {
   isOpen: boolean;
@@ -45,7 +45,6 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   if (isOpen && firmId && !fetchedRef.current) {
     fetchedRef.current = true;
     setLoadingLocations(true);
-    const supabase = createBrowserSupabase();
     supabase
       .from("locations")
       .select("id, name, address")
@@ -171,8 +170,6 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
       const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
       const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
 
-      const supabase = createBrowserSupabase();
-    
       const { error } = await supabase
         .from("scheduled_classes") // <-- your table name
         .insert([

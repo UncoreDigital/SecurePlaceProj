@@ -31,7 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EditLocationDialog } from "./edit-location-dialog";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { supabase } from "@/lib/supabaseClient";
 
 interface LocationCardProps {
   location: Location;
@@ -52,8 +52,6 @@ const LocationCard = ({ location, onActionComplete }: LocationCardProps) => {
 
   const handleDelete = async () => {
     try {
-      const supabase = createBrowserSupabase();
-      
       const { error } = await supabase
         .from('locations')
         .delete()

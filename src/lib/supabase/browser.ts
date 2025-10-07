@@ -1,7 +1,9 @@
 "use client";
+
+import { supabase } from "@/lib/supabaseClient";
+
 // Uploads a file to Supabase Storage and returns the public URL
 export async function uploadImageToSupabase(file: File, folder = "thumbnails") {
-  const supabase = createBrowserSupabase();
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
   const filePath = `${folder}/${fileName}`;
