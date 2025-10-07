@@ -60,9 +60,8 @@ const getScheduledClasses = cache(async ({
       .order("start_time", { ascending: false }); // Add reasonable limit to prevent large data loads
 
     let { data: scheduledClasses, error }: any = await query;
-
     // Format data for UI
-    scheduledClasses = user?.firm_id ? scheduledClasses?.filter((cls: any) => cls?.firm_id === user?.firm_id) : scheduledClasses;
+    scheduledClasses = me?.firm_id ? scheduledClasses?.filter((cls: any) => cls?.firm_id === me?.firm_id) : scheduledClasses;
     const formatted = (scheduledClasses || []).map((cls: any) => ({
       id: cls.id,
         title: cls.safety_class?.title ?? "Untitled",
