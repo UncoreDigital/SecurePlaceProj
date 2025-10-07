@@ -105,48 +105,67 @@ const getScheduledClasses = cache(async ({
   }
 });
 
-// Server action to create a new safety class
-// export async function createSafetyClass(formData: FormData) {
-//   "use server";
-//   const me = await requireAdmin();
+// Server action to approve a scheduled class
+export async function approveScheduledClass(scheduledClassId: string) {
+  "use server";
+  
+  try {
+    const me = await requireAdmin();
+    
+    // Use service role key to bypass RLS for admin operations
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
-//   // For super admins, firmId can be null
-//   const firmId = me.firmId;
+    console.log('🔄 Approving scheduled class:', { scheduledClassId, adminRole: me.role, firmId: me.firmId });
 
-//   const title = String(formData.get("title") || "").trim();
-//   const description = String(formData.get("description") || "").trim();
-//   const videoUrl = String(formData.get("videoUrl") || "").trim();
-//   const duration = parseInt(String(formData.get("duration") || "0"));
-//   const isRequired = String(formData.get("isRequired") || "") === "on";
-//   const thumbnailUrl = String(formData.get("thumbnailUrl") || "").trim();
+    // First, check if the scheduled class exists and get its details
+    const { data: scheduledClass, error: fetchError } = await admin
+      .from("scheduled_classes")
+      .select("*, safety_classes!inner(firm_id)")
+      .eq("id", scheduledClassId)
+      .single();
 
-//   if (!title || !description || !videoUrl || duration <= 0) {
-//     throw new Error("Please fill in all required fields");
-//   }
+    if (fetchError) {
+      console.error("Error fetching scheduled class:", fetchError);
+      throw new Error("Scheduled class not found");
+    }
 
-//   const admin = createClient(
-//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-//     { auth: { autoRefreshToken: false, persistSession: false } }
-//   );
-//   console.log({ thumbnailUrl });
-//   const { error } = await admin.from("safety_classes").insert({
-//     firm_id: firmId ?? null, // Allow null
-//     title,
-//     description,
-//     video_url: videoUrl,
-//     duration_minutes: duration,
-//     is_required: isRequired,
-//     thumbnail_url: thumbnailUrl || null,
-//   });
+    // Check permissions - super admins can approve all, firm admins only their firm's classes
+    if (me.role === "firm_admin") {
+      const safetyClassFirmId = scheduledClass.safety_classes?.firm_id;
+      if (safetyClassFirmId !== me.firmId) {
+        throw new Error("You can only approve classes for your firm");
+      }
+    }
 
-//   if (error) {
-//     console.error("Error creating safety class:", error);
-//     throw new Error("Failed to create safety class");
-//   }
+    // Update the status to approved
+    const { error: updateError } = await admin
+      .from("scheduled_classes")
+      .update({ 
+        status: "approved",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", scheduledClassId);
 
-//   revalidatePath("/safety-classes");
-// }
+    if (updateError) {
+      console.error("Error updating scheduled class:", updateError);
+      throw new Error("Failed to approve scheduled class");
+    }
+
+    console.log('✅ Successfully approved scheduled class:', scheduledClassId);
+    
+    // Revalidate the page to show updated data
+    revalidatePath("/scheduled-classes");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Server action error:", error);
+    throw error;
+  }
+}
 
 export default async function ScheduledClassesPage({
   searchParams,
@@ -186,6 +205,7 @@ export default async function ScheduledClassesPage({
           initialCategory={category}
           initialType={type}
           isSuperAdmin={me.role === "super_admin"}
+          approveScheduledClass={approveScheduledClass}
         />
       </div>
     );

@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
 // import AddSafetyClassForm from "./AddSafetyClassForm";
 // import { SafetyClass } from "./types";
 
@@ -48,11 +47,13 @@ export default function ScheduledClassesClient({
   initialCategory,
   initialType,
   isSuperAdmin,
+  approveScheduledClass,
 }: {
   scheduledClasses: any[];
   initialCategory: string;
   initialType: string;
   isSuperAdmin: boolean;
+  approveScheduledClass: (scheduledClassId: string) => Promise<{ success: boolean }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -71,25 +72,23 @@ export default function ScheduledClassesClient({
   const handleCancel = (id: string) => setCancelId(id);
 
   const handleApprove = async (id: string) => {
-    console.log({ id });
+    console.log('🔄 Starting approval process for class ID:', id);
     setApprovingId(id);
-    const supabase = createBrowserSupabase();
-    const { error } = await supabase
-      .from("scheduled_classes")
-      .update({ status: "approved" })
-      .eq("id", id);
-    console.log({ error });
-    if (error) {
-      console.error("Failed to approve class:", error);
-    } else {
-      console.log("Class approved:", id);
-      // setScheduledClasses((prev) =>
-      //   prev.map((cls) =>
-      //     cls.id === id ? { ...cls, status: "approved" } : cls
-      //   )
-      // );
+    setError(null);
+    
+    try {
+      const result = await approveScheduledClass(id);
+      
+      if (result.success) {
+        console.log('✅ Class approved successfully:', id);
+        // The page will be revalidated by the server action, so the UI will update automatically
+      }
+    } catch (error) {
+      console.error('❌ Failed to approve class:', error);
+      setError(error instanceof Error ? error.message : 'Failed to approve class');
+    } finally {
+      setApprovingId(null);
     }
-    setApprovingId(null);
   };
 
   const handleCategoryChange = (newCategory: string) => {
