@@ -1,200 +1,188 @@
 "use client";
+
 import { useState } from "react";
-import { Eye, SlidersHorizontal, MapPin } from "lucide-react";
 
-const data = [
-   {
-    purpose: "Fire Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Earthquake Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Lockdown Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Evacuation Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Shelter-in-Place Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Medical Emergency Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Flood Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-  {
-    purpose: "Bomb Threat Drill",
-    location: "Waterings",
-    volunteer: "John Deo",
-    date: "03/06/2025",
-    time: "09:45 AM",
-  },
-];
+type CertificateData = {
+  recipient: string;
+  title: string;
+  firm: string;
+  date: string;
+  signature: string;
+};
 
-const DRILL_LOCATION = "Laan van Wateringse Veld 1322 2548 CX The Hague";
-const MAP_IMAGE_URL =
-  "https://maps.googleapis.com/maps/api/staticmap?center=Laan+van+Wateringse+Veld+1322+2548+CX+The+Hague&zoom=15&size=350x150&markers=color:red%7C52.0367,4.3007&key=YOUR_GOOGLE_MAPS_API_KEY";
-
-function DrillDetailModal({ open, onClose, drill }: { open: boolean; onClose: () => void; drill: any }) {
-  if (!open || !drill) return null;
+function CertificatePreview({ data }: { data: CertificateData }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
-      <div className="bg-white rounded-xl shadow-lg p-6 w-[400px]">
-        <div className="font-bold text-lg mb-2">{drill.volunteer}</div>
-        <div className="flex justify-between text-sm mb-2">
-          <div>
-            <span className="font-semibold">Drill Date :</span>{" "}
-            <span className="text-[#3E2FB7] font-bold">{drill.date}</span>
+    <div className="w-full bg-white rounded-xl shadow relative overflow-hidden print:shadow-none">
+      {/* Decorative border */}
+      <div className="m-4 border-[3px] border-slate-200 rounded-lg">
+        <div className="m-6 p-8 md:p-12 border border-slate-300 rounded-lg text-center">
+          <p className="uppercase tracking-widest text-xs text-slate-500 mb-2">
+            Certificate of Appreciation
+          </p>
+          <h1 className="text-3xl md:text-4xl font-bold text-brand-blue mb-3">
+            {data.title || "Title of Certification"}
+          </h1>
+          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            This certificate is proudly presented to
+          </p>
+          <div className="mt-4 mb-6">
+            <span className="inline-block text-2xl md:text-3xl font-semibold text-brand-orange">
+              {data.recipient || "{Recipient Name}"}
+            </span>
           </div>
-          <div>
-            <span className="font-semibold">Drill Time :</span>{" "}
-            <span className="text-[#3E2FB7] font-bold">{drill.time}</span>
+
+          {/* Fixed appreciation lines */}
+          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            In appreciation of outstanding participation and successful
+            completion of the safety training program.
+          </p>
+          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed mt-2">
+            Awarded by {data.firm || "{Firm Name}"} for dedication to safety
+            excellence and continuous improvement.
+          </p>
+
+          {/* Footer section with signature and date */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+            <div className="flex flex-col items-center">
+              <div className="w-48 border-b border-slate-400" />
+              <span className="mt-2 text-sm text-slate-500">Signature</span>
+              <span className="mt-1 text-slate-700">
+                {data.signature || "{Signature}"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-48 border-b border-slate-400" />
+              <span className="mt-2 text-sm text-slate-500">Date</span>
+              <span className="mt-1 text-slate-700">{data.date || "DD/MM/YYYY"}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center text-gray-700 text-sm mb-2">
-          <MapPin className="w-4 h-4 mr-1" />
-          {DRILL_LOCATION}
-        </div>
-        <img
-          src={MAP_IMAGE_URL}
-          alt="Map"
-          className="rounded mb-2 border"
-          width={350}
-          height={150}
-        />
-        <hr className="my-2" />
-        <div className="text-sm">
-          <span className="font-semibold">Drill Purpose :</span>{" "}
-          <span className="text-[#3E2FB7] font-bold">{drill.purpose}</span>
-        </div>
-        <div className="flex justify-end mt-4">
-          <button
-            className="px-4 py-1 rounded bg-brand-orange text-white font-medium"
-            onClick={onClose}
-          >
-            Close
-          </button>
+
+          {/* Firm name footer */}
+          <div className="mt-10 text-slate-500 text-sm">
+            {data.firm || "{Firm Name}"}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default function DrillAlertLogPage() {
-  const [selected, setSelected] = useState<any>(null);
+export default function GiveCertificationPage() {
+  const [form, setForm] = useState<CertificateData>({
+    recipient: "",
+    title: "Certificate of Completion",
+    firm: "",
+    date: "",
+    signature: "",
+  });
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const handlePrint = () => {
+    if (typeof window !== "undefined") window.print();
+  };
 
   return (
-    <div>
-      <nav className="text-gray-500 text-sm mb-2 flex items-center gap-2">
+    <div className="space-y-4">
+      {/* Print-only CSS: show only the certificate area when printing */}
+      <style jsx global>{`
+        @media print {
+          /* Hide everything by default */
+          body * { visibility: hidden !important; }
+          /* Only show the certificate area */
+          #certificate-print, #certificate-print * { visibility: visible !important; }
+          /* Position the certificate at the top-left for printing */
+          #certificate-print { position: absolute !important; inset: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; background: white !important; }
+        }
+        @page { size: A4; margin: 16mm; }
+      `}</style>
+      {/* Breadcrumb */}
+      <nav className="text-gray-500 text-sm mb-2 flex items-center gap-2 print:hidden">
         <span>Home</span>
         <span>&gt;</span>
-        <span>Drill Alert Log</span>
+        <span>Give Certification</span>
       </nav>
-      <h1 className="text-2xl font-bold mb-1">Drill Alert Log</h1>
-      <div className="bg-white rounded-xl shadow p-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr className="bg-gray-100 text-gray-700 text-sm">
-                <th className="px-4 py-2 text-left font-semibold">Drill Purpose</th>
-                <th className="px-4 py-2 text-left font-semibold">Location</th>
-                <th className="px-4 py-2 text-left font-semibold">Volunteer Name</th>
-                <th className="px-4 py-2 text-left font-semibold">Drill Date</th>
-                <th className="px-4 py-2 text-left font-semibold">Drill Time</th>
-                <th className="px-4 py-2 text-center">
-                  <SlidersHorizontal className="inline w-5 h-5 text-gray-400" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr
-                  key={row.purpose + idx}
-                  className="bg-white border-b hover:bg-gray-50 text-gray-700"
-                >
-                  <td className="px-4 py-2">{row.purpose}</td>
-                  <td className="px-4 py-2">{row.location}</td>
-                  <td className="px-4 py-2">{row.volunteer}</td>
-                  <td className="px-4 py-2">{row.date}</td>
-                  <td className="px-4 py-2">{row.time}</td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      className="p-1 rounded hover:bg-gray-100"
-                      onClick={() => setSelected(row)}
-                    >
-                      <Eye className="w-5 h-5 text-gray-500" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination and controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span>Showing</span>
-            <select className="border rounded px-2 py-1">
-              <option>10</option>
-              <option>25</option>
-              <option>50</option>
-            </select>
-            <span>of 500</span>
+
+      <h1 className="text-2xl font-bold mb-1 print:hidden">Give Certification</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Form */}
+        <section className="lg:col-span-4 bg-white rounded-xl shadow p-4 print:hidden">
+          <h2 className="font-semibold text-slate-800 mb-3">Certificate Details</h2>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-slate-600 mb-1">Title</label>
+              <input
+                name="title"
+                value={form.title}
+                onChange={onChange}
+                placeholder="Certificate Title"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-600 mb-1">Recipient</label>
+              <input
+                name="recipient"
+                value={form.recipient}
+                onChange={onChange}
+                placeholder="e.g. Jane Doe"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-600 mb-1">Firm Name</label>
+              <input
+                name="firm"
+                value={form.firm}
+                onChange={onChange}
+                placeholder="e.g. Acme Inc."
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Date</label>
+                <input
+                  name="date"
+                  value={form.date}
+                  onChange={onChange}
+                  placeholder="DD/MM/YYYY"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Signature</label>
+                <input
+                  name="signature"
+                  value={form.signature}
+                  onChange={onChange}
+                  placeholder="Signer name"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600"
+              >
+                Print Certificate
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="border rounded px-3 py-1 text-gray-700 text-sm">Reset Filters</button>
-            <button className="border rounded px-2 py-1 text-gray-400" disabled>
-              &lt;&lt;
-            </button>
-            <button className="border rounded px-2 py-1 text-gray-400" disabled>
-              &lt;
-            </button>
-            <span className="text-gray-700 text-sm">1</span>
-            <span className="text-gray-500 text-sm">of 25 pages</span>
-            <button className="border rounded px-2 py-1 text-gray-700">
-              &gt;
-            </button>
-            <button className="border rounded px-2 py-1 text-gray-700">
-              &gt;&gt;
-            </button>
-          </div>
-        </div>
+        </section>
+
+        {/* Preview */}
+        <section id="certificate-print" className="lg:col-span-8 bg-slate-50 rounded-xl p-4 print:bg-white print:col-span-12">
+          <CertificatePreview data={form} />
+        </section>
       </div>
-      <DrillDetailModal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        drill={selected}
-      />
     </div>
   );
 }
