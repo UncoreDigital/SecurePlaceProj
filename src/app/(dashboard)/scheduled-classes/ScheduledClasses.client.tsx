@@ -72,6 +72,47 @@ function CancelModal({
   );
 }
 
+function ApprovalModal({
+  open,
+  onClose,
+  onConfirm,
+  loading = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading?: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
+      <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-lg min-w-[350px]">
+        <Check className="w-16 h-16 text-green-500 mb-4" />
+        <div className="text-lg font-medium mb-6 text-center">
+          Are you sure you want to approve this class?
+        </div>
+        <div className="flex gap-4">
+          <Button 
+            variant="outline" 
+            className="min-w-[70px]" 
+            onClick={onClose}
+            disabled={loading}
+          >
+            No
+          </Button>
+          <Button 
+            className="bg-green-500 hover:bg-green-600 min-w-[70px]" 
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? "Approving..." : "Yes"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ScheduledClassesClient({
   scheduledClasses,
   initialCategory,
@@ -101,38 +142,40 @@ export default function ScheduledClassesClient({
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [approveId, setApproveId] = useState<string | null>(null);
+  
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
+  const handleApproveClick = (id: string) => setApproveId(id);
+  const handleApproveClose = () => setApproveId(null);
 
   const handleConfirm = async () => {
     if (!cancelId) return;
     setCancellingId(cancelId);
-    const result = await cancelScheduledClass(cancelId);
-    if (result.error) {
-      console.error("Failed to cancel class:", result.error);
+    try {
+      const result = await cancelScheduledClass(cancelId);
+      if (!result.success) {
+        console.error("Failed to cancel class");
+      }
+    } catch (error) {
+      console.error("Failed to cancel class:", error);
+    } finally {
+      setCancellingId(null);
+      setCancelId(null);
     }
-    //   console.error("Failed to cancel class:", error);
-    // } else {
-    // setScheduledClasses((prev) =>
-    //   prev.map((cls) =>
-    //     cls.id === cancelId ? { ...cls, status: "cancelled" } : cls
-    //   )
-    // );
-    // }
-    setCancellingId(null);
-    setCancelId(null);
   };
 
-  const handleApprove = async (id: string) => {
-    console.log('🔄 Starting approval process for class ID:', id);
-    setApprovingId(id);
+  const handleApproveConfirm = async () => {
+    if (!approveId) return;
+    console.log('🔄 Starting approval process for class ID:', approveId);
+    setApprovingId(approveId);
     setError(null);
 
     try {
-      const result = await approveScheduledClass(id);
+      const result = await approveScheduledClass(approveId);
 
       if (result.success) {
-        console.log('✅ Class approved successfully:', id);
+        console.log('✅ Class approved successfully:', approveId);
         // The page will be revalidated by the server action, so the UI will update automatically
       }
     } catch (error) {
@@ -140,6 +183,7 @@ export default function ScheduledClassesClient({
       setError(error instanceof Error ? error.message : 'Failed to approve class');
     } finally {
       setApprovingId(null);
+      setApproveId(null);
     }
   };
 
@@ -265,7 +309,7 @@ export default function ScheduledClassesClient({
                             <Button
                               className={`flex-1 ${statusBtnStyles[cls.status]}`} style={{ padding: '0px 9px' }}
                               // disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                              onClick={cls.status === "pending" ? () => handleApprove(cls.id) : undefined}
+                              onClick={cls.currentUserRole === "super_admin" && cls.status === "pending" ? () => handleApproveClick(cls.id) : undefined}
                             >
                               {approvingId === cls.id
                                 ? "Approving..."
@@ -305,10 +349,10 @@ export default function ScheduledClassesClient({
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleApprove(cls.id)}
+                                    onClick={() => handleApproveClick(cls.id)}
                                     disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
                                     className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    title="Edit Class"
+                                    title="Approve Class"
                                   >
                                     {approvingId === cls.id ? (
                                       <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
@@ -383,6 +427,13 @@ export default function ScheduledClassesClient({
         open={!!cancelId}
         onClose={handleClose}
         onConfirm={handleConfirm}
+      />
+
+      <ApprovalModal
+        open={!!approveId}
+        onClose={handleApproveClose}
+        onConfirm={handleApproveConfirm}
+        loading={approvingId === approveId}
       />
     </div>
   );
