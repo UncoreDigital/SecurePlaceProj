@@ -1,11 +1,7 @@
 import { databases } from "@/lib/appwrite-server"; // <-- Use the server client
 import { Query, Models } from "appwrite";
 import { DashboardUI } from "./DashboardUI";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { createServerSupabase } from "@/lib/supabase/server";
 
 // Define interfaces for our data structures
 interface SafetyTraining extends Models.Document {
@@ -15,6 +11,8 @@ interface SafetyTraining extends Models.Document {
 
 // This function now runs securely on the server
 async function getDashboardData() {
+  const supabase = await createServerSupabase();
+  
   try {
     // Fetch all data concurrently
     const [

@@ -6,7 +6,7 @@ import * as z from "zod";
 import { useState } from "react";
 import { ArrowRight, AtSign, KeyRound, Eye, EyeOff } from "lucide-react";
 
-import { createBrowserClient } from "@supabase/ssr"; // NEW
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +28,9 @@ const formSchema = z.object({
   }),
 });
 
-// Minimal, page-local Supabase browser client to avoid changing your project structure
+// Use the singleton browser client
 function useSupabase() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  return supabase;
+  return createBrowserSupabase();
 }
 
 export default function LoginPage() {

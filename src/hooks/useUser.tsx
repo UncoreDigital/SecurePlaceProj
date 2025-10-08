@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 // Combine Auth user and Profile document into one type (keeps your shape)
 export interface UserSession {
@@ -17,13 +17,12 @@ export interface UserSession {
 
 // Small helper to avoid crashing if env is missing
 function makeSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) {
-    // Return null so the hook can show a clear error
+  try {
+    return createBrowserSupabase();
+  } catch (error) {
+    console.error('Failed to create Supabase client:', error);
     return null;
   }
-  return createBrowserClient(url, anon);
 }
 
 // localStorage configuration

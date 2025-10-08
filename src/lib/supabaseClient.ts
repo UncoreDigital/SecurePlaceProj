@@ -1,14 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+// Use the singleton browser client to prevent multiple GoTrueClient instances
+import { createBrowserSupabase } from "./supabase/browser";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Singleton Supabase client - create once and reuse across the app
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // Enable session persistence
-    persistSession: true,
-    // Auto refresh tokens
-    autoRefreshToken: true,
-  },
-});
+// Export a single instance that all components can use
+export const supabase = createBrowserSupabase();

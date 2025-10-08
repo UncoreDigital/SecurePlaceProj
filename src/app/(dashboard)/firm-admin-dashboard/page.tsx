@@ -10,11 +10,10 @@ import { Users, UserCheck, Siren } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyEmergenciesChart from "../components/MonthlyEmergenciesChart";
 import SafetyClassesTable from "../components/SafetyClassesTable";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Use the singleton browser client
+const supabase = createBrowserSupabase();
 
 
 // Define the colors for our charts

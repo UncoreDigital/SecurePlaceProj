@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useUser } from "@/hooks/useUser"; // must return { user?: { role?: string } }
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 import {
   LayoutDashboard,
@@ -58,12 +58,8 @@ const FIRM_ADMIN_ITEMS: NavItem[] = [
   // { href: "/drills", label: "Drills", icon: UserSquare },
 ];
 
-// Page-local supabase client (browser)
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createBrowserClient(url, anon);
-}
+// Use the singleton browser client
+const supabase = createBrowserSupabase();
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
