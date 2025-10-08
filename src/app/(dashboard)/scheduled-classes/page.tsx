@@ -167,6 +167,68 @@ export async function approveScheduledClass(scheduledClassId: string) {
   }
 }
 
+// Server action to cancel a scheduled class
+export async function cancelScheduledClass(scheduledClassId: string) {
+  "use server";
+
+  try {
+    const me = await requireAdmin();
+
+    // Use service role key to bypass RLS for admin operations
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    console.log('🔄 cancel scheduled class:', { scheduledClassId, adminRole: me.role, firmId: me.firmId });
+
+    // First, check if the scheduled class exists and get its details
+    // const { data: scheduledClass, error: fetchError } = await admin
+    //   .from("scheduled_classes")
+    //   .select("*, safety_classes!inner(firm_id)")
+    //   .eq("id", scheduledClassId)
+    //   .single();
+
+    // if (fetchError) {
+    //   console.error("Error fetching scheduled class:", fetchError);
+    //   throw new Error("Scheduled class not found");
+    // }
+
+    // // Check permissions - super admins can approve all, firm admins only their firm's classes
+    // if (me.role === "firm_admin") {
+    //   const safetyClassFirmId = scheduledClass.safety_classes?.firm_id;
+    //   if (safetyClassFirmId !== me.firmId) {
+    //     throw new Error("You can only approve classes for your firm");
+    //   }
+    // }
+
+    // Update the status to approved
+    const { error: updateError } = await admin
+      .from("scheduled_classes")
+      .update({
+        status: "cancelled",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", scheduledClassId);
+
+    if (updateError) {
+      console.error("Error updating scheduled class:", updateError);
+      throw new Error("Failed to approve scheduled class");
+    }
+
+    console.log('✅ Successfully approved scheduled class:', scheduledClassId);
+
+    // Revalidate the page to show updated data
+    revalidatePath("/scheduled-classes");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Server action error:", error);
+    throw error;
+  }
+}
+
 export default async function ScheduledClassesPage({
   searchParams,
 }: {
@@ -206,6 +268,7 @@ export default async function ScheduledClassesPage({
           initialType={type}
           isSuperAdmin={me.role === "super_admin"}
           approveScheduledClass={approveScheduledClass}
+          cancelScheduledClass={cancelScheduledClass}
         />
       </div>
     );

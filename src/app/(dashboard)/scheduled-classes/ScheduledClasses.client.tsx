@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter, Calendar, Edit, X, Check, Eye } from "lucide-react";
+import { Play, Clock, Users, Filter, Calendar, Edit, X, Check, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -42,18 +42,50 @@ function setParams(
   router.replace(`${pathname}?${sp.toString()}`);
 }
 
+function CancelModal({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
+      <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-lg min-w-[350px]">
+        <Trash2 className="w-16 h-16 text-brand-orange mb-4" />
+        <div className="text-lg font-medium mb-6 text-center">
+          Are you sure cancel this classes
+        </div>
+        <div className="flex gap-4">
+          <Button variant="outline" className="min-w-[70px]" onClick={onClose}>
+            No
+          </Button>
+          <Button className="bg-brand-orange min-w-[70px]" onClick={onConfirm}>
+            Yes
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ScheduledClassesClient({
   scheduledClasses,
   initialCategory,
   initialType,
   isSuperAdmin,
   approveScheduledClass,
+  cancelScheduledClass
 }: {
   scheduledClasses: any[];
   initialCategory: string;
   initialType: string;
   isSuperAdmin: boolean;
   approveScheduledClass: (scheduledClassId: string) => Promise<{ success: boolean }>;
+  cancelScheduledClass: (scheduledClassId: string) => Promise<{ success: boolean }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -70,15 +102,35 @@ export default function ScheduledClassesClient({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const handleCancel = (id: string) => setCancelId(id);
+  const handleClose = () => setCancelId(null);
+
+  const handleConfirm = async () => {
+    if (!cancelId) return;
+    setCancellingId(cancelId);
+    const result = await cancelScheduledClass(cancelId);
+    if (result.error) {
+      console.error("Failed to cancel class:", result.error);
+    }
+    //   console.error("Failed to cancel class:", error);
+    // } else {
+    // setScheduledClasses((prev) =>
+    //   prev.map((cls) =>
+    //     cls.id === cancelId ? { ...cls, status: "cancelled" } : cls
+    //   )
+    // );
+    // }
+    setCancellingId(null);
+    setCancelId(null);
+  };
 
   const handleApprove = async (id: string) => {
     console.log('🔄 Starting approval process for class ID:', id);
     setApprovingId(id);
     setError(null);
-    
+
     try {
       const result = await approveScheduledClass(id);
-      
+
       if (result.success) {
         console.log('✅ Class approved successfully:', id);
         // The page will be revalidated by the server action, so the UI will update automatically
@@ -236,34 +288,41 @@ export default function ScheduledClassesClient({
                               </span>
                             </td> */}
                           <td className="px-4 py-2">
-                          <div className="flex gap-2">
-                            {/* View button - available for all users */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => router.push(`/safety-classes/${cls?.safetyClassId}`)}
-                              className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-                              title="View Class Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            
-                            {cls.currentUserRole === "super_admin" && cls.status === "pending" ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleApprove(cls.id)}
-                                  disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  title="Edit Class"                                  
-                                >
-                                  {approvingId === cls.id ? (
-                                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                                  ) : (
-                                    <Check className="h-5 w-5 stroke-[2.5]" style={{ color: "#00bc7d" }} />
-                                  )}
-                                </Button>
+                            <div className="flex gap-2">
+                              {/* View button - available for all users */}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => router.push(`/safety-classes/${cls?.safetyClassId}`)}
+                                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                title="View Class Details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+
+                              {cls.currentUserRole === "super_admin" && cls.status === "pending" ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApprove(cls.id)}
+                                    disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    title="Edit Class"
+                                  >
+                                    {approvingId === cls.id ? (
+                                      <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                    ) : (
+                                      <Check className="h-5 w-5 stroke-[2.5]" style={{ color: "#00bc7d" }} />
+                                    )}
+                                  </Button>
+
+                                </>
+                              ) : (
+                                <></>
+                                // <span className="text-gray-500 text-sm">View Only</span>
+                              )}
+                              {cls.status === "pending" ? (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -273,13 +332,11 @@ export default function ScheduledClassesClient({
                                 >
                                   <X className="h-5 w-5 stroke-[2.5]" />
                                 </Button>
-                              </>
-                            ) : (
-                              <></>
-                              // <span className="text-gray-500 text-sm">View Only</span>
-                            )}
-                          </div>
-                        </td>
+                              ) : (
+                                <></>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -322,7 +379,11 @@ export default function ScheduledClassesClient({
         isSubmitting={isSubmitting}
       /> */}
 
-
+      <CancelModal
+        open={!!cancelId}
+        onClose={handleClose}
+        onConfirm={handleConfirm}
+      />
     </div>
   );
 }
