@@ -43,6 +43,7 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
   // { href: "/dashboard/alerts", label: "Alerts", icon: BellRing },
   { href: "drills", label: "Drills", icon: UserSquare },
   // { href: "/dashboard/training", label: "Training", icon: BookOpen },
+  { href: "/certification", label: "Certification", icon: BookOpen },
 ];
 
 const FIRM_ADMIN_ITEMS: NavItem[] = [
