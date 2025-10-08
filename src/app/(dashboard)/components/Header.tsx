@@ -37,14 +37,14 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
       {/* Right side */}
       <div className="flex items-center space-x-6">
         <button
-          className="text-slate-500 hover:text-brand-orange transition-colors"
+          className="text-slate-500 hover:text-brand-orange transition-colors cursor-pointer"
           aria-label="Notifications"
           title="Notifications"
         >
           <Bell className="h-6 w-6" />
         </button>
         <button
-          className="text-slate-500 hover:text-brand-orange transition-colors"
+          className="text-slate-500 hover:text-brand-orange transition-colors cursor-pointer"
           aria-label="Support"
           title="Support"
           onClick={() => setShowSupportModal(true)}

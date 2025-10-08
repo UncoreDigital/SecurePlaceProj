@@ -131,7 +131,7 @@ export default function EmergencyAlertLogPage() {
                 <span>&gt;</span>
                 <span>Emergency Alert Log</span>
             </nav>
-            <h1 className="text-2xl font-bold mb-1">Emergency Alert Log</h1>
+            <h1 className="text-2xl font-bold mb-1 cursor-pointer">Emergency Alert Log</h1>
             <div className="text-gray-500 mb-4">1110 Brown St..</div>
             <div className="bg-white rounded-xl shadow p-4">
                 <div className="overflow-x-auto">

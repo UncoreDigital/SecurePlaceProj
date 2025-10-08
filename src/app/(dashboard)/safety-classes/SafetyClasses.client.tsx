@@ -128,7 +128,7 @@ export default function SafetyClassesClient({
         <div className="flex items-center gap-3">
           {isSuperAdmin && (
             <Button
-              className="bg-brand-blue hover:bg-brand-blue/90"
+              className="bg-brand-blue hover:bg-brand-blue/90 cursor-pointer"
               onClick={() => setIsAddFormOpen(true)}
             >
               Add New Safety Class
@@ -215,7 +215,7 @@ export default function SafetyClassesClient({
                 <Button
                   onClick={() => handleExploreWorkshop(safetyClass)}
                   variant="outline"
-                  className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-colors"
+                  className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-colors cursor-pointer"
                 >
                   Explore Workshop
                 </Button>

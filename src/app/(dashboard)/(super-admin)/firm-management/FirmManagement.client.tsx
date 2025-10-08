@@ -73,7 +73,7 @@ export default function FirmManagement({
               editTrigger={
                 <FormDialog
                   triggerLabel={
-                    <span className="block px-2 py-1 text-sm">Edit Firm</span>
+                    <span className="block px-2 py-1 text-sm cursor-pointer">Edit Firm</span>
                   }
                   title="Edit Firm"
                   description={`Update ${firm.name}`}

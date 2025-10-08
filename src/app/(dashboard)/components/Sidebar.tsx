@@ -162,13 +162,13 @@ const Sidebar = () => {
           className="flex items-center w-full p-2 text-red-500 hover:bg-red-500 hover:text-white rounded-md transition-colors"
         >
           <LogOut className="h-6 w-6" />
-          {isOpen && <span className="ml-3 font-semibold">Logout</span>}
+          {isOpen && <span className="ml-3 font-semibold cursor-pointer">Logout</span>}
         </button>
 
         <Button
           variant="outline"
           size="icon"
-          className="w-full"
+          className="w-full cursor-pointer"
           onClick={toggleSidebar}
           aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           title={isOpen ? "Collapse sidebar" : "Expand sidebar"}

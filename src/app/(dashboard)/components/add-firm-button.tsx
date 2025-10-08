@@ -80,7 +80,7 @@ export function AddFirmButton() {
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !pending && setIsOpen(v)}>
       <DialogTrigger asChild>
-        <Button>Add New Firm</Button>
+        <Button className="cursor-pointer">Add New Firm</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px]">

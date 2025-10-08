@@ -99,7 +99,7 @@ function DrillDetailModal({ open, onClose, drill }: { open: boolean; onClose: ()
         </div>
         <div className="flex justify-end mt-4">
           <button
-            className="px-4 py-1 rounded bg-brand-orange text-white font-medium"
+            className="px-4 py-1 rounded bg-brand-orange text-white font-medium cursor-pointer"
             onClick={onClose}
           >
             Close
@@ -149,7 +149,7 @@ export default function DrillAlertLogPage() {
                   <td className="px-4 py-2">{row.time}</td>
                   <td className="px-4 py-2 text-center">
                     <button
-                      className="p-1 rounded hover:bg-gray-100"
+                      className="p-1 rounded hover:bg-gray-100 cursor-pointer"
                       onClick={() => setSelected(row)}
                     >
                       <Eye className="w-5 h-5 text-gray-500" />
@@ -172,19 +172,19 @@ export default function DrillAlertLogPage() {
             <span>of 500</span>
           </div>
           <div className="flex items-center gap-2">
-            <button className="border rounded px-3 py-1 text-gray-700 text-sm">Reset Filters</button>
-            <button className="border rounded px-2 py-1 text-gray-400" disabled>
+            <button className="border rounded px-3 py-1 text-gray-700 text-sm cursor-pointer">Reset Filters</button>
+            <button className="border rounded px-2 py-1 text-gray-400 cursor-pointer" disabled>
               &lt;&lt;
             </button>
-            <button className="border rounded px-2 py-1 text-gray-400" disabled>
+            <button className="border rounded px-2 py-1 text-gray-400 cursor-pointer" disabled>
               &lt;
             </button>
             <span className="text-gray-700 text-sm">1</span>
             <span className="text-gray-500 text-sm">of 25 pages</span>
-            <button className="border rounded px-2 py-1 text-gray-700">
+            <button className="border rounded px-2 py-1 text-gray-700 cursor-pointer">
               &gt;
             </button>
-            <button className="border rounded px-2 py-1 text-gray-700">
+            <button className="border rounded px-2 py-1 text-gray-700 cursor-pointer">
               &gt;&gt;
             </button>
           </div>

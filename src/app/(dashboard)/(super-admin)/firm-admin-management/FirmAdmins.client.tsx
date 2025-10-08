@@ -87,7 +87,7 @@ export default function FirmAdminsClient({
               editTrigger={
                 <FormDialog
                   triggerLabel={
-                    <span className="block px-2 py-1 text-sm">Edit Admin</span>
+                    <span className="block px-2 py-1 text-sm cursor-pointer">Edit Admin</span>
                   }
                   title="Edit Admin"
                   description="Update admin details and firm assignment."

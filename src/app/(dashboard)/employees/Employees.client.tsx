@@ -126,7 +126,7 @@ export default function EmployeesClient({
               editTrigger={
                 <FormDialog
                   triggerLabel={
-                    <span className="block px-2 py-1 text-sm">
+                    <span className="block px-2 py-1 text-sm cursor-pointer">
                       Edit Employee
                     </span>
                   }

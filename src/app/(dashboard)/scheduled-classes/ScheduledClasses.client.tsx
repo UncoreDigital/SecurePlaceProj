@@ -307,7 +307,7 @@ export default function ScheduledClassesClient({
                           <td className="px-4 py-2">{cls.time || "-"}</td>
                           <td className="gap-2 mt-2">
                             <Button
-                              className={`flex-1 ${statusBtnStyles[cls.status]}`} style={{ padding: '0px 9px' }}
+                              className={`cursor-pointer flex-1 ${statusBtnStyles[cls.status]}`} style={{ padding: '0px 9px' }}
                               // disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
                               onClick={cls.currentUserRole === "super_admin" && cls.status === "pending" ? () => handleApproveClick(cls.id) : undefined}
                             >
@@ -338,7 +338,7 @@ export default function ScheduledClassesClient({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => router.push(`/safety-classes/${cls?.safetyClassId}`)}
-                                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50 cursor-pointer"
                                 title="View Class Details"
                               >
                                 <Eye className="h-4 w-4" />
@@ -351,7 +351,7 @@ export default function ScheduledClassesClient({
                                     variant="outline"
                                     onClick={() => handleApproveClick(cls.id)}
                                     disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
                                     title="Approve Class"
                                   >
                                     {approvingId === cls.id ? (
@@ -371,7 +371,7 @@ export default function ScheduledClassesClient({
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleCancel(cls.id)}
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                                   title="Cancel Class"
                                 >
                                   <X className="h-5 w-5 stroke-[2.5]" />
