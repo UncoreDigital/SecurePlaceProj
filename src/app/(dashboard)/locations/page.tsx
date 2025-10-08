@@ -129,8 +129,13 @@ export default async function Page() {
 
   return (
     <AdminGuard>
-      <div className="container mx-auto py-10">
-        <h1 className="text-3xl font-bold text-brand-blue mb-6">
+      <nav className="text-gray-500 text-sm mb-2 flex items-center gap-2">
+        <span>Home</span>
+        <span>&gt;</span>
+        <span>Location Management</span>
+      </nav>
+      <div className="container mx-auto">
+        <h1 className="text-3xl font-bold text-brand-blue mb-3">
           Location Management
         </h1>
         <LocationsClient

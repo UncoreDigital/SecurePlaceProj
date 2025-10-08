@@ -259,10 +259,13 @@ export default async function Page({
   ]);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold text-brand-blue mb-6">
-        Employee Management
-      </h1>
+    <div className="container mx-auto">
+      <div className="mb-6">
+        <nav className="text-sm text-gray-500 mb-2">
+          Home &gt; Requested Classes
+        </nav>
+        <span className="text-3xl font-bold text-brand-blue">Employee Management</span>
+      </div>
       <EmployeesClient
         employees={employees}
         firms={firms}
