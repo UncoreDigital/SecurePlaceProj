@@ -12,7 +12,7 @@ interface SafetyTraining extends Models.Document {
 // This function now runs securely on the server
 async function getDashboardData() {
   const supabase = await createServerSupabase();
-  
+
   try {
     // Fetch all data concurrently
     const [
@@ -42,7 +42,6 @@ async function getDashboardData() {
     const processedWorkshops = Object.entries(workshopTypes).map(
       ([name, value]) => ({ name, value })
     );
-    console.log("NEHA", locationsRes);
     // Return all processed data
     return {
       stats: {
@@ -53,18 +52,26 @@ async function getDashboardData() {
       },
       chartData: {
         drills: [
-          { name: "Completed", value: completedDrillsRes.count ?? 0 },
-          { name: "Pending", value: pendingDrillsRes.count ?? 0 },
+          { name: "Total", value: 2 },
+          { name: "Done", value: completedDrillsRes.count ?? 0 },
+          // { name: "Completed", value: completedDrillsRes.count ?? 0 },
+          // { name: "Pending", value: pendingDrillsRes.count ?? 0 },
         ],
-        workshops: processedWorkshops,
+        // workshops: processedWorkshops,
+        workshops: [
+          { name: "Total", value: 4 },
+          { name: "Done", value: workshopTypes ?? 0 },
+        ],
+        // Fixed compliance: total=4, done=3
         compliance: [
           {
-            name: "Workshops Done",
-            value: (workshopsRes.data ?? []).filter(
-              (d: { status: string }) => d.status === "approved" || d.status === "completed"
-            ).length,
+            name: "Total",
+            value: 2
+            // (workshopsRes.data ?? []).filter(
+            //   (d: { status: string }) => d.status === "approved" || d.status === "completed"
+            // ).length,
           },
-          { name: "Drills Done", value: completedDrillsRes.count ?? 0 },
+          { name: "Done", value: completedDrillsRes.count ?? 0 },
         ],
       },
     };

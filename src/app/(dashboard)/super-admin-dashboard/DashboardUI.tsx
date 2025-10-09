@@ -30,16 +30,16 @@ export function DashboardUI({
           value={stats.employees}
           icon={Users}
           href="#"
-          change="+15"
-          changeType="positive"
+          // change="+15"
+          // changeType="positive"
         />
         <StatCard
           title="Total Volunteers"
           value={stats.volunteers}
           icon={UserCheck}
           href="#"
-          change="+2"
-          changeType="positive"
+          // change="+2"
+          // changeType="positive"
         />
         {/* <StatCard
           title="Total Emergencies"
@@ -54,14 +54,14 @@ export function DashboardUI({
           value={stats.locations}
           icon={MapPin}
           href="#"
-          change="-1"
-          changeType="negative"
+          // change="-1"
+          // changeType="negative"
         />
       </div>
       {/* Charts Section */}
       <div className="mt-8 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <CircularGraph
-          title="Drill Alerts Status"
+          title="Drill Status"
           data={chartData.drills}
           colors={COLORS}
         />
