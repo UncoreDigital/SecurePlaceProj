@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Eye, Plus, PlusCircle, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Eye, PlusCircle, Printer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import CertificateCreator from "../components/CertificateCreator";
 import { Button } from "@/components/ui/button";
@@ -29,6 +28,7 @@ export default function CertificationsLandingPage() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<CertItem | null>(null);
   const [autoPrint, setAutoPrint] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     try {
@@ -58,12 +58,12 @@ export default function CertificationsLandingPage() {
       </nav>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Certifications</h1>
-        <Link
-          href="/certifications/new"
+        <Button
+          onClick={() => router.push('/certifications/new')}
           className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium"
         >
           <PlusCircle className="w-4 h-4" /> Create Certificate
-        </Link>
+        </Button>
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
