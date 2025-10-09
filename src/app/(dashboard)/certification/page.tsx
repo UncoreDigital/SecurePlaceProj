@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type CertificateData = {
   recipient: string;
@@ -75,6 +75,33 @@ export default function GiveCertificationPage() {
     date: "",
     signature: "",
   });
+
+  const STORAGE_KEY = "secure_place_cert_draft";
+
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setForm((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist on change
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    } catch (_) {
+      /* ignore */
+    }
+  }, [form]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -167,6 +194,18 @@ export default function GiveCertificationPage() {
             </div>
 
             <div className="pt-2 flex items-center gap-3">
+              {/* Optional: Reset draft */}
+              <button
+                type="button"
+                onClick={() => {
+                  const empty: CertificateData = { recipient: "", title: "Certificate of Completion", firm: "", date: "", signature: "" };
+                  setForm(empty);
+                  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(empty)); } catch (_) {}
+                }}
+                className="px-4 py-2 rounded border text-slate-700 text-sm hover:bg-slate-50"
+              >
+                Reset
+              </button>
               <button
                 type="button"
                 onClick={handlePrint}

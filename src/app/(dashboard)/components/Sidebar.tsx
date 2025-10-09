@@ -41,9 +41,9 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
   { href: "/emergencies", label: "Emergencies", icon: Siren },
   // { href: "/dashboard/alerts", label: "Alerts", icon: BellRing },
-  { href: "drills", label: "Drills", icon: UserSquare },
+  { href: "/drills", label: "Drills", icon: UserSquare },
   // { href: "/dashboard/training", label: "Training", icon: BookOpen },
-  { href: "/certification", label: "Certification", icon: BookOpen },
+  { href: "/certifications", label: "Certification", icon: BookOpen },
 ];
 
 const FIRM_ADMIN_ITEMS: NavItem[] = [
