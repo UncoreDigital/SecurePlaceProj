@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Upload, Plus } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Upload, Plus, Bold, Italic, List, ListOrdered, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,84 @@ export default function AddSafetyClassForm({
     type: "Safety Class",
     mode: "Remote",
   });
+  
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
+
+  // Initialize editor content
+  useEffect(() => {
+    if (editorRef.current && !isEditorFocused) {
+      const content = formData.description || '';
+      const displayContent = content || '<span style="color: #6b7280; font-style: italic;">Enter safety class description...</span>';
+      if (editorRef.current.innerHTML !== displayContent) {
+        editorRef.current.innerHTML = displayContent;
+      }
+    }
+  }, [formData.description, isEditorFocused]);
+
+  const formatText = (command: string, value?: string) => {
+    if (editorRef.current) {
+      // Focus the editor first
+      editorRef.current.focus();
+      
+      // Execute the command
+      const success = document.execCommand(command, false, value);
+      
+      if (success) {
+        // Update the form data with the new content
+        const content = editorRef.current.innerHTML;
+        handleInputChange("description", content);
+      }
+      
+      // Keep focus on the editor
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      }, 0);
+    }
+  };
+
+  const handleEditorChange = (e: React.FormEvent<HTMLDivElement>) => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      handleInputChange("description", content);
+    }
+  };
+
+  const handleEditorFocus = () => {
+    setIsEditorFocused(true);
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML.trim();
+      if (content === '' || content === 'Enter safety class description...') {
+        editorRef.current.innerHTML = '<p><br></p>';
+        // Set cursor to the paragraph
+        const range = document.createRange();
+        const selection = window.getSelection();
+        const p = editorRef.current.querySelector('p');
+        if (p && selection) {
+          range.setStart(p, 0);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    }
+  };
+
+  const handleEditorBlur = () => {
+    setIsEditorFocused(false);
+    if (editorRef.current) {
+      let content = editorRef.current.innerHTML;
+      // Clean up empty paragraphs and placeholder text
+      if (content === '<p><br></p>' || content.trim() === '' || content.includes('Enter safety class description...')) {
+        content = '';
+        handleInputChange("description", content);
+      } else {
+        handleEditorChange({} as React.FormEvent<HTMLDivElement>);
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,14 +178,78 @@ export default function AddSafetyClassForm({
 
             <div className="space-y-2">
               <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Enter safety class description"
-                rows={3}
-                required
-              />
+              <div className="border rounded-md">
+                {/* Rich Text Editor Toolbar */}
+                <div className="flex items-center gap-1 p-2 border-b bg-gray-50">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('bold')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Bold className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('italic')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Italic className="h-4 w-4" />
+                  </Button>
+                  <div className="w-px h-6 bg-gray-300 mx-1" />
+                  {/* <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('insertUnorderedList')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => formatText('insertOrderedList')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </Button> */}
+                  {/* <div className="w-px h-6 bg-gray-300 mx-1" /> */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const url = prompt('Enter URL:');
+                      if (url) formatText('createLink', url);
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Link className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Rich Text Editor Content */}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  onInput={handleEditorChange}
+                  onFocus={handleEditorFocus}
+                  onBlur={handleEditorBlur}
+                  className="min-h-[100px] p-3 outline-none prose prose-sm max-w-none border-0 focus:ring-0 focus:border-blue-500 transition-colors"
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                  }}
+                  suppressContentEditableWarning={true}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Use the toolbar above to format your text with bold, italic, lists, and links.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

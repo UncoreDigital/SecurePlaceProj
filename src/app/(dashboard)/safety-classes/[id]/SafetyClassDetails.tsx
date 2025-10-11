@@ -317,9 +317,10 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                   </div>
 
                   <h2 className="text-xl font-semibold text-gray-900 mt-6 mb-1">About Classes</h2>
-                  <p className="text-gray-700 leading-relaxed">
-                    {safetyClass.description}
-                  </p>
+                  <div 
+                    className="text-gray-700 leading-relaxed prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2"
+                    dangerouslySetInnerHTML={{ __html: safetyClass.description }}
+                  />
 
                   <h2 className="text-xl font-semibold text-gray-900 mt-6 mb-1">Why Us?</h2>
                   <ul className="space-y-3">
