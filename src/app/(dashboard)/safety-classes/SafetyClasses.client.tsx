@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter } from "lucide-react";
+import { Play, Clock, Users, Filter, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -38,12 +38,14 @@ export default function SafetyClassesClient({
   initialType,
   isSuperAdmin,
   createSafetyClass,
+  updateSafetyClass,
 }: {
   safetyClasses: SafetyClass[];
   initialCategory: string;
   initialType: string;
   isSuperAdmin: boolean;
   createSafetyClass: (formData: FormData) => Promise<void>;
+  updateSafetyClass: (formData: FormData) => Promise<void>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,6 +55,7 @@ export default function SafetyClassesClient({
   const type = sp.get("type") ?? initialType ?? "remote";
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [editingSafetyClass, setEditingSafetyClass] = useState<SafetyClass | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +103,34 @@ export default function SafetyClassesClient({
     } catch (error) {
       console.error("Error creating safety class:", error);
       setError(error instanceof Error ? error.message : "Failed to create safety class");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSafetyClass = async (data: any) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const formData = new FormData();
+      formData.append("id", editingSafetyClass!.id);
+      formData.append("title", data.title);
+      formData.append("description", data.description);
+      formData.append("duration", data.duration.toString());
+      formData.append("videoUrl", data.videoUrl);
+      formData.append("isRequired", data.isRequired ? "on" : "");
+      formData.append("type", data.type);
+      formData.append("mode", data.mode);
+
+      if (data.thumbnailUrl) {
+        formData.append("thumbnailUrl", data.thumbnailUrl);
+      }
+      await updateSafetyClass(formData);
+      setEditingSafetyClass(null);
+    } catch (error) {
+      console.error("Error updating safety class:", error);
+      setError(error instanceof Error ? error.message : "Failed to update safety class");
     } finally {
       setIsSubmitting(false);
     }
@@ -224,13 +255,25 @@ export default function SafetyClassesClient({
               </CardContent>
 
               <CardFooter className="p-4 pt-0">
-                <Button
-                  onClick={() => handleExploreWorkshop(safetyClass)}
-                  variant="outline"
-                  className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-colors cursor-pointer"
-                >
-                  Explore Workshop
-                </Button>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    onClick={() => handleExploreWorkshop(safetyClass)}
+                    variant="outline"
+                    className="flex-1 border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-colors cursor-pointer"
+                  >
+                    Explore Workshop
+                  </Button>
+                  {isSuperAdmin && (
+                    <Button
+                      onClick={() => setEditingSafetyClass(safetyClass)}
+                      variant="outline"
+                      className="px-3 border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                      title="Edit Safety Class"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardFooter>
             </Card>
           ))}
@@ -255,6 +298,19 @@ export default function SafetyClassesClient({
         isSubmitting={isSubmitting}
       />
 
+      {/* Edit Safety Class Form */}
+      {editingSafetyClass && (
+        <AddSafetyClassForm
+          isOpen={!!editingSafetyClass}
+          onClose={() => {
+            setEditingSafetyClass(null);
+            setError(null);
+          }}
+          onSubmit={handleEditSafetyClass}
+          isSubmitting={isSubmitting}
+          editingSafetyClass={editingSafetyClass}
+        />
+      )}
 
     </div>
   );

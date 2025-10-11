@@ -22,6 +22,19 @@ interface AddSafetyClassFormProps {
   onClose: () => void;
   onSubmit: (data: SafetyClassFormData) => void;
   isSubmitting?: boolean;
+  editingSafetyClass?: SafetyClass;
+}
+
+interface SafetyClass {
+  id: string;
+  title: string;
+  description: string;
+  duration_minutes: number;
+  video_url: string;
+  is_required: boolean;
+  thumbnail_url?: string;
+  type: "Safety Class" | "Drill";
+  mode: "Remote" | "InPerson";
 }
 
 // Removed categories as they're not in the database schema
@@ -87,20 +100,39 @@ export default function AddSafetyClassForm({
   onClose,
   onSubmit,
   isSubmitting = false,
+  editingSafetyClass,
 }: AddSafetyClassFormProps) {
+  const isEditing = !!editingSafetyClass;
+  
   const [formData, setFormData] = useState<SafetyClassFormData>({
-    title: "",
-    description: "",
-    duration: 0,
-    videoUrl: "",
-    isRequired: false,
-    thumbnailUrl: "",
-    type: "Safety Class",
-    mode: "Remote",
+    title: editingSafetyClass?.title || "",
+    description: editingSafetyClass?.description || "",
+    duration: editingSafetyClass?.duration_minutes || 0,
+    videoUrl: editingSafetyClass?.video_url || "",
+    isRequired: editingSafetyClass?.is_required || false,
+    thumbnailUrl: editingSafetyClass?.thumbnail_url || "",
+    type: editingSafetyClass?.type || "Safety Class",
+    mode: editingSafetyClass?.mode || "Remote",
   });
   
   const editorRef = useRef<HTMLDivElement>(null);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+
+  // Update form data when editing a different safety class
+  useEffect(() => {
+    if (editingSafetyClass) {
+      setFormData({
+        title: editingSafetyClass.title || "",
+        description: editingSafetyClass.description || "",
+        duration: editingSafetyClass.duration_minutes || 0,
+        videoUrl: editingSafetyClass.video_url || "",
+        isRequired: editingSafetyClass.is_required || false,
+        thumbnailUrl: editingSafetyClass.thumbnail_url || "",
+        type: editingSafetyClass.type || "Safety Class",
+        mode: editingSafetyClass.mode || "Remote",
+      });
+    }
+  }, [editingSafetyClass]);
 
   // Initialize editor content
   useEffect(() => {
@@ -180,16 +212,18 @@ export default function AddSafetyClassForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({
-      title: "",
-      description: "",
-      duration: 0,
-      videoUrl: "",
-      isRequired: false,
-      thumbnailUrl: "",
-      type: "Safety Class",
-      mode: "Remote",
-    });
+    if (!isEditing) {
+      setFormData({
+        title: "",
+        description: "",
+        duration: 0,
+        videoUrl: "",
+        isRequired: false,
+        thumbnailUrl: "",
+        type: "Safety Class",
+        mode: "Remote",
+      });
+    }
     onClose();
   };
 
@@ -209,7 +243,9 @@ export default function AddSafetyClassForm({
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold">Add New Safety Class</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            {isEditing ? "Edit Safety Class" : "Add New Safety Class"}
+          </CardTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -431,7 +467,10 @@ export default function AddSafetyClassForm({
                 disabled={isSubmitting}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {isSubmitting ? "Adding..." : "Add Safety Class"}
+                {isSubmitting 
+                  ? (isEditing ? "Updating..." : "Adding...") 
+                  : (isEditing ? "Update Safety Class" : "Add Safety Class")
+                }
               </Button>
             </div>
           </form>

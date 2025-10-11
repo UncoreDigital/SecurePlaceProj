@@ -120,6 +120,50 @@ export async function createSafetyClass(formData: FormData) {
   revalidatePath("/safety-classes");
 }
 
+// Server action to update an existing safety class
+export async function updateSafetyClass(formData: FormData) {
+  "use server";
+  const me = await requireAdmin();
+
+  const id = String(formData.get("id") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const videoUrl = String(formData.get("videoUrl") || "").trim();
+  const duration = parseInt(String(formData.get("duration") || "0"));
+  const isRequired = String(formData.get("isRequired") || "") === "on";
+  const thumbnailUrl = String(formData.get("thumbnailUrl") || "").trim();
+  const type = String(formData.get("type") || "Safety Class").trim();
+  const mode = String(formData.get("mode") || "Remote").trim();
+
+  if (!id || !title || !description || !videoUrl || duration <= 0) {
+    throw new Error("Please fill in all required fields");
+  }
+
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  
+  const { error } = await admin.from("safety_classes").update({
+    title,
+    description,
+    video_url: videoUrl,
+    duration_minutes: duration,
+    is_required: isRequired,
+    thumbnail_url: thumbnailUrl || null,
+    type: type as "Safety Class" | "Drill",
+    mode: mode as "Remote" | "InPerson",
+  }).eq("id", id);
+  
+  if (error) {
+    console.error("Error updating safety class:", error);
+    throw new Error("Failed to update safety class");
+  }
+
+  revalidatePath("/safety-classes");
+}
+
 export default async function SafetyClassesPage({
   searchParams,
 }: {
@@ -159,6 +203,7 @@ export default async function SafetyClassesPage({
           initialType={type}
           isSuperAdmin={me.role === "super_admin"}
           createSafetyClass={createSafetyClass}
+          updateSafetyClass={updateSafetyClass}
         />
       </div>
     );
