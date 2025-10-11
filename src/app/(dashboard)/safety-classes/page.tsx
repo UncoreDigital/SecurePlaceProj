@@ -88,7 +88,9 @@ export async function createSafetyClass(formData: FormData) {
   const duration = parseInt(String(formData.get("duration") || "0"));
   const isRequired = String(formData.get("isRequired") || "") === "on";
   const thumbnailUrl = String(formData.get("thumbnailUrl") || "").trim();
-
+  const type = String(formData.get("type") || "Safety Class").trim();
+  const mode = String(formData.get("mode") || "Remote").trim();
+  console.log(formData);
   if (!title || !description || !videoUrl || duration <= 0) {
     throw new Error("Please fill in all required fields");
   }
@@ -98,7 +100,7 @@ export async function createSafetyClass(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  console.log({ thumbnailUrl });
+  console.log("Test", type);
   const { error } = await admin.from("safety_classes").insert({
     firm_id: firmId ?? null, // Allow null
     title,
@@ -107,8 +109,11 @@ export async function createSafetyClass(formData: FormData) {
     duration_minutes: duration,
     is_required: isRequired,
     thumbnail_url: thumbnailUrl || null,
+    type: type as "Safety Class" | "Drill",
+    mode: mode as "Remote" | "InPerson",
   });
-
+  console.log(formData);
+  console.log("Neha");
   if (error) {
     console.error("Error creating safety class:", error);
     throw new Error("Failed to create safety class");

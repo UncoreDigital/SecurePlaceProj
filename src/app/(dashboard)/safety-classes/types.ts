@@ -19,4 +19,6 @@ export type SafetyClassFormData = {
   videoUrl: string;
   isRequired: boolean;
   thumbnailUrl?: string;
+  type: "Safety Class" | "Drill";
+  mode: "Remote" | "InPerson";
 };

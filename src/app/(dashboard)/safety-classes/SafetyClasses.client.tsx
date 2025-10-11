@@ -79,6 +79,8 @@ export default function SafetyClassesClient({
       formData.append("duration", data.duration.toString());
       formData.append("videoUrl", data.videoUrl);
       formData.append("isRequired", data.isRequired ? "on" : "");
+      formData.append("type", data.type);
+      formData.append("mode", data.mode);
 
       if (data.thumbnailUrl) {
         formData.append("thumbnailUrl", data.thumbnailUrl);

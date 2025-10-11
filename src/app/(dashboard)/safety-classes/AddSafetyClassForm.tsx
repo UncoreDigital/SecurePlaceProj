@@ -39,6 +39,8 @@ export default function AddSafetyClassForm({
     videoUrl: "",
     isRequired: false,
     thumbnailUrl: "",
+    type: "Safety Class",
+    mode: "Remote",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,6 +53,8 @@ export default function AddSafetyClassForm({
       videoUrl: "",
       isRequired: false,
       thumbnailUrl: "",
+      type: "Safety Class",
+      mode: "Remote",
     });
     onClose();
   };
@@ -106,17 +110,51 @@ export default function AddSafetyClassForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duration (minutes) *</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                value={formData.duration}
-                onChange={(e) => handleInputChange("duration", parseInt(e.target.value) || 0)}
-                placeholder="Enter duration in minutes"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes) *</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="1"
+                  value={formData.duration}
+                  onChange={(e) => handleInputChange("duration", parseInt(e.target.value) || 0)}
+                  placeholder="Enter duration in minutes"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Type *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => handleInputChange("type", value as "Safety Class" | "Drill")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Safety Class">Safety Class</SelectItem>
+                    <SelectItem value="Drill">Drill</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mode">Mode *</Label>
+                <Select
+                  value={formData.mode}
+                  onValueChange={(value) => handleInputChange("mode", value as "Remote" | "InPerson")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Remote">Remote</SelectItem>
+                    <SelectItem value="InPerson">In Person</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -173,16 +211,16 @@ export default function AddSafetyClassForm({
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onClose}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-brand-blue hover:bg-brand-blue/90"
                 disabled={isSubmitting}
               >
