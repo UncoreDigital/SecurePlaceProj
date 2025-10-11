@@ -100,7 +100,6 @@ export async function createSafetyClass(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  console.log("Test", type);
   const { error } = await admin.from("safety_classes").insert({
     firm_id: firmId ?? null, // Allow null
     title,
@@ -112,8 +111,6 @@ export async function createSafetyClass(formData: FormData) {
     type: type as "Safety Class" | "Drill",
     mode: mode as "Remote" | "InPerson",
   });
-  console.log(formData);
-  console.log("Neha");
   if (error) {
     console.error("Error creating safety class:", error);
     throw new Error("Failed to create safety class");
