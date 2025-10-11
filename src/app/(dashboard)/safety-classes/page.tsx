@@ -53,14 +53,15 @@ const getSafetyClasses = cache(async ({
         is_active,
         firm_id,
         created_at,
-        updated_at
+        updated_at,
+        type,
+        mode
       `)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(50); // Add reasonable limit to prevent large data loads
 
     const { data: safetyClasses, error } = await query;
-
     if (error) {
       console.error("Error fetching safety classes:", error);
       throw new Error(`Failed to fetch safety classes: ${error.message}`);
@@ -132,7 +133,7 @@ export default async function SafetyClassesPage({
     const me = await requireAdmin();
     
     const category = searchParams?.category ?? "all";
-    const type = searchParams?.type ?? "in-person";
+    const type = searchParams?.type ?? "remote";
     
     console.log('👤 Auth check completed:', { role: me.role, firmId: me.firmId });
     

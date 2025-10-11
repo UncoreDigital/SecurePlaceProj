@@ -7,9 +7,12 @@ export type SafetyClass = {
   is_required: boolean;
   is_active: boolean;
   created_at: string;
+  updated_at: string;
   firm_id: string | null;
   thumbnail_url?: string;
-  isRemote?: boolean; // New field to indicate if the class is remote
+  type: "Safety Class" | "Drill";
+  mode: "Remote" | "InPerson";
+  isRemote?: boolean; // Computed field for backward compatibility
 };
 
 export type SafetyClassFormData = {

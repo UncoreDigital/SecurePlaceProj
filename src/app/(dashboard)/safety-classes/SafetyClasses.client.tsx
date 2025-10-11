@@ -50,11 +50,21 @@ export default function SafetyClassesClient({
   const sp = useSearchParams();
 
   const category = sp.get("category") ?? initialCategory ?? "all";
-  const type = sp.get("type") ?? initialType ?? "in-person";
+  const type = sp.get("type") ?? initialType ?? "remote";
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter safety classes based on selected type
+  const filteredSafetyClasses = safetyClasses.filter((safetyClass) => {
+    if (type === "remote") {
+      return safetyClass.mode === "Remote";
+    } else if (type === "in-person") {
+      return safetyClass.mode === "InPerson";
+    }
+    return true; // Show all if no specific type selected
+  });
 
   const handleCategoryChange = (newCategory: string) => {
     setParams(router, pathname, sp, { category: newCategory });
@@ -138,7 +148,7 @@ export default function SafetyClassesClient({
           )}
           <div className="flex w-48 bg-gray-100 rounded-lg overflow-hidden border border-[#D8D8D8]">
             <button
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "remote"
+              className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${type === "remote"
                 ? "bg-brand-orange text-white"
                 : "text-gray-700 hover:bg-gray-200"
                 }`}
@@ -147,7 +157,7 @@ export default function SafetyClassesClient({
               Remote
             </button>
             <button
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${type === "in-person"
+              className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${type === "in-person"
                 ? "bg-brand-orange text-white"
                 : "text-gray-700 hover:bg-gray-200"
                 }`}
@@ -160,19 +170,19 @@ export default function SafetyClassesClient({
       </div>
 
       {/* Video Cards Grid */}
-      {safetyClasses.length === 0 ? (
+      {filteredSafetyClasses.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No safety classes found
+            No {type === "remote" ? "remote" : "in-person"} safety classes found
           </h3>
           <p className="text-gray-500">
-            Try adjusting your filters or check back later for new content.
+            Try switching to {type === "remote" ? "in-person" : "remote"} classes or check back later for new content.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {safetyClasses.map((safetyClass, index) => (
+          {filteredSafetyClasses.map((safetyClass, index) => (
             <Card key={safetyClass.id} className="py-0 overflow-hidden hover:shadow-lg transition-shadow gap-3">
               <div className="relative aspect-video bg-gray-100 h-40">
                 {safetyClass.thumbnail_url ? (
