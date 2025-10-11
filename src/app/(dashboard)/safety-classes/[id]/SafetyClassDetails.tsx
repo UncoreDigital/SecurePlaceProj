@@ -23,7 +23,7 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
   const [currentTime, setCurrentTime] = useState(0);
   const [duration_, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -137,17 +137,25 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                     <video
                       ref={videoRef}
                       className="w-full aspect-video rounded-t-lg h-100"
+                      controls={false}
+                      preload="metadata"
                       onTimeUpdate={handleTimeUpdate}
                       onLoadedMetadata={handleLoadedMetadata}
+                      onLoadStart={() => setIsLoading(true)}
+                      onCanPlay={() => setIsLoading(false)}
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
                       onEnded={() => setIsPlaying(false)}
-                      onError={() => {
+                      onError={(e) => {
+                        console.error('Video error:', e);
                         setIsLoading(false);
                         setHasError(true);
                       }}
+                      crossOrigin="anonymous"
                     >
                       <source src={safetyClass.video_url} type="video/mp4" />
+                      <source src={safetyClass.video_url} type="video/webm" />
+                      <source src={safetyClass.video_url} type="video/ogg" />
                       Your browser does not support the video tag.
                     </video>
                   )}
@@ -260,23 +268,34 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                   {/* Error Overlay */}
                   {hasError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                      <div className="text-white text-center">
+                      <div className="text-white text-center max-w-md">
                         <div className="text-red-400 mb-2">⚠️</div>
-                        <p className="text-sm">Failed to load video</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setHasError(false);
-                            setIsLoading(true);
-                            if (videoRef.current) {
-                              videoRef.current.load();
-                            }
-                          }}
-                          className="mt-2 text-white border-white hover:bg-white/20"
-                        >
-                          Retry
-                        </Button>
+                        <p className="text-sm mb-2">Failed to load video</p>
+                        <p className="text-xs text-gray-300 mb-3 break-all">{safetyClass.video_url}</p>
+                        <div className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setHasError(false);
+                              setIsLoading(true);
+                              if (videoRef.current) {
+                                videoRef.current.load();
+                              }
+                            }}
+                            className="text-white border-white hover:bg-white/20"
+                          >
+                            Retry
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(safetyClass.video_url, '_blank')}
+                            className="text-white border-white hover:bg-white/20"
+                          >
+                            Open Direct
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -81,7 +81,7 @@ export default async function SafetyClassPage({
 
   const safetyClass = await getSafetyClass(id, me.firmId);
   const locations = await getFirmLocations(id, me.firmId);
-  console.log("Fetched safety class:", safetyClass);
+  // console.log("Fetched safety class:", safetyClass);
   if (!safetyClass) {
     redirect("/safety-classes");
   }
