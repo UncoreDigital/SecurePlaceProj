@@ -1,6 +1,5 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
+import CertificationClient from "./CertificationClient";
 
 type CertificateData = {
   recipient: string;
@@ -67,161 +66,28 @@ function CertificatePreview({ data }: { data: CertificateData }) {
   );
 }
 
-export default function GiveCertificationPage() {
-  const [form, setForm] = useState<CertificateData>({
-    recipient: "",
-    title: "Certificate of Completion",
-    firm: "",
-    date: "",
-    signature: "",
-  });
-
-  const STORAGE_KEY = "secure_place_cert_draft";
-
-  // Load draft on mount
-  useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setForm((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (_) {
-      /* ignore */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Persist on change
-  useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    } catch (_) {
-      /* ignore */
-    }
-  }, [form]);
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-  };
-
-  const handlePrint = () => {
-    if (typeof window !== "undefined") window.print();
-  };
-
+function LoadingSpinner() {
   return (
-    <div className="space-y-4">
-      {/* Print-only CSS: show only the certificate area when printing */}
-      <style jsx global>{`
-        @media print {
-          /* Hide everything by default */
-          body * { visibility: hidden !important; }
-          /* Only show the certificate area */
-          #certificate-print, #certificate-print * { visibility: visible !important; }
-          /* Position the certificate at the top-left for printing */
-          #certificate-print { position: absolute !important; inset: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; background: white !important; }
-        }
-        @page { size: A4; margin: 16mm; }
-      `}</style>
-      {/* Breadcrumb */}
-      <nav className="text-gray-500 text-sm mb-2 flex items-center gap-2 print:hidden">
-        <span>Home</span>
-        <span>&gt;</span>
-        <span>Give Certification</span>
-      </nav>
-
-      <h1 className="text-2xl font-bold mb-1 print:hidden">Give Certification</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Form */}
-        <section className="lg:col-span-4 bg-white rounded-xl shadow p-4 print:hidden">
-          <h2 className="font-semibold text-slate-800 mb-3">Certificate Details</h2>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-slate-600 mb-1">Title</label>
-              <input
-                name="title"
-                value={form.title}
-                onChange={onChange}
-                placeholder="Certificate Title"
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-600 mb-1">Recipient</label>
-              <input
-                name="recipient"
-                value={form.recipient}
-                onChange={onChange}
-                placeholder="e.g. Jane Doe"
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-600 mb-1">Firm Name</label>
-              <input
-                name="firm"
-                value={form.firm}
-                onChange={onChange}
-                placeholder="e.g. Acme Inc."
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm text-slate-600 mb-1">Date</label>
-                <input
-                  name="date"
-                  value={form.date}
-                  onChange={onChange}
-                  placeholder="DD/MM/YYYY"
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-600 mb-1">Signature</label>
-                <input
-                  name="signature"
-                  value={form.signature}
-                  onChange={onChange}
-                  placeholder="Signer name"
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center gap-3">
-              {/* Optional: Reset draft */}
-              <button
-                type="button"
-                onClick={() => {
-                  const empty: CertificateData = { recipient: "", title: "Certificate of Completion", firm: "", date: "", signature: "" };
-                  setForm(empty);
-                  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(empty)); } catch (_) {}
-                }}
-                className="px-4 py-2 rounded border text-slate-700 text-sm hover:bg-slate-50"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600"
-              >
-                Print Certificate
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Preview */}
-        <section id="certificate-print" className="lg:col-span-8 bg-slate-50 rounded-xl p-4 print:bg-white print:col-span-12">
-          <CertificatePreview data={form} />
-        </section>
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Certification...</p>
       </div>
     </div>
+  );
+}
+
+async function CertificationContent() {
+  // Simulate async data loading
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return <CertificationClient />;
+}
+
+export default function GiveCertificationPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <CertificationContent />
+    </Suspense>
   );
 }

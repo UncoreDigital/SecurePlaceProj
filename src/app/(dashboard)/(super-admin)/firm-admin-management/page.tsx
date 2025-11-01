@@ -5,6 +5,7 @@ import FirmAdminsClient from "./FirmAdmins.client";
 import { SuperAdminGuard } from "@/components/AuthGuard";
 import { createClient } from "@supabase/supabase-js";
 import type { FirmOption, FirmAdminRow } from "@/lib/types";
+import { Suspense } from "react";
 
 const REVALIDATE_PATH = "/dashboard/super-admin/firm-admins";
 
@@ -181,7 +182,20 @@ export async function deleteFirmAdmin(formData: FormData) {
   revalidatePath(REVALIDATE_PATH);
 }
 
-export default async function Page({
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Firm Admin Management...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component that loads data
+async function FirmAdminManagementContent({
   searchParams,
 }: {
   searchParams?: { q?: string; firm?: string };
@@ -219,5 +233,17 @@ export default async function Page({
         />
       </div>
     </SuperAdminGuard>
+  );
+}
+
+export default function Page({
+  searchParams,
+}: {
+  searchParams?: { q?: string; firm?: string };
+}) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <FirmAdminManagementContent searchParams={searchParams} />
+    </Suspense>
   );
 }

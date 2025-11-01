@@ -1,15 +1,16 @@
 // app/dashboard/super-admin/firm-management/page.tsx
 import { redirect } from "next/navigation";
-import { revalidatePath, cache } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import FirmManagement from "./FirmManagement.client";
 import type { Firm } from "@/lib/types";
 import { SuperAdminGuard } from "@/components/AuthGuard";
+import { Suspense } from "react";
 
 const REVALIDATE_PATH = "/dashboard/super-admin/firm-management";
 
-/** SSR fetch with server-side filter from URL (?q=) - Cached and optimized */
-const getFirms = cache(async (q?: string): Promise<Firm[]> => {
+/** SSR fetch with server-side filter from URL (?q=) - Optimized */
+async function getFirms(q?: string): Promise<Firm[]> {
   const supabase = await createServerSupabase();
 
   const startTime = Date.now();
@@ -50,7 +51,7 @@ const getFirms = cache(async (q?: string): Promise<Firm[]> => {
     address: "", // Removed from query to reduce payload
     createdAt: f.created_at ?? null,
   }));
-});
+}
 
 /* -------------------- SERVER ACTIONS -------------------- */
 
@@ -120,7 +121,20 @@ export async function deleteFirm(formData: FormData) {
 
 /* ----------------------------------- PAGE ----------------------------------- */
 
-export default async function Page({
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Firm Management...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component that loads data
+async function FirmManagementContent({
   searchParams,
 }: {
   searchParams?: { q?: string };
@@ -150,5 +164,17 @@ export default async function Page({
         />
       </div>
     </SuperAdminGuard>
+  );
+}
+
+export default function Page({
+  searchParams,
+}: {
+  searchParams?: { q?: string };
+}) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <FirmManagementContent searchParams={searchParams} />
+    </Suspense>
   );
 }

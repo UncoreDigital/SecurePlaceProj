@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import EmployeesClient from "./Employees.client";
 import { createClient } from "@supabase/supabase-js";
+import { Suspense } from "react";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -236,7 +237,18 @@ export async function deleteEmployee(formData: FormData) {
 
 /* ----------------------------------- PAGE ----------------------------------- */
 
-export default async function Page({
+function LoadingSpinner() {
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Employees...</p>
+      </div>
+    </div>
+  );
+}
+
+async function EmployeesContent({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; firm?: string }>;
@@ -279,5 +291,17 @@ export default async function Page({
         deleteEmployee={deleteEmployee}
       />
     </div>
+  );
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; firm?: string }>;
+}) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <EmployeesContent searchParams={searchParams} />
+    </Suspense>
   );
 }

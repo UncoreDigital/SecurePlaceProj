@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { AdminGuard } from "@/components/AuthGuard";
 import type { Location } from "./columns";
 import LocationsClient from "./Locations.client";
+import { Suspense } from "react";
 
 const REVALIDATE_PATH = "/dashboard/locations";
 
@@ -124,7 +125,20 @@ export async function deleteLocation(formData: FormData) {
   revalidatePath(REVALIDATE_PATH);
 }
 
-export default async function Page() {
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Locations...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component that loads data
+async function LocationsContent() {
   const locations = await getLocations();
 
   return (
@@ -146,5 +160,13 @@ export default async function Page() {
         />
       </div>
     </AdminGuard>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <LocationsContent />
+    </Suspense>
   );
 }

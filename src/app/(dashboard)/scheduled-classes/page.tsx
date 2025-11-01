@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
-// // import SafetyClassesClient from "./SafetyClasses.client";
 import { revalidatePath } from "next/cache";
-// import { SafetyClass } from "./types";
-import { cache } from "react";
 import ScheduledClassesClient from "./ScheduledClasses.client";
-import { useUser } from "@/hooks/useUser";
+import { Suspense } from "react";
 
 // Force dynamic rendering for this page since it uses auth
 export const dynamic = 'force-dynamic';
@@ -32,12 +29,12 @@ async function requireAdmin() {
   };
 }
 
-// Cache the function to avoid repeated database calls
-const getScheduledClasses = cache(async ({
+// Get scheduled classes function
+async function getScheduledClasses({
   firmId,
 }: {
   firmId?: string | null;
-}): Promise<any[]> => {
+}): Promise<any[]> {
   const supabase = await createServerSupabase();
 
   const {
@@ -103,7 +100,7 @@ const getScheduledClasses = cache(async ({
     console.error("Unexpected error in getScheduledClasses:", error);
     return [];
   }
-});
+}
 
 // Server action to approve a scheduled class
 export async function approveScheduledClass(scheduledClassId: string) {
@@ -229,7 +226,20 @@ export async function cancelScheduledClass(scheduledClassId: string) {
   }
 }
 
-export default async function ScheduledClassesPage({
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Scheduled Classes...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component that loads data
+async function ScheduledClassesContent({
   searchParams,
 }: {
   searchParams: { category?: string; type?: string };
@@ -246,16 +256,8 @@ export default async function ScheduledClassesPage({
 
     console.log('👤 Auth check completed:', { role: me.role, firmId: me.firmId });
 
-    // Fetch scheduled classes with timeout to prevent hanging
-    const scheduledClassesPromise = Promise.race([
-      getScheduledClasses({ firmId: me.firmId }),
-      // 10 second timeout
-      new Promise<any[]>((_, reject) =>
-        setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
-      )
-    ]);
-
-    const scheduledClasses = await scheduledClassesPromise;
+    // Fetch scheduled classes
+    const scheduledClasses = await getScheduledClasses({ firmId: me.firmId });
 
     const endTime = Date.now();
     console.log(`⚡ ScheduledClassesPage: Completed in ${endTime - startTime}ms with ${scheduledClasses.length} classes`);
@@ -275,16 +277,28 @@ export default async function ScheduledClassesPage({
   } catch (error) {
     console.error('❌ ScheduledClassesPage: Error:', error);
 
-    // Return a fallback UI on error without event handlers
+    // Return a fallback UI on error
     return (
       <div className="container mx-auto p-6">
-        {/* <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-red-800 font-semibold mb-2">Unable to load safety classes</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-red-800 font-semibold mb-2">Unable to load scheduled classes</h2>
           <p className="text-red-600">
-            We're experiencing technical difficulties. Please refresh the page manually.
+            We're experiencing technical difficulties. Please refresh the page to try again.
           </p>
-        </div> */}
+        </div>
       </div>
     );
   }
+}
+
+export default function ScheduledClassesPage({
+  searchParams,
+}: {
+  searchParams: { category?: string; type?: string };
+}) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ScheduledClassesContent searchParams={searchParams} />
+    </Suspense>
+  );
 }

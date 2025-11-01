@@ -1,6 +1,6 @@
-"use client";
-import { useState } from "react";
 import { Eye, SlidersHorizontal, MapPin } from "lucide-react";
+import { Suspense } from "react";
+import DrillsClient from "./DrillsClient";
 
 const data = [
    {
@@ -110,91 +110,28 @@ function DrillDetailModal({ open, onClose, drill }: { open: boolean; onClose: ()
   );
 }
 
-export default function DrillAlertLogPage() {
-  const [selected, setSelected] = useState<any>(null);
-
+function LoadingSpinner() {
   return (
-    <div>
-      <nav className="text-gray-500 text-sm mb-2 flex items-center gap-2">
-        <span>Home</span>
-        <span>&gt;</span>
-        <span>Drill Alert Log</span>
-      </nav>
-      <h1 className="text-2xl font-bold mb-1">Drill Alert Log</h1>
-      <div className="bg-white rounded-xl shadow p-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr className="bg-gray-100 text-gray-700 text-sm">
-                <th className="px-4 py-2 text-left font-semibold">Drill Purpose</th>
-                <th className="px-4 py-2 text-left font-semibold">Location</th>
-                <th className="px-4 py-2 text-left font-semibold">Volunteer Name</th>
-                <th className="px-4 py-2 text-left font-semibold">Drill Date</th>
-                <th className="px-4 py-2 text-left font-semibold">Drill Time</th>
-                <th className="px-4 py-2 text-center">
-                  <SlidersHorizontal className="inline w-5 h-5 text-gray-400" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr
-                  key={row.purpose + idx}
-                  className="bg-white border-b hover:bg-gray-50 text-gray-700"
-                >
-                  <td className="px-4 py-2">{row.purpose}</td>
-                  <td className="px-4 py-2">{row.location}</td>
-                  <td className="px-4 py-2">{row.volunteer}</td>
-                  <td className="px-4 py-2">{row.date}</td>
-                  <td className="px-4 py-2">{row.time}</td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      className="p-1 rounded hover:bg-gray-100 cursor-pointer"
-                      onClick={() => setSelected(row)}
-                    >
-                      <Eye className="w-5 h-5 text-gray-500" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination and controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span>Showing</span>
-            <select className="border rounded px-2 py-1">
-              <option>10</option>
-              <option>25</option>
-              <option>50</option>
-            </select>
-            <span>of 500</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="border rounded px-3 py-1 text-gray-700 text-sm cursor-pointer">Reset Filters</button>
-            <button className="border rounded px-2 py-1 text-gray-400 cursor-pointer" disabled>
-              &lt;&lt;
-            </button>
-            <button className="border rounded px-2 py-1 text-gray-400 cursor-pointer" disabled>
-              &lt;
-            </button>
-            <span className="text-gray-700 text-sm">1</span>
-            <span className="text-gray-500 text-sm">of 25 pages</span>
-            <button className="border rounded px-2 py-1 text-gray-700 cursor-pointer">
-              &gt;
-            </button>
-            <button className="border rounded px-2 py-1 text-gray-700 cursor-pointer">
-              &gt;&gt;
-            </button>
-          </div>
-        </div>
+    <div className="container mx-auto flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600 text-lg">Loading Drills...</p>
       </div>
-      <DrillDetailModal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        drill={selected}
-      />
     </div>
+  );
+}
+
+async function DrillsContent() {
+  // Simulate async data loading
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return <DrillsClient data={data} />;
+}
+
+export default function DrillAlertLogPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <DrillsContent />
+    </Suspense>
   );
 }
