@@ -39,35 +39,39 @@ const getSafetyClasses = cache(async ({
   const supabase = await createServerSupabase();
   
   try {
-    // Optimized query with specific columns and better indexing
+    // Highly optimized query with indexed columns first and minimal payload
     let query = supabase
       .from("safety_classes")
       .select(`
         id,
         title,
-        description,
-        video_url,
-        thumbnail_url,
         duration_minutes,
         is_required,
-        is_active,
-        firm_id,
-        created_at,
-        updated_at,
+        thumbnail_url,
         type,
-        mode
+        mode,
+        created_at
       `)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(50); // Add reasonable limit to prevent large data loads
+      .eq("is_active", true) // Indexed column first
+      .order("created_at", { ascending: false }) // Use indexed column for sorting
+      .limit(20); // Reduced limit for faster initial load
 
+    const startTime = Date.now();
     const { data: safetyClasses, error } = await query;
+    const queryTime = Date.now() - startTime;
+    
     if (error) {
       console.error("Error fetching safety classes:", error);
       throw new Error(`Failed to fetch safety classes: ${error.message}`);
     }
 
-    console.log(`✅ Fetched ${safetyClasses?.length || 0} safety classes`);
+    console.log(`✅ Fetched ${safetyClasses?.length || 0} safety classes in ${queryTime}ms`);
+    
+    // Warn if query is slow
+    if (queryTime > 1000) {
+      console.warn(`⚠️ Slow query detected: ${queryTime}ms for safety classes`);
+    }
+    
     return safetyClasses || [];
   } catch (error) {
     console.error("Unexpected error in getSafetyClasses:", error);

@@ -1,6 +1,6 @@
 // app/dashboard/super-admin/firm-management/page.tsx
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import FirmManagement from "./FirmManagement.client";
 import type { Firm } from "@/lib/types";
@@ -8,16 +8,18 @@ import { SuperAdminGuard } from "@/components/AuthGuard";
 
 const REVALIDATE_PATH = "/dashboard/super-admin/firm-management";
 
-/** SSR fetch with server-side filter from URL (?q=) */
-async function getFirms(q?: string): Promise<Firm[]> {
+/** SSR fetch with server-side filter from URL (?q=) - Cached and optimized */
+const getFirms = cache(async (q?: string): Promise<Firm[]> => {
   const supabase = await createServerSupabase();
 
+  const startTime = Date.now();
   let query = supabase
     .from("firms")
     .select(
-      "id, name, industry, contact_email, phone_number, address, created_at"
-    )
-    .order("created_at", { ascending: false });
+      "id, name, industry, contact_email, phone_number, created_at"
+    ) // Removed address to reduce payload
+    .order("name") // Use name index for better performance
+    .limit(100); // Add reasonable limit
 
   if (q && q.trim()) {
     // Case-insensitive 'contains' on name
@@ -25,10 +27,18 @@ async function getFirms(q?: string): Promise<Firm[]> {
   }
 
   const { data, error } = await query;
+  const queryTime = Date.now() - startTime;
 
   if (error) {
     console.error("Failed to fetch firms:", error.message);
     return [];
+  }
+
+  console.log(`✅ Fetched ${data?.length || 0} firms in ${queryTime}ms`);
+  
+  // Warn if query is slow
+  if (queryTime > 1000) {
+    console.warn(`⚠️ Slow query detected: ${queryTime}ms for firms`);
   }
 
   return (data ?? []).map((f: any) => ({
@@ -37,10 +47,10 @@ async function getFirms(q?: string): Promise<Firm[]> {
     industry: f.industry ?? "",
     contactEmail: f.contact_email ?? "",
     phoneNumber: f.phone_number ?? "",
-    address: f.address ?? "",
+    address: "", // Removed from query to reduce payload
     createdAt: f.created_at ?? null,
   }));
-}
+});
 
 /* -------------------- SERVER ACTIONS -------------------- */
 
