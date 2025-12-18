@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Combine Auth user and Profile document into one type (keeps your shape)
 export interface UserSession {
@@ -110,11 +111,8 @@ const loadUserDetailLocalStorage = (): any | null => {
 
 export const useUser = () => {
   const supabase = useMemo(makeSupabase, []);
-  // Initialize user from localStorage if available
-  const [user, setUser] = useState<UserSession | null>(() => loadUserFromStorage());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const queryClient = useQueryClient();
+  
   // Turn a Supabase user + profile row into your UserSession shape
   const buildSession = (
     u: User | null,
@@ -133,114 +131,97 @@ export const useUser = () => {
       firmId: profile?.firm_id ?? null,
     };
   };
-
-  useEffect(() => {
-    let unsubscribed = false;
-    const init = async () => {
-      try {
-        setError(null);
-        
-        // Check localStorage first for faster loading
-        const cachedUser = loadUserFromStorage();
-        if (cachedUser) {
-          console.log('⚡ Using cached user from localStorage');
-          setUser(cachedUser);
-          setLoading(false);
-          return;
-        }
-        
-        if (!supabase) {
-          const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
-          console.error(errorMsg);
-          setError(errorMsg);
-          setUser(null);
-          return;
-        }
-
-        console.log('🔐 useUser: Checking authentication...');
-        
-        // Check if we have valid environment variables
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        console.log('🔑 Supabase config:', { 
-          url: url ? `${url.substring(0, 20)}...` : 'MISSING',
-          key: key ? `${key.substring(0, 20)}...` : 'MISSING'
-        });
-
-        // 1) Check authentication with better error handling
-        const {
-          data: { user: authUser },
-          error: userErr,
-        } = await supabase.auth.getUser();
-        
-        if (userErr) {
-          console.error('🚨 Auth error:', userErr);
-          if (userErr.message.includes('403') || userErr.message.includes('Forbidden')) {
-            setError('Authentication failed. Please check your Supabase configuration or try logging in again.');
-            // Try to clear any bad session
-            await supabase.auth.signOut();
-          }
-          throw userErr;
-        }
-
-        console.log('👤 Auth user:', authUser ? `${authUser.email} (${authUser.id})` : 'No user');
-
-        if (!authUser) {
-          console.log('❌ No authenticated user found');
-          setUser(null);
-          return;
-        }
-
-        // 2) Load profile with better error handling
-        console.log('📝 Fetching user profile...');
-        const { data: profile, error: profileErr } = await supabase
-          .from("profiles")
-          .select("full_name, role, firm_id")
-          .eq("id", authUser.id)
-          .maybeSingle();
-
-        if (profileErr) {
-          console.warn('⚠️ Profile fetch warning:', profileErr.message);
-          if (profileErr.message.includes('403') || profileErr.message.includes('Forbidden')) {
-            setError('Access denied. Please check your permissions or contact an administrator.');
-          }
-          // Still try to set user with auth info only
-          if (!unsubscribed) setUser(buildSession(authUser, null));
-          return;
-        }
-
-        console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
-        
-        // Build session and save to localStorage
-        const sessionData = buildSession(authUser, profile);
-        if (sessionData && !unsubscribed) {
-          saveUserToStorage(sessionData); // Save to localStorage
-          setUser(sessionData);
-        }
-        
-      } catch (err: any) {
-        console.error('❌ useUser init error:', err);
-        const errorMessage = err?.message || 'Unknown authentication error';
-        if (!unsubscribed) {
-          setError(errorMessage);
-          setUser(null);
-        }
-      } finally {
-        if (!unsubscribed) setLoading(false);
+  
+  // React Query hook for user data with caching
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      // Check localStorage first for faster loading
+      const cachedUser = loadUserFromStorage();
+      if (cachedUser) {
+        console.log('⚡ Using cached user from localStorage');
+        return cachedUser;
       }
-    };
+      
+      if (!supabase) {
+        const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
-    init();
+      console.log('🔐 useUser: Checking authentication...');
+      
+      // Check if we have valid environment variables
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      console.log('🔑 Supabase config:', { 
+        url: url ? `${url.substring(0, 20)}...` : 'MISSING',
+        key: key ? `${key.substring(0, 20)}...` : 'MISSING'
+      });
 
-    // 3) Subscribe to auth state changes so the hook stays in sync
-    const { data: sub } = supabase?.auth.onAuthStateChange(async (event, session) => {
+      // 1) Check authentication with better error handling
+      const {
+        data: { user: authUser },
+        error: userErr,
+      } = await supabase.auth.getUser();
+      
+      if (userErr) {
+        console.error('🚨 Auth error:', userErr);
+        if (userErr.message.includes('403') || userErr.message.includes('Forbidden')) {
+          // Try to clear any bad session
+          await supabase.auth.signOut();
+        }
+        throw userErr;
+      }
+
+      console.log('👤 Auth user:', authUser ? `${authUser.email} (${authUser.id})` : 'No user');
+
+      if (!authUser) {
+        console.log('❌ No authenticated user found');
+        return null;
+      }
+
+      // 2) Load profile with better error handling
+      console.log('📝 Fetching user profile...');
+      const { data: profile, error: profileErr } = await supabase
+        .from("profiles")
+        .select("full_name, role, firm_id")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (profileErr) {
+        console.warn('⚠️ Profile fetch warning:', profileErr.message);
+        // Still try to set user with auth info only
+        return buildSession(authUser, null);
+      }
+
+      console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
+      
+      // Build session and save to localStorage
+      const sessionData = buildSession(authUser, profile);
+      if (sessionData) {
+        saveUserToStorage(sessionData); // Save to localStorage
+      }
+      
+      return sessionData;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Retry failed queries once
+  });
+
+  // Subscribe to auth state changes so the hook stays in sync
+  useEffect(() => {
+    if (!supabase) return;
+    
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event, session?.user?.email);
       
       try {
         if (event === 'SIGNED_OUT' || !session?.user) {
           console.log('👋 User signed out, clearing storage');
           clearUserFromStorage();
-          setUser(null);
+          queryClient.setQueryData(['user'], null);
           return;
         }
         
@@ -255,30 +236,29 @@ export const useUser = () => {
           const sessionData = buildSession(session.user, profile ?? null);
           if (sessionData) {
             saveUserToStorage(sessionData);
-            setUser(sessionData);
+            queryClient.setQueryData(['user'], sessionData);
           }
         }
       } catch (e) {
         console.error("useUser listener error:", e);
         clearUserFromStorage();
-        setUser(null);
+        queryClient.setQueryData(['user'], null);
       }
-    }) ?? { unsubscribe: () => {} };
+    });
 
     return () => {
-      unsubscribed = true;
       if (sub?.subscription) {
         sub.subscription.unsubscribe();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]); // supabase instance is memoized
+  }, [supabase, queryClient]);
 
   // Logout function that clears everything
   const logout = async () => {
     if (supabase) {
       try {
-        console.log('� Logging out user...');
+        console.log(' Logging out user...');
         
         // Clear local storage first
         clearUserFromStorage();
@@ -286,10 +266,8 @@ export const useUser = () => {
         // Sign out from Supabase
         await supabase.auth.signOut();
         
-        // Reset component state
-        setUser(null);
-        setError(null);
-        setLoading(false);
+        // Reset query cache
+        queryClient.setQueryData(['user'], null);
         
         console.log('✅ User logged out successfully - all storage cleared');
       } catch (error) {
@@ -297,23 +275,19 @@ export const useUser = () => {
         
         // Force clear everything even if signOut fails
         clearUserFromStorage();
-        setUser(null);
-        setError(null);
-        setLoading(false);
+        queryClient.setQueryData(['user'], null);
         
         console.log('⚠️ Forced logout - storage cleared despite error');
       }
     } else {
       // If no supabase client, still clear storage
       clearUserFromStorage();
-      setUser(null);
-      setError(null);
-      setLoading(false);
+      queryClient.setQueryData(['user'], null);
       console.log('🧹 Storage cleared (no supabase client available)');
     }
   };
 
-  return { user, loading, error, logout };
+  return { user: data, loading: isLoading, error: error ? error.message : null, logout, refetch };
 };
 
 // Export helper functions for manual storage management
