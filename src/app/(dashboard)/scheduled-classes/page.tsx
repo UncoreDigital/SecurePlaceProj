@@ -1,31 +1,25 @@
 import { redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import ScheduledClassesClient from "./ScheduledClasses.client";
 import { Suspense } from "react";
+import { requireAdmin } from "@/lib/auth-utils";
 
-// Force dynamic rendering for this page since it uses auth
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Use ISR with a reasonable revalidation time for better performance
+export const dynamic = 'force-static';
+export const revalidate = 300; // Revalidate every 5 minutes
 
-async function requireAdmin() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role, firm_id")
-    .eq("id", user.id)
-    .single();
-
-  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
+async function requireAdminWrapper() {
+  const { authorized, error, role, firmId } = await requireAdmin();
+  
+  if (!authorized) {
+    console.error('Unauthorized access attempt:', error);
+    redirect("/");
+  }
+  
   return {
-    role: me!.role as "super_admin" | "firm_admin",
-    firmId: me!.firm_id as string | null,
+    role: role as "super_admin" | "firm_admin",
+    firmId: firmId as string | null,
   };
 }
 
@@ -107,7 +101,7 @@ export async function approveScheduledClass(scheduledClassId: string) {
   "use server";
 
   try {
-    const me = await requireAdmin();
+    const me = await requireAdminWrapper();
 
     // Use service role key to bypass RLS for admin operations
     const admin = createClient(
@@ -169,7 +163,7 @@ export async function cancelScheduledClass(scheduledClassId: string) {
   "use server";
 
   try {
-    const me = await requireAdmin();
+    const me = await requireAdminWrapper();
 
     // Use service role key to bypass RLS for admin operations
     const admin = createClient(
@@ -249,7 +243,7 @@ async function ScheduledClassesContent({
 
   try {
     // Run auth check
-    const me = await requireAdmin();
+    const me = await requireAdminWrapper();
 
     const category = searchParams?.category ?? "all";
     const type = searchParams?.type ?? "in-person";
