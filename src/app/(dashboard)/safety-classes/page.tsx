@@ -1,34 +1,14 @@
 import { redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import SafetyClassesClient from "./SafetyClasses.client";
 import { revalidatePath } from "next/cache";
 import { SafetyClass } from "./types";
 import { Suspense } from "react";
+import { requireAdmin } from "@/lib/auth-utils";
 
-// Force dynamic rendering for this page since it uses auth
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-async function requireAdmin() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role, firm_id")
-    .eq("id", user.id)
-    .single();
-
-  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
-  return {
-    role: me!.role as "super_admin" | "firm_admin",
-    firmId: me!.firm_id as string | null,
-  };
-}
+// Use ISR with a reasonable revalidation time for better performance
+export const dynamic = 'force-static';
+export const revalidate = 300; // Revalidate every 5 minutes
 
 // Simple function to get safety classes (NO CACHE)
 async function getSafetyClasses({
@@ -189,11 +169,17 @@ async function SafetyClassesContent({
 }: {
   searchParams: { category?: string; type?: string };
 }) {
-  const me = await requireAdmin();
+  const { authorized, error, role, firmId } = await requireAdmin();
+  
+  if (!authorized) {
+    console.error('Unauthorized access attempt:', error);
+    redirect("/");
+  }
+  
   const category = searchParams?.category ?? "all";
   const type = searchParams?.type ?? "remote";
   
-  const safetyClasses = await getSafetyClasses({ firmId: me.firmId });
+  const safetyClasses = await getSafetyClasses({ firmId });
 
   return (
     <div className="container mx-auto">
@@ -201,7 +187,7 @@ async function SafetyClassesContent({
         safetyClasses={safetyClasses}
         initialCategory={category}
         initialType={type}
-        isSuperAdmin={me.role === "super_admin"}
+        isSuperAdmin={role === "super_admin"}
         createSafetyClass={createSafetyClass}
         updateSafetyClass={updateSafetyClass}
       />
