@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createServerSupabase } from "@/lib/supabase/server";
 import EmployeesClient from "./Employees.client";
 import { createClient } from "@supabase/supabase-js";
 import { Suspense } from "react";
+import { requireAdmin } from "@/lib/auth-utils";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -20,23 +20,17 @@ type EmployeeRow = {
 
 type FirmOption = { id: string; name: string };
 
-async function requireAdmin() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role, firm_id")
-    .eq("id", user.id)
-    .single();
-
-  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
+async function requireAdminWrapper() {
+  const { authorized, error, role, firmId } = await requireAdmin();
+  
+  if (!authorized) {
+    console.error('Unauthorized access attempt:', error);
+    redirect("/");
+  }
+  
   return {
-    role: me!.role as "super_admin" | "firm_admin",
-    firmId: me!.firm_id as string | null,
+    role: role as "super_admin" | "firm_admin",
+    firmId: firmId as string | null,
   };
 }
 
@@ -104,7 +98,7 @@ async function getFirms(): Promise<FirmOption[]> {
 
 export async function createEmployee(formData: FormData) {
   "use server";
-  const me = await requireAdmin();
+  const me = await requireAdminWrapper();
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "")
@@ -164,7 +158,7 @@ export async function createEmployee(formData: FormData) {
 
 export async function updateEmployee(formData: FormData) {
   "use server";
-  const me = await requireAdmin();
+  const me = await requireAdminWrapper();
 
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
@@ -253,7 +247,7 @@ async function EmployeesContent({
 }: {
   searchParams: Promise<{ q?: string; firm?: string }>;
 }) {
-  const me = await requireAdmin();
+  const me = await requireAdminWrapper();
 
   const sp = await searchParams;
   const q = sp?.q ?? "";
