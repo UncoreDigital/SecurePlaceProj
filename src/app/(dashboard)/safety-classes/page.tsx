@@ -1,22 +1,21 @@
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import SafetyClassesClient from "./SafetyClasses.client";
-import { revalidatePath } from "next/cache";
 import { SafetyClass } from "./types";
 import { Suspense } from "react";
-import { requireAdmin } from "@/lib/auth-utils";
+import { AdminGuard } from "@/components/AuthGuard";
 
 // Use ISR with a reasonable revalidation time for better performance
 export const dynamic = 'force-static';
 export const revalidate = 300; // Revalidate every 5 minutes
 
 // Simple function to get safety classes (NO CACHE)
-async function getSafetyClasses({
-  firmId,
-}: {
-  firmId?: string | null;
-}): Promise<SafetyClass[]> {
-  const supabase = await createServerSupabase();
+async function getSafetyClasses(): Promise<SafetyClass[]> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
   
   try {
     const startTime = Date.now();
@@ -66,7 +65,6 @@ async function getSafetyClasses({
 // Server action to create a new safety class
 export async function createSafetyClass(formData: FormData) {
   "use server";
-  const me = await requireAdmin();
 
   const title = String(formData.get("title") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -88,7 +86,7 @@ export async function createSafetyClass(formData: FormData) {
   );
   
   const { error } = await admin.from("safety_classes").insert({
-    firm_id: me.firmId ?? null,
+    firm_id: null, // For now, allow all admins to create classes
     title,
     description,
     video_url: videoUrl,
@@ -110,7 +108,6 @@ export async function createSafetyClass(formData: FormData) {
 // Server action to update an existing safety class
 export async function updateSafetyClass(formData: FormData) {
   "use server";
-  const me = await requireAdmin();
 
   const id = String(formData.get("id") || "").trim();
   const title = String(formData.get("title") || "").trim();
@@ -169,17 +166,10 @@ async function SafetyClassesContent({
 }: {
   searchParams: { category?: string; type?: string };
 }) {
-  const { authorized, error, role, firmId } = await requireAdmin();
-  
-  if (!authorized) {
-    console.error('Unauthorized access attempt:', error);
-    redirect("/");
-  }
-  
   const category = searchParams?.category ?? "all";
   const type = searchParams?.type ?? "remote";
   
-  const safetyClasses = await getSafetyClasses({ firmId });
+  const safetyClasses = await getSafetyClasses();
 
   return (
     <div className="container mx-auto">
@@ -187,7 +177,7 @@ async function SafetyClassesContent({
         safetyClasses={safetyClasses}
         initialCategory={category}
         initialType={type}
-        isSuperAdmin={role === "super_admin"}
+        isSuperAdmin={true} // Will be controlled by AdminGuard
         createSafetyClass={createSafetyClass}
         updateSafetyClass={updateSafetyClass}
       />
@@ -201,8 +191,10 @@ export default function SafetyClassesPage({
   searchParams: { category?: string; type?: string };
 }) {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <SafetyClassesContent searchParams={searchParams} />
-    </Suspense>
+    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+      <Suspense fallback={<LoadingSpinner />}>
+        <SafetyClassesContent searchParams={searchParams} />
+      </Suspense>
+    </AdminGuard>
   );
 }

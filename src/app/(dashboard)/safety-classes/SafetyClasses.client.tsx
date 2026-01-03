@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter, Edit } from "lucide-react";
+import { Play, Clock, Users, Filter, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -270,7 +270,7 @@ export default function SafetyClassesClient({
                       className="px-3 border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
                       title="Edit Safety Class"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   )}
                 </div>

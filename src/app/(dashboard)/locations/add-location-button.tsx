@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 
 interface AddLocationButtonProps {
@@ -63,7 +63,7 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Location
+          <Plus className="mr-2 h-4 w-4" /> Add New Location
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] z-[1000]">
@@ -152,7 +152,7 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
                 </>
               ) : (
                 <>
-                  <PlusCircle className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Create Location
                 </>
               )}

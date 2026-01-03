@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, PlusCircle, Printer } from "lucide-react";
+import { Eye, Plus, Printer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +62,7 @@ export default function CertificationsLandingPage() {
           onClick={() => router.push('/certifications/new')}
           className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium"
         >
-          <PlusCircle className="w-4 h-4" /> Create Certificate
+          <Plus className="w-4 h-4" /> Create Certificate
         </Button>
       </div>
 

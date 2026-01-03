@@ -1,9 +1,8 @@
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import EmployeesClient from "./Employees.client";
 import { createClient } from "@supabase/supabase-js";
 import { Suspense } from "react";
-import { requireAdmin } from "@/lib/auth-utils";
+import { AdminGuard } from "@/components/AuthGuard";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -20,20 +19,6 @@ type EmployeeRow = {
 
 type FirmOption = { id: string; name: string };
 
-async function requireAdminWrapper() {
-  const { authorized, error, role, firmId } = await requireAdmin();
-  
-  if (!authorized) {
-    console.error('Unauthorized access attempt:', error);
-    redirect("/");
-  }
-  
-  return {
-    role: role as "super_admin" | "firm_admin",
-    firmId: firmId as string | null,
-  };
-}
-
 async function getEmployees({
   q,
   firmFilter,
@@ -41,7 +26,11 @@ async function getEmployees({
   q?: string;
   firmFilter?: string | null;
 }): Promise<EmployeeRow[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
   let query = supabase
     .from("profiles")
     .select(
@@ -82,7 +71,11 @@ async function getEmployees({
 }
 
 async function getFirms(): Promise<FirmOption[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
   const { data, error } = await supabase
     .from("firms")
     .select("id, name")
@@ -98,7 +91,6 @@ async function getFirms(): Promise<FirmOption[]> {
 
 export async function createEmployee(formData: FormData) {
   "use server";
-  const me = await requireAdminWrapper();
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "")
@@ -158,7 +150,6 @@ export async function createEmployee(formData: FormData) {
 
 export async function updateEmployee(formData: FormData) {
   "use server";
-  const me = await requireAdminWrapper();
 
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
@@ -247,21 +238,14 @@ async function EmployeesContent({
 }: {
   searchParams: Promise<{ q?: string; firm?: string }>;
 }) {
-  const me = await requireAdminWrapper();
-
   const sp = await searchParams;
   const q = sp?.q ?? "";
   const firmParam = sp?.firm ?? "__ALL__";
-  const firmFilter =
-    me.role === "super_admin"
-      ? firmParam && firmParam !== "__ALL__"
-        ? firmParam
-        : null
-      : me.firmId;
+  const firmFilter = firmParam && firmParam !== "__ALL__" ? firmParam : null;
 
   const [employees, firms] = await Promise.all([
     getEmployees({ q, firmFilter }),
-    me.role === "super_admin" ? getFirms() : Promise.resolve([]),
+    getFirms(),
   ]);
 
   return (
@@ -275,11 +259,9 @@ async function EmployeesContent({
       <EmployeesClient
         employees={employees}
         firms={firms}
-        isSuperAdmin={me.role === "super_admin"}
+        isSuperAdmin={true} // Will be controlled by AdminGuard
         initialQuery={q}
-        initialFirm={
-          me.role === "super_admin" ? firmParam : me.firmId ?? "__ALL__"
-        }
+        initialFirm={firmParam}
         createEmployee={createEmployee}
         updateEmployee={updateEmployee}
         deleteEmployee={deleteEmployee}
@@ -294,8 +276,10 @@ export default async function Page({
   searchParams: Promise<{ q?: string; firm?: string }>;
 }) {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <EmployeesContent searchParams={searchParams} />
-    </Suspense>
+    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+      <Suspense fallback={<LoadingSpinner />}>
+        <EmployeesContent searchParams={searchParams} />
+      </Suspense>
+    </AdminGuard>
   );
 }

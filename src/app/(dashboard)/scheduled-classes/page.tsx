@@ -1,59 +1,32 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import ScheduledClassesClient from "./ScheduledClasses.client";
 import { Suspense } from "react";
-import { requireAdmin } from "@/lib/auth-utils";
+import { AdminGuard } from "@/components/AuthGuard";
 
 // Use ISR with a reasonable revalidation time for better performance
 export const dynamic = 'force-static';
 export const revalidate = 300; // Revalidate every 5 minutes
 
-async function requireAdminWrapper() {
-  const { authorized, error, role, firmId } = await requireAdmin();
-  
-  if (!authorized) {
-    console.error('Unauthorized access attempt:', error);
-    redirect("/");
-  }
-  
-  return {
-    role: role as "super_admin" | "firm_admin",
-    firmId: firmId as string | null,
-  };
-}
-
 // Get scheduled classes function
-async function getScheduledClasses({
-  firmId,
-}: {
-  firmId?: string | null;
-}): Promise<any[]> {
-  const supabase = await createServerSupabase();
+async function getScheduledClasses(): Promise<any[]> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
-  const {
-    data: { user },
-  }: any = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("firm_id, full_name, role")
-    .eq("id", user.id)
-    .single();
-  console.log('👤 Current user role:', me);
   try {
     // Optimized query with specific columns and better indexing
-    // .select("*, safety_class: safety_class_id(title, thumbnail_url, video_url)")
     let query = supabase
       .from("scheduled_classes")
       .select("*, safety_class: safety_class_id(title, id), firms:firm_id ( name )")
-      .order("start_time", { ascending: false }); // Add reasonable limit to prevent large data loads
+      .order("start_time", { ascending: false });
 
     let { data: scheduledClasses, error }: any = await query;
-    // Format data for UI
-    scheduledClasses = me?.firm_id ? scheduledClasses?.filter((cls: any) => cls?.firm_id === me?.firm_id) : scheduledClasses;
+    
     console.log(scheduledClasses, `✅ Fetched Scheduled classes`);
+    
     const formatted = (scheduledClasses || []).map((cls: any) => ({
       id: cls.id,
       title: cls.safety_class?.title ?? "Untitled",
@@ -80,16 +53,16 @@ async function getScheduledClasses({
       type: cls.type ?? "In-Person",
       thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
       firm: cls.firms?.name || "-",
-      currentUserRole: me?.role || "employee",
+      currentUserRole: "admin", // Will be controlled by AdminGuard
       safetyClassId: cls?.safety_class?.id || null,
     }));
-    scheduledClasses = formatted
+    
     if (error) {
       console.error("Error fetching Scheduled classes:", error);
       throw new Error(`Failed to fetch Scheduled classes: ${error.message}`);
     }
 
-    return scheduledClasses || [];
+    return formatted || [];
   } catch (error) {
     console.error("Unexpected error in getScheduledClasses:", error);
     return [];
@@ -101,8 +74,6 @@ export async function approveScheduledClass(scheduledClassId: string) {
   "use server";
 
   try {
-    const me = await requireAdminWrapper();
-
     // Use service role key to bypass RLS for admin operations
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -110,27 +81,13 @@ export async function approveScheduledClass(scheduledClassId: string) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    console.log('🔄 Approving scheduled class:', { scheduledClassId, adminRole: me.role, firmId: me.firmId });
+    console.log('🔄 Approving scheduled class:', { scheduledClassId });
 
-    // First, check if the scheduled class exists and get its details
-    const { data: scheduledClass, error: fetchError } = await admin
+    // Update the scheduled class status to approved
+    const { error } = await admin
       .from("scheduled_classes")
-      .select("*, safety_classes!inner(firm_id)")
-      .eq("id", scheduledClassId)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching scheduled class:", fetchError);
-      throw new Error("Scheduled class not found");
-    }
-
-    // Check permissions - super admins can approve all, firm admins only their firm's classes
-    if (me.role === "firm_admin") {
-      const safetyClassFirmId = scheduledClass.safety_classes?.firm_id;
-      if (safetyClassFirmId !== me.firmId) {
-        throw new Error("You can only approve classes for your firm");
-      }
-    }
+      .update({ status: "approved" })
+      .eq("id", scheduledClassId);
 
     // Update the status to approved
     const { error: updateError } = await admin
@@ -139,10 +96,8 @@ export async function approveScheduledClass(scheduledClassId: string) {
         status: "approved",
         updated_at: new Date().toISOString()
       })
-      .eq("id", scheduledClassId);
-
-    if (updateError) {
-      console.error("Error updating scheduled class:", updateError);
+    if (error) {
+      console.error("Error updating scheduled class:", error);
       throw new Error("Failed to approve scheduled class");
     }
 
@@ -163,8 +118,6 @@ export async function cancelScheduledClass(scheduledClassId: string) {
   "use server";
 
   try {
-    const me = await requireAdminWrapper();
-
     // Use service role key to bypass RLS for admin operations
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -172,29 +125,9 @@ export async function cancelScheduledClass(scheduledClassId: string) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    console.log('🔄 cancel scheduled class:', { scheduledClassId, adminRole: me.role, firmId: me.firmId });
+    console.log('🔄 cancel scheduled class:', { scheduledClassId });
 
-    // First, check if the scheduled class exists and get its details
-    // const { data: scheduledClass, error: fetchError } = await admin
-    //   .from("scheduled_classes")
-    //   .select("*, safety_classes!inner(firm_id)")
-    //   .eq("id", scheduledClassId)
-    //   .single();
-
-    // if (fetchError) {
-    //   console.error("Error fetching scheduled class:", fetchError);
-    //   throw new Error("Scheduled class not found");
-    // }
-
-    // // Check permissions - super admins can approve all, firm admins only their firm's classes
-    // if (me.role === "firm_admin") {
-    //   const safetyClassFirmId = scheduledClass.safety_classes?.firm_id;
-    //   if (safetyClassFirmId !== me.firmId) {
-    //     throw new Error("You can only approve classes for your firm");
-    //   }
-    // }
-
-    // Update the status to approved
+    // Update the status to cancelled
     const { error: updateError } = await admin
       .from("scheduled_classes")
       .update({
@@ -205,10 +138,10 @@ export async function cancelScheduledClass(scheduledClassId: string) {
 
     if (updateError) {
       console.error("Error updating scheduled class:", updateError);
-      throw new Error("Failed to approve scheduled class");
+      throw new Error("Failed to cancel scheduled class");
     }
 
-    console.log('✅ Successfully approved scheduled class:', scheduledClassId);
+    console.log('✅ Successfully cancelled scheduled class:', scheduledClassId);
 
     // Revalidate the page to show updated data
     revalidatePath("/scheduled-classes");
@@ -242,16 +175,13 @@ async function ScheduledClassesContent({
   console.log('🚀 ScheduledClassesPage: Starting render');
 
   try {
-    // Run auth check
-    const me = await requireAdminWrapper();
-
     const category = searchParams?.category ?? "all";
     const type = searchParams?.type ?? "in-person";
 
-    console.log('👤 Auth check completed:', { role: me.role, firmId: me.firmId });
+    console.log('👤 Auth check completed via AdminGuard');
 
     // Fetch scheduled classes
-    const scheduledClasses = await getScheduledClasses({ firmId: me.firmId });
+    const scheduledClasses = await getScheduledClasses();
 
     const endTime = Date.now();
     console.log(`⚡ ScheduledClassesPage: Completed in ${endTime - startTime}ms with ${scheduledClasses.length} classes`);
@@ -262,7 +192,7 @@ async function ScheduledClassesContent({
           scheduledClasses={scheduledClasses}
           initialCategory={category}
           initialType={type}
-          isSuperAdmin={me.role === "super_admin"}
+          isSuperAdmin={true} // Will be controlled by AdminGuard
           approveScheduledClass={approveScheduledClass}
           cancelScheduledClass={cancelScheduledClass}
         />
@@ -291,8 +221,10 @@ export default function ScheduledClassesPage({
   searchParams: { category?: string; type?: string };
 }) {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <ScheduledClassesContent searchParams={searchParams} />
-    </Suspense>
+    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+      <Suspense fallback={<LoadingSpinner />}>
+        <ScheduledClassesContent searchParams={searchParams} />
+      </Suspense>
+    </AdminGuard>
   );
 }

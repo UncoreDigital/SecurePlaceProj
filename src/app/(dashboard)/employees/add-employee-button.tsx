@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAuth } from "@/context/UserContext";
 import { functions } from "@/lib/appwrite";
 
@@ -78,7 +78,7 @@ export function AddEmployeeButton({ onEmployeeAdded }: AddEmployeeButtonProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Employee
+          <Plus className="mr-2 h-4 w-4" /> Add Employee
         </Button>
       </DialogTrigger>
       <DialogContent>

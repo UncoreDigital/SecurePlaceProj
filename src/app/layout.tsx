@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import ResourcePreloader from "@/components/ResourcePreloader";
 import ReactQueryProvider from "@/providers/ReactQueryProvider";
 import "./globals.css";
 
@@ -36,7 +35,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ReactQueryProvider>
-          <ResourcePreloader />
           {children}
           <Toaster richColors position="bottom-center" />
         </ReactQueryProvider>
