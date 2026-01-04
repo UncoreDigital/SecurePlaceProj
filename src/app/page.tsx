@@ -3,10 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, AtSign, KeyRound, Eye, EyeOff } from "lucide-react";
 
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { validateSession, redirectToDashboard } from "@/lib/session-utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,12 +37,42 @@ function useSupabase() {
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const supabase = useSupabase();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
   });
+
+  // Check if user is already logged in
+  useEffect(() => {
+    console.log('🔐 Login: Checking existing session...');
+    
+    // Use non-strict validation for login page (more lenient)
+    const { isValid, user, reason } = validateSession(false);
+    
+    if (isValid && user && user.role) {
+      console.log('✅ Login: Valid session found, redirecting to dashboard');
+      redirectToDashboard(user);
+      return;
+    }
+    
+    console.log('❌ Login: No valid session -', reason, '- showing login form');
+    setIsCheckingSession(false);
+  }, []);
+
+  // Show loading while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
+          <div className="text-lg text-gray-600">Checking session...</div>
+        </div>
+      </div>
+    );
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setError(null);
@@ -98,13 +129,34 @@ export default function LoginPage() {
 
       if (!profile?.role) throw new Error("User profile/role not found.");
 
+      // 4) Save user session to localStorage in the expected format
+      const userSession = {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.user_metadata?.full_name || `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim(),
+          role: profile.role,
+          firmId: null // You can add firm_id from profile if needed
+        },
+        timestamp: Date.now(),
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      };
+      
+      localStorage.setItem('secure_place_user_session', JSON.stringify(userSession));
+      console.log('💾 Login: User session saved to localStorage:', userSession);
+
+      // Debug: Verify session was saved correctly
+      const savedSession = localStorage.getItem('secure_place_user_session');
+      console.log('🔍 Login: Verification - saved session:', savedSession);
+
       // Update last login time
       await supabase
         .from("user_profiles")
         .update({ last_login_at: new Date().toISOString() })
         .eq("id", user.id);
 
-      // 4) Hard redirect to ensure fresh state (same as your original flow)
+      // 5) Hard redirect to ensure fresh state (same as your original flow)
+      console.log('🔄 Login: Redirecting to dashboard for role:', profile.role);
       if (profile.role === "super_admin") {
         window.location.assign("/super-admin-dashboard");
         return;

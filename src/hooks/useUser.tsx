@@ -71,38 +71,29 @@ const loadUserFromStorage = (): UserSession | null => {
 
 const clearUserFromStorage = () => {
   if (typeof window !== 'undefined') {
-    console.log('🧹 Starting comprehensive storage cleanup...');
+    console.log('🧹 FAST storage cleanup...');
     
-    // Clear the main user session
-    localStorage.removeItem(STORAGE_KEY);
-    
-    // Clear all Supabase-related storage
-    const keysToRemove = [
-      'supabase.auth.token',
-      'sb-localhost-auth-token', // Local development
-      'sb-auth-token',
-    ];
-    
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    });
-    
-    // Clear any storage keys that contain auth-related terms
-    [...Object.keys(localStorage), ...Object.keys(sessionStorage)].forEach(key => {
-      if (key.startsWith('sb-') || // Supabase prefix
-          key.includes('supabase') ||
-          key.includes('auth') ||
-          key.includes('session') ||
-          key.includes('user') ||
-          key.includes('secure_place')) {
+    try {
+      // Clear the main user session immediately
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Clear common Supabase keys immediately (don't iterate)
+      const commonKeys = [
+        'supabase.auth.token',
+        'sb-localhost-auth-token',
+        'sb-auth-token',
+        'sb-' + window.location.hostname + '-auth-token'
+      ];
+      
+      commonKeys.forEach(key => {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
-        console.log('🗑️ Removed storage key:', key);
-      }
-    });
-    
-    console.log('✅ Storage cleanup completed');
+      });
+      
+      console.log('✅ Fast storage cleanup completed');
+    } catch (error) {
+      console.warn('Storage cleanup error (ignored):', error);
+    }
   }
 };
 
@@ -271,93 +262,46 @@ export const useUser = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, queryClient]);
 
-  // Logout function that clears everything
+  // Fast logout function - prioritizes immediate redirect
   const logout = async () => {
+    console.log('🚐 Starting FAST logout process...');
+    
+    // Step 1: IMMEDIATELY clear local storage and redirect (don't wait for anything)
     try {
-      console.log('🚐 Starting comprehensive logout process...');
-      
-      // Step 1: Clear local storage first (before API calls)
       clearUserFromStorage();
-      
-      // Step 2: Clear React Query cache
       queryClient.setQueryData(['user'], null);
-      queryClient.clear(); // Clear all cached data
+      queryClient.clear();
       
-      // Step 3: Call server-side logout to clear cookies
-      try {
-        console.log('🌐 Calling server-side logout...');
-        const response = await fetch('/api/auth/signout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          console.log('✅ Server-side logout successful');
-        } else {
-          console.warn('⚠️ Server-side logout failed, continuing...');
-        }
-      } catch (serverError) {
-        console.warn('⚠️ Server-side logout error (continuing anyway):', serverError);
-      }
-      
-      // Step 4: Sign out from Supabase client (if client exists)
-      if (supabase) {
-        console.log('🔐 Signing out from Supabase client...');
-        const { error } = await supabase.auth.signOut({ scope: 'global' });
-        if (error) {
-          console.warn('⚠️ Supabase client signOut error (continuing anyway):', error);
-        } else {
-          console.log('✅ Supabase client signOut successful');
-        }
-      }
-      
-      // Step 5: Clear all possible auth-related storage
-      if (typeof window !== 'undefined') {
-        // Clear localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || // Supabase keys
-              key.includes('supabase') ||
-              key.includes('auth') ||
-              key.includes('session') ||
-              key.includes('user') ||
-              key.includes('token')) {
-            localStorage.removeItem(key);
-            console.log('🗑️ Cleared localStorage key:', key);
-          }
-        });
-        
-        // Clear sessionStorage
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.startsWith('sb-') ||
-              key.includes('supabase') ||
-              key.includes('auth') ||
-              key.includes('session') ||
-              key.includes('user') ||
-              key.includes('token')) {
-            sessionStorage.removeItem(key);
-            console.log('🗑️ Cleared sessionStorage key:', key);
-          }
-        });
-      }
-      
-      // Step 6: Force a hard redirect to clear any remaining state
-      console.log('🔄 Redirecting to login page...');
+      // Immediate redirect - don't wait for API calls
+      console.log('🔄 Immediate redirect to login...');
       window.location.href = '/';
       
     } catch (error) {
-      console.error('❌ Logout error:', error);
-      
-      // Force clear everything even if there are errors
-      clearUserFromStorage();
-      queryClient.clear();
-      
-      // Force redirect even on error
+      // Even if clearing fails, force redirect
+      console.warn('⚠️ Storage clear failed, forcing redirect anyway');
       window.location.href = '/';
-      
-      console.log('⚠️ Forced logout completed despite errors');
     }
+    
+    // Step 2: Do cleanup in background (after redirect starts)
+    // This runs after the redirect, so user doesn't wait
+    setTimeout(async () => {
+      try {
+        // Background server-side logout
+        fetch('/api/auth/signout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }).catch(() => {}); // Ignore errors
+        
+        // Background Supabase logout
+        if (supabase) {
+          supabase.auth.signOut({ scope: 'global' }).catch(() => {}); // Ignore errors
+        }
+        
+        console.log('🧹 Background cleanup completed');
+      } catch (error) {
+        console.log('🧹 Background cleanup had errors (ignored)');
+      }
+    }, 100); // Small delay to let redirect start
   };
 
   return { user: data, loading: isLoading, error: error ? error.message : null, logout, refetch };

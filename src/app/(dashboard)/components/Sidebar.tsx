@@ -88,16 +88,14 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsOpen((v) => !v);
 
-  const handleLogout = async () => {
-    try {
-      console.log('🚐 Initiating logout from sidebar...');
-      await logout();
-      router.push('/');
-      console.log('✅ Logout completed successfully');
-    } catch (err) {
-      console.error("Failed to log out:", err);
-      window.location.assign("/");
-    }
+  const handleLogout = () => {
+    console.log('🚐 Fast logout initiated from sidebar...');
+    
+    // Don't await - just trigger logout and redirect immediately
+    logout(); // Fire and forget
+    
+    // Immediate redirect without waiting
+    window.location.href = '/';
   };
 
   return (
