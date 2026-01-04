@@ -202,7 +202,7 @@ export async function createEmployee(formData: FormData) {
         employeeEmail: email,
         password: password,
         firmName: firmName,
-        loginUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+        loginUrl: process.env.NEXT_PUBLIC_APP_URL || "https://secure-place-proj.vercel.app/"
       });
 
       if (emailResult.success) {
