@@ -3,6 +3,7 @@ import EmployeesClient from "./Employees.client";
 import { createClient } from "@supabase/supabase-js";
 import { Suspense } from "react";
 import { AdminGuard } from "@/components/AuthGuard";
+import { generateSecurePassword, sendEmployeeWelcomeEmail } from "@/lib/email-service";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -103,9 +104,15 @@ export async function createEmployee(formData: FormData) {
   const isVolunteer = String(formData.get("isVolunteer") || "") === "on";
 
   const firmIdRaw = String(formData.get("firmId") || "");
-  const firmId = me.role === "super_admin" ? firmIdRaw || null : me.firmId;
+  const firmId = firmIdRaw || null;
 
-  if (!name || !email || !firmId) return;
+  if (!name || !email) {
+    throw new Error("Name and email are required");
+  }
+
+  // Generate secure password
+  const password = generateSecurePassword();
+  console.log('🔐 Generated password for', email, ':', password);
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,37 +120,109 @@ export async function createEmployee(formData: FormData) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser(
-    {
+  try {
+    // Create user with generated password
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
-      password: "Password@123",
+      password: password,
       email_confirm: true,
       user_metadata: { full_name: name },
+    });
+    
+    if (createErr) {
+      console.error("createUser error:", createErr.message);
+      throw new Error(`Failed to create user: ${createErr.message}`);
     }
-  );
-  if (createErr) {
-    console.error("createUser error:", createErr.message);
-    return;
+    
+    const userId = created.user.id;
+
+    // Parse the name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Create profile
+    const { error: profileErr } = await admin.from("user_profiles").upsert({
+      id: userId,
+      email: email,
+      first_name: firstName,
+      last_name: lastName,
+      role: "employee",
+      employee_code: employeeCode,
+      phone: contactNumber,
+      is_volunteer: isVolunteer,
+      firm_id: firmId,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    });
+
+    if (profileErr) {
+      console.error("Profile creation error:", profileErr.message);
+      // Try to clean up the created user
+      await admin.auth.admin.deleteUser(userId);
+      throw new Error(`Failed to create profile: ${profileErr.message}`);
+    }
+
+    // Also create in profiles table (for compatibility)
+    const { error: profileErr2 } = await admin.from("profiles").upsert({
+      id: userId,
+      full_name: name,
+      official_email: email,
+      role: "employee",
+      firm_id: firmId,
+      employee_code: employeeCode,
+      phone: contactNumber,
+      is_volunteer: isVolunteer,
+      created_at: new Date().toISOString(),
+    });
+
+    if (profileErr2) {
+      console.warn("Secondary profile creation warning:", profileErr2.message);
+    }
+
+    // Send welcome email with credentials
+    try {
+      console.log('📧 Sending welcome email to:', email);
+      
+      // Get firm name for email
+      let firmName = "Your Organization";
+      if (firmId) {
+        const { data: firm } = await admin
+          .from("firms")
+          .select("name")
+          .eq("id", firmId)
+          .single();
+        if (firm?.name) {
+          firmName = firm.name;
+        }
+      }
+
+      const emailResult = await sendEmployeeWelcomeEmail({
+        employeeName: name,
+        employeeEmail: email,
+        password: password,
+        firmName: firmName,
+        loginUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      });
+
+      if (emailResult.success) {
+        console.log('✅ Welcome email sent successfully to:');
+      } else {
+        console.warn('⚠️ Failed to send welcome email:', emailResult.error);
+        // Don't throw error - user creation should still succeed
+      }
+      
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      // Don't throw error - user creation should still succeed
+    }
+
+    console.log('✅ Employee created successfully:');
+
+  } catch (error: any) {
+    console.error('❌ Employee creation failed:', error);
+    throw error;
   }
-  const userId = created.user.id;
-
-  // Parse the name into first and last name
-  const nameParts = name.trim().split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
-
-  const { error: profileErr } = await admin.from("user_profiles").upsert({
-    id: userId,
-    email: email,
-    first_name: firstName,
-    last_name: lastName,
-    role: "employee",
-    firm_id: firmId,
-    employee_code: employeeCode,
-    phone: contactNumber,
-    is_volunteer: isVolunteer,
-  });
-  if (profileErr) console.error("profile upsert error:", profileErr.message);
 
   revalidatePath(REVALIDATE_PATH);
 }
@@ -163,7 +242,7 @@ export async function updateEmployee(formData: FormData) {
   const isVolunteer = String(formData.get("isVolunteer") || "") === "on";
 
   const firmIdRaw = String(formData.get("firmId") || "");
-  const firmId = me.role === "super_admin" ? firmIdRaw || null : me.firmId;
+  const firmId = firmIdRaw || null;
 
   if (!id || !name || !email) return;
 
@@ -276,7 +355,7 @@ export default async function Page({
   searchParams: Promise<{ q?: string; firm?: string }>;
 }) {
   return (
-    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+    <AdminGuard>
       <Suspense fallback={<LoadingSpinner />}>
         <EmployeesContent searchParams={searchParams} />
       </Suspense>
