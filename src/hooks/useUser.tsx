@@ -71,21 +71,38 @@ const loadUserFromStorage = (): UserSession | null => {
 
 const clearUserFromStorage = () => {
   if (typeof window !== 'undefined') {
+    console.log('🧹 Starting comprehensive storage cleanup...');
+    
     // Clear the main user session
     localStorage.removeItem(STORAGE_KEY);
     
-    // Clear any other user-related storage items
-    localStorage.removeItem('supabase.auth.token');
-    sessionStorage.removeItem('supabase.auth.token');
+    // Clear all Supabase-related storage
+    const keysToRemove = [
+      'supabase.auth.token',
+      'sb-localhost-auth-token', // Local development
+      'sb-auth-token',
+    ];
     
-    // Clear any cached data that might be user-specific
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('user') || key.includes('session') || key.includes('auth')) {
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+    
+    // Clear any storage keys that contain auth-related terms
+    [...Object.keys(localStorage), ...Object.keys(sessionStorage)].forEach(key => {
+      if (key.startsWith('sb-') || // Supabase prefix
+          key.includes('supabase') ||
+          key.includes('auth') ||
+          key.includes('session') ||
+          key.includes('user') ||
+          key.includes('secure_place')) {
         localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+        console.log('🗑️ Removed storage key:', key);
       }
     });
     
-    console.log('🗑️ All user data cleared from localStorage');
+    console.log('✅ Storage cleanup completed');
   }
 };
 
@@ -256,34 +273,90 @@ export const useUser = () => {
 
   // Logout function that clears everything
   const logout = async () => {
-    if (supabase) {
-      try {
-        console.log(' Logging out user...');
-        
-        // Clear local storage first
-        clearUserFromStorage();
-        
-        // Sign out from Supabase
-        await supabase.auth.signOut();
-        
-        // Reset query cache
-        queryClient.setQueryData(['user'], null);
-        
-        console.log('✅ User logged out successfully - all storage cleared');
-      } catch (error) {
-        console.error('❌ Logout error:', error);
-        
-        // Force clear everything even if signOut fails
-        clearUserFromStorage();
-        queryClient.setQueryData(['user'], null);
-        
-        console.log('⚠️ Forced logout - storage cleared despite error');
-      }
-    } else {
-      // If no supabase client, still clear storage
+    try {
+      console.log('🚐 Starting comprehensive logout process...');
+      
+      // Step 1: Clear local storage first (before API calls)
       clearUserFromStorage();
+      
+      // Step 2: Clear React Query cache
       queryClient.setQueryData(['user'], null);
-      console.log('🧹 Storage cleared (no supabase client available)');
+      queryClient.clear(); // Clear all cached data
+      
+      // Step 3: Call server-side logout to clear cookies
+      try {
+        console.log('🌐 Calling server-side logout...');
+        const response = await fetch('/api/auth/signout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          console.log('✅ Server-side logout successful');
+        } else {
+          console.warn('⚠️ Server-side logout failed, continuing...');
+        }
+      } catch (serverError) {
+        console.warn('⚠️ Server-side logout error (continuing anyway):', serverError);
+      }
+      
+      // Step 4: Sign out from Supabase client (if client exists)
+      if (supabase) {
+        console.log('🔐 Signing out from Supabase client...');
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        if (error) {
+          console.warn('⚠️ Supabase client signOut error (continuing anyway):', error);
+        } else {
+          console.log('✅ Supabase client signOut successful');
+        }
+      }
+      
+      // Step 5: Clear all possible auth-related storage
+      if (typeof window !== 'undefined') {
+        // Clear localStorage
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || // Supabase keys
+              key.includes('supabase') ||
+              key.includes('auth') ||
+              key.includes('session') ||
+              key.includes('user') ||
+              key.includes('token')) {
+            localStorage.removeItem(key);
+            console.log('🗑️ Cleared localStorage key:', key);
+          }
+        });
+        
+        // Clear sessionStorage
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('sb-') ||
+              key.includes('supabase') ||
+              key.includes('auth') ||
+              key.includes('session') ||
+              key.includes('user') ||
+              key.includes('token')) {
+            sessionStorage.removeItem(key);
+            console.log('🗑️ Cleared sessionStorage key:', key);
+          }
+        });
+      }
+      
+      // Step 6: Force a hard redirect to clear any remaining state
+      console.log('🔄 Redirecting to login page...');
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      
+      // Force clear everything even if there are errors
+      clearUserFromStorage();
+      queryClient.clear();
+      
+      // Force redirect even on error
+      window.location.href = '/';
+      
+      console.log('⚠️ Forced logout completed despite errors');
     }
   };
 
