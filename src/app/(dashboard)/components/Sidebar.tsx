@@ -3,9 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { useUser } from "@/hooks/useUser"; // must return { user?: { role?: string } }
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { useMemo, useState, useEffect } from "react";
+import { useUser, loadUserDetailLocalStorage } from "@/hooks/useUser";
 
 import {
   LayoutDashboard,
@@ -17,7 +16,6 @@ import {
   ChevronsRight,
   LogOut,
   Siren,
-  BellRing,
   BookOpen,
   UserCog,
   Calendar,
@@ -40,9 +38,7 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
   { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
   { href: "/emergencies", label: "Emergencies", icon: Siren },
-  // { href: "/dashboard/alerts", label: "Alerts", icon: BellRing },
   { href: "/drills", label: "Drills", icon: Target },
-  // { href: "/dashboard/training", label: "Training", icon: BookOpen },
   { href: "/certifications", label: "Certification", icon: BookOpen },
 ];
 
@@ -53,45 +49,53 @@ const FIRM_ADMIN_ITEMS: NavItem[] = [
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
-  // { href: "/emergencies", label: "Emergencies", icon: Siren },
-  // { href: "/dashboard/alerts", label: "Alerts", icon: BellRing },
-  // { href: "/drills", label: "Drills", icon: UserSquare },
 ];
-
-// Use the singleton browser client
-const supabase = createBrowserSupabase();
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const { user, logout } = useUser(); // Get logout function from useUser hook
   const pathname = usePathname();
   const router = useRouter();
+  
+  // Get user role synchronously from localStorage for instant display
+  const getUserRole = () => {
+    if (typeof window === 'undefined') return 'super_admin'; // SSR fallback
+    
+    try {
+      const cached = loadUserDetailLocalStorage();
+      return cached?.user?.role || 'super_admin'; // Default to super_admin for instant display
+    } catch {
+      return 'super_admin'; // Fallback
+    }
+  };
 
-  // Choose nav items based on role (memoized)
+  // Get initial role immediately (no async)
+  const [userRole, setUserRole] = useState(() => getUserRole());
+  const { user, logout } = useUser();
+
+  // Update role when real user data loads (but sidebar is already visible)
+  useEffect(() => {
+    if (user?.role && user.role !== userRole) {
+      setUserRole(user.role);
+      console.log('🔄 Sidebar: Updated to real user role:', user.role);
+    }
+  }, [user?.role, userRole]);
+
+  // Choose nav items - always returns items for instant display
   const navItems = useMemo<NavItem[]>(() => {
-    if (user?.role === "super_admin") return SUPER_ADMIN_ITEMS;
-    if (user?.role === "firm_admin") return FIRM_ADMIN_ITEMS;
-    // Unknown/Loading role → empty list (prevents flash of wrong items)
-    return [];
-  }, [user?.role]);
+    if (userRole === "firm_admin") return FIRM_ADMIN_ITEMS;
+    return SUPER_ADMIN_ITEMS; // Default to super admin for instant display
+  }, [userRole]);
 
   const toggleSidebar = () => setIsOpen((v) => !v);
 
   const handleLogout = async () => {
     try {
       console.log('🚐 Initiating logout from sidebar...');
-      
-      // Use the useUser logout function which clears localStorage
       await logout();
-      
-      // Navigate to home page after successful logout
       router.push('/');
-      
       console.log('✅ Logout completed successfully');
     } catch (err) {
       console.error("Failed to log out:", err);
-      
-      // Force navigation even if logout fails
       window.location.assign("/");
     }
   };
@@ -101,6 +105,7 @@ const Sidebar = () => {
       className={`relative hidden lg:flex flex-col bg-white border-r transition-all duration-300 ${isOpen ? "w-64" : "w-20"
         }`}
     >
+      {/* Logo Section - Renders instantly */}
       <div className="flex items-center justify-center h-20 px-4 border-b">
         {isOpen ? (
           <Image
@@ -121,10 +126,10 @@ const Sidebar = () => {
         )}
       </div>
 
+      {/* Navigation Section - Renders instantly with menu items */}
       <nav className="flex-1 px-4 py-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          // active for exact and nested routes
           const isActive =
             pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
@@ -145,13 +150,9 @@ const Sidebar = () => {
             </Link>
           );
         })}
-
-        {/* Optional: show a subtle hint while role is loading */}
-        {navItems.length === 0 && (
-          <div className="text-sm text-slate-400 px-2">Loading menu…</div>
-        )}
       </nav>
 
+      {/* Footer Section - Renders instantly */}
       <div className="border-t p-4 space-y-2">
         <button
           onClick={handleLogout}
