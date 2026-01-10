@@ -92,10 +92,10 @@ export default function LoginPage() {
       if (userErr) throw userErr;
       if (!user) throw new Error("No user session found after login.");
 
-      // 3) Read role from profiles (RLS allows user to read their own profile)
+      // 3) Read role from user_profiles (RLS allows user to read their own profile)
       let { data: profile, error: profileErr } = await supabase
-        .from("profiles")
-        .select("role")
+        .from("user_profiles")
+        .select("role, firm_id")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -113,13 +113,12 @@ export default function LoginPage() {
             is_active: true,
             last_login_at: new Date().toISOString()
           });
-        
         if (createErr) throw createErr;
         
         // Re-fetch the profile
         const { data: newProfile, error: newProfileErr } = await supabase
-          .from("profiles")
-          .select("role")
+          .from("user_profiles")
+          .select("role, firm_id")
           .eq("id", user.id)
           .single();
         
@@ -136,7 +135,7 @@ export default function LoginPage() {
           email: user.email,
           fullName: user.user_metadata?.full_name || `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim(),
           role: profile.role,
-          firmId: null // You can add firm_id from profile if needed
+          firmId: profile.firm_id || null // Include firm_id from profile
         },
         timestamp: Date.now(),
         expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
