@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw, Clock, Users, Calendar, MapPin, CheckCircle } from "lucide-react";
+import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw, Clock, Users, Calendar, MapPin, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -326,7 +326,9 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                   <ul className="space-y-3">
                     {benefits.map((benefit, index) => (
                       <li key={index} className="flex items-start gap-3">
-                        <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="h-5 w-5 bg-green-600 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
                         <span className="text-gray-700">{benefit}</span>
                       </li>
                     ))}
