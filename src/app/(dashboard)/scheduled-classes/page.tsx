@@ -20,7 +20,7 @@ async function getScheduledClasses(): Promise<any[]> {
     // Optimized query with specific columns and better indexing
     let query = supabase
       .from("scheduled_classes")
-      .select("*, safety_class: safety_class_id(title, id), firms:firm_id ( name )")
+      .select("*, safety_class: safety_class_id(title, id), firms:firm_id ( name ), locations:location_id ( id, name )")
       .order("start_time", { ascending: false });
 
     let { data: scheduledClasses, error }: any = await query;
@@ -53,6 +53,8 @@ async function getScheduledClasses(): Promise<any[]> {
       type: cls.type ?? "In-Person",
       thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
       firm: cls.firms?.name || "-",
+      location: cls.locations?.name || "Remote",
+      locationId: cls.locations?.id || null,
       currentUserRole: "admin", // Will be controlled by AdminGuard
       safetyClassId: cls?.safety_class?.id || null,
     }));
