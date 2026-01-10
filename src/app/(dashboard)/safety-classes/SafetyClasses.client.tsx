@@ -2,19 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import { Play, Clock, Users, Filter, Pencil } from "lucide-react";
+import { Play, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import AddSafetyClassForm from "./AddSafetyClassForm";
 import { SafetyClass } from "./types";
+import { useUser } from "@/hooks/useUser"; // ✅ Import useUser hook
 
 // Removed categories as they're not in the database schema
 
@@ -50,8 +43,10 @@ export default function SafetyClassesClient({
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-
-  const category = sp.get("category") ?? initialCategory ?? "all";
+  
+  // ✅ Use the useUser hook - handles all localStorage logic safely
+  const { user, loading, error: userError } = useUser();
+  
   const type = sp.get("type") ?? initialType ?? "remote";
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -59,8 +54,36 @@ export default function SafetyClassesClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter safety classes based on selected type
+  // // ✅ Enhanced user data handling with proper TypeScript types
+  // useEffect(() => {
+    
+  // }, [user, loading, userError]);
+
+  // ✅ Determine user permissions based on role
+  const userPermissions = {
+    canCreateClasses: user?.role === 'super_admin' || user?.role === 'firm_admin',
+    canEditClasses: user?.role === 'super_admin' || user?.role === 'firm_admin',
+    canViewAllClasses: user?.role === 'super_admin',
+    firmId: user?.firmId || null
+  };
+
+  // ✅ Show loading state while user data is being fetched
+  if (loading) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
+            <div className="text-lg text-gray-600">Loading user data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Filter safety classes based on user permissions and selected type
   const filteredSafetyClasses = safetyClasses.filter((safetyClass) => {
+    // Filter by type (remote/in-person)
     if (type === "remote") {
       return safetyClass.mode === "Remote";
     } else if (type === "in-person") {
@@ -95,6 +118,11 @@ export default function SafetyClassesClient({
       formData.append("type", data.type);
       formData.append("mode", data.mode);
 
+      // // ✅ Add firm_id for firm admins (automatically use their firm)
+      // if (user?.role === 'firm_admin' && userPermissions.firmId) {
+      //   formData.append("firmId", userPermissions.firmId);
+      // }
+
       if (data.thumbnailUrl) {
         formData.append("thumbnailUrl", data.thumbnailUrl);
       }
@@ -125,7 +153,7 @@ export default function SafetyClassesClient({
 
       if (data.thumbnailUrl) {
         formData.append("thumbnailUrl", data.thumbnailUrl);
-      }
+      }      
       await updateSafetyClass(formData);
       setEditingSafetyClass(null);
     } catch (error) {
@@ -169,7 +197,8 @@ export default function SafetyClassesClient({
         </div>
 
         <div className="flex items-center gap-3">
-          {isSuperAdmin && (
+          {/* ✅ Show Add button based on user permissions */}
+          {user?.role === 'super_admin' && (
             <Button
               className="bg-brand-blue hover:bg-brand-blue/90 cursor-pointer"
               onClick={() => setIsAddFormOpen(true)}
@@ -177,6 +206,7 @@ export default function SafetyClassesClient({
               Add New Safety Class
             </Button>
           )}
+          
           <div className="flex w-48 bg-gray-100 rounded-lg overflow-hidden border border-[#D8D8D8]">
             <button
               className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${type === "remote"
@@ -263,7 +293,8 @@ export default function SafetyClassesClient({
                   >
                     Explore Workshop
                   </Button>
-                  {isSuperAdmin && (
+                  {/* ✅ Show edit button based on user permissions */}
+                  {user?.role === 'super_admin' && (
                     <Button
                       onClick={() => setEditingSafetyClass(safetyClass)}
                       variant="outline"
