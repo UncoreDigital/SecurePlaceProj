@@ -17,17 +17,68 @@ async function getScheduledClasses(): Promise<any[]> {
   );
 
   try {
-    // Optimized query with specific columns and better indexing
+    // created_by is linked to auth.users.id
     let query = supabase
       .from("scheduled_classes")
-      .select("*, safety_class: safety_class_id(title, id), firms:firm_id ( name ), locations:location_id ( id, name )")
+      .select(`
+        *, 
+        safety_class: safety_class_id(title, id), 
+        firms:firm_id ( name ), 
+        locations:location_id ( id, name )
+      `)
       .order("start_time", { ascending: false });
 
     let { data: scheduledClasses, error }: any = await query;
     
     console.log(scheduledClasses, `✅ Fetched Scheduled classes`);
     
-    const formatted = (scheduledClasses || []).map((cls: any) => ({
+    // Fetch creator details from auth.users for each scheduled class
+    let classesWithCreators = scheduledClasses;
+    if (scheduledClasses && scheduledClasses.length > 0) {
+      // Get unique creator IDs
+      const creatorIds = [...new Set(
+        scheduledClasses
+          .map((cls: any) => cls.created_by)
+          .filter((id: any) => id !== null && id !== undefined)
+      )];
+      
+      if (creatorIds.length > 0) {
+        try {
+            const { data: userProfiles, error: userProfileError } = await supabase
+              .from("user_profiles")
+              .select("id, first_name, last_name, official_email, role, phone, created_at")
+              .in("id", creatorIds);
+            
+            console.log('🔍 User profiles result:', { userProfiles, userProfileError });
+            
+            if (!userProfileError && userProfiles && userProfiles.length > 0) {
+              // Format user_profiles data to match expected structure
+              const formattedCreators = userProfiles.map(profile => ({
+                id: profile.id,
+                full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+                official_email: profile.official_email,
+                role: profile.role,
+                phone: profile.phone,
+                created_at: profile.created_at
+              }));
+              
+              const creatorMap = new Map(formattedCreators.map(creator => [creator.id, creator]));
+              
+              classesWithCreators = scheduledClasses.map((cls: any) => ({
+                ...cls,
+                creator: cls.created_by ? creatorMap.get(cls.created_by) : null
+              }));
+              
+              console.log(`✅ Fetched creator details from user_profiles for ${formattedCreators.length} users`);
+            }
+ 
+        } catch (creatorFetchError) {
+          console.error("❌ Error fetching creator details:", creatorFetchError);
+        }
+      }
+    }
+    
+    const formatted = (classesWithCreators || []).map((cls: any) => ({
       id: cls.id,
       title: cls.safety_class?.title ?? "Untitled",
       date: cls.start_time
@@ -55,17 +106,27 @@ async function getScheduledClasses(): Promise<any[]> {
       firm: cls.firms?.name || "-",
       location: cls.locations?.name || "Remote",
       locationId: cls.locations?.id || null,
+      // Creator info - fetched from profiles table linked to auth.users
+      createdBy: cls.creator?.full_name || cls.creator?.official_email || "System",
+      createdById: cls.creator?.id || cls.created_by || null,
+      creatorDetails: cls.creator ? {
+        id: cls.creator.id,
+        fullName: cls.creator.full_name,
+        email: cls.creator.official_email,
+        role: cls.creator.role,
+        phone: cls.creator.phone,
+        createdAt: cls.creator.created_at
+      } : null,
       currentUserRole: "admin", // Will be controlled by AdminGuard
       safetyClassId: cls?.safety_class?.id || null,
     }));
-    
     if (error) {
       console.error("Error fetching Scheduled classes:", error);
       throw new Error(`Failed to fetch Scheduled classes: ${error.message}`);
     }
 
     return formatted || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error in getScheduledClasses:", error);
     return [];
   }

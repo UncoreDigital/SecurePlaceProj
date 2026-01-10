@@ -303,7 +303,20 @@ export default function ScheduledClassesClient({
                           {scheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
                             <td className="px-4 py-2">{cls.firm || "-"}</td>
                           )}
-                          <td className="px-4 py-2">{cls.location || "Remote"}</td>
+                          <td className="px-4 py-2">
+                            <div>
+                              <div className="font-medium">{cls.location || "Remote"}</div>
+                              {(cls.creatorDetails?.email || cls.creatorDetails?.phone) && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {cls.creatorDetails?.email && cls.creatorDetails?.phone ? (
+                                    <span>({cls.creatorDetails.email} - {cls.creatorDetails.phone})</span>
+                                  ) : (
+                                    <span>({cls.creatorDetails?.email || cls.creatorDetails?.phone})</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
 
                           <td className="px-4 py-2">{cls.date || "-"}</td>
                           <td className="px-4 py-2">{cls.time || "-"}</td>

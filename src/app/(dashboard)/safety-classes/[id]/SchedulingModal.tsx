@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
+import { useUser } from "@/hooks/useUser";
 
 interface SchedulingModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface Location {
 }
 
 export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, locations }: SchedulingModalProps) {
+  const { user } = useUser(); // Get current logged-in user
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
@@ -186,6 +188,16 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const handleSchedule = async () => {
     if (selectedLocation && selectedDate && selectedTimeSlot) {
       setLoadingLocations(true); // Optionally show loading
+      
+      // Get current user ID for created_by field
+      const currentUserId = user?.id;
+      
+      if (!currentUserId) {
+        alert("User not authenticated. Please log in again.");
+        setLoadingLocations(false);
+        return;
+      }
+
       // Insert scheduling logic here (e.g., call an API or Supabase)
       const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
       const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
@@ -200,15 +212,19 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
             start_time: startDate.toISOString(),
             end_time: endDate.toISOString(),
             firm_id: firmId,
+            created_by: currentUserId, // Add the logged-in user ID
             created_at: new Date().toISOString(),
             status: "pending",
           },
         ]);
+      
       setLoadingLocations(false);
+      
       if (!error) {
-        // alert("Class scheduled successfully!");
+        console.log('✅ Class scheduled successfully by user:', currentUserId);
         onClose();
       } else {
+        console.error('❌ Failed to schedule class:', error);
         alert("Failed to schedule class: " + error.message);
       }
     } else {
