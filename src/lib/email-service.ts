@@ -5,12 +5,24 @@ import nodemailer from 'nodemailer';
 const EMAIL_CONFIG = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER, // Your email
     pass: process.env.SMTP_PASSWORD, // Your email password or app password
   },
 };
+
+// Debug environment variables (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('📧 Email service configuration:', {
+    host: EMAIL_CONFIG.host,
+    port: EMAIL_CONFIG.port,
+    secure: EMAIL_CONFIG.secure,
+    user: process.env.SMTP_USER,
+    passwordSet: !!process.env.SMTP_PASSWORD,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL
+  });
+}
 
 // Create reusable transporter
 const createTransporter = () => {
@@ -58,23 +70,52 @@ export async function sendEmployeeWelcomeEmail({
 }): Promise<{ success: boolean; error?: string }> {
   
   try {
-    // Check if email configuration is available
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.warn('📧 Email configuration missing. Skipping email send.');
-      console.log('💡 To enable emails, configure SMTP settings in .env.local:');
-      console.log('   SMTP_USER=your-email@gmail.com');
-      console.log('   SMTP_PASSWORD=your-app-password');
+    // Environment validation
+    const isProduction = process.env.NODE_ENV === 'production';
+    const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      const errorMsg = `Missing environment variables: ${missingVars.join(', ')}`;
+      console.error('❌ Email configuration error:', errorMsg);
+      
+      if (isProduction) {
+        console.error('🚨 Production deployment missing email configuration!');
+        console.error('💡 Set these environment variables in your deployment platform:');
+        missingVars.forEach(varName => {
+          console.error(`   ${varName}=your-value`);
+        });
+      } else {
+        console.error('💡 Add these to your .env.local file:');
+        console.error('   SMTP_HOST=smtp.gmail.com');
+        console.error('   SMTP_PORT=587');
+        console.error('   SMTP_USER=your-email@gmail.com');
+        console.error('   SMTP_PASSWORD=your-app-password');
+      }
+      
       return { 
         success: false, 
-        error: 'Email configuration not set up. Please configure SMTP settings in .env.local' 
+        error: `Email configuration incomplete. ${errorMsg}` 
       };
     }
 
-    console.log('📧 Attempting to send email with config:', {
+    // Validate app URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl || appUrl.includes('localhost')) {
+      if (isProduction) {
+        console.warn('⚠️ Production app URL not set or still using localhost');
+        console.warn('💡 Set NEXT_PUBLIC_APP_URL to your actual domain in deployment platform');
+      }
+    }
+
+    console.log(`📧 Attempting to send email in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+    console.log('📧 Email config:', {
       host: EMAIL_CONFIG.host,
       port: EMAIL_CONFIG.port,
+      secure: EMAIL_CONFIG.secure,
       user: process.env.SMTP_USER,
-      passwordSet: !!process.env.SMTP_PASSWORD
+      passwordSet: !!process.env.SMTP_PASSWORD,
+      appUrl: appUrl
     });
 
     const transporter = createTransporter();
