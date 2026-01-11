@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useUser } from "@/hooks/useUser"; // ✅ Import useUser hook
 // import AddSafetyClassForm from "./AddSafetyClassForm";
 // import { SafetyClass } from "./types";
 
@@ -133,6 +134,10 @@ export default function ScheduledClassesClient({
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  
+  // ✅ Get user from localStorage using useUser hook
+  const { user, loading: userLoading } = useUser();
+  
   // console.log(scheduledClasses)
 
   const category = sp.get("category") ?? initialCategory ?? "all";
@@ -194,6 +199,7 @@ export default function ScheduledClassesClient({
   };
 
   // ✅ Handle inline status updates
+  // ✅ Handle inline status updates - Only for Super Admin (from localStorage)
   const handleStatusUpdate = async (classId: string, newStatus: string) => {
     setUpdatingStatusId(classId);
     setError(null);
@@ -214,7 +220,7 @@ export default function ScheduledClassesClient({
     }
   };
 
-  // ✅ Handle status edit click
+  // ✅ Handle status edit click - Only for Super Admin (from localStorage)
   const handleStatusEditClick = (classId: string) => {
     console.log('🔄 Status edit clicked for class:', classId);
     console.log('🔍 Current editingStatusId:', editingStatusId);
@@ -264,6 +270,20 @@ export default function ScheduledClassesClient({
       setIsSubmitting(false);
     }
   };
+
+  // ✅ Show loading state while user data is being fetched
+  if (userLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
+            <div className="text-lg text-gray-600">Loading user data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="">
@@ -375,8 +395,8 @@ export default function ScheduledClassesClient({
                           <td className="px-4 py-2">{cls.date || "-"}</td>
                           <td className="px-4 py-2">{cls.time || "-"}</td>
                           <td className="px-4 py-2">
-                            {/* ✅ Inline Status Editing */}
-                            {editingStatusId === cls.id ? (
+                            {/* ✅ Inline Status Editing - Only for Super Admin (from localStorage) */}
+                            {editingStatusId === cls.id && user?.role === "super_admin" ? (
                               <div className="flex items-center gap-2">
                                 <Select
                                   value={cls.status}
@@ -404,12 +424,12 @@ export default function ScheduledClassesClient({
                             ) : (
                               <div className="flex items-center gap-2">
                                 <Button
-                                  className={`cursor-pointer text-xs px-2 py-1 h-7 ${statusBtnStyles[cls.status]} ${editingStatusId === cls.id ? 'ring-2 ring-blue-500' : ''}`}
-                                  onClick={() => handleStatusEditClick(cls.id)}
+                                  className={`text-xs px-2 py-1 h-7 ${statusBtnStyles[cls.status]} ${user?.role === "super_admin" ? 'cursor-pointer' : 'cursor-default'}`}
+                                  onClick={() => user?.role === "super_admin" ? handleStatusEditClick(cls.id) : undefined}
                                   disabled={updatingStatusId === cls.id}
                                 >
                                   {updatingStatusId === cls.id
-                                    ? "Approving..."
+                                    ? "Updating..."
                                     : cls.status === "approved"
                                       ? "Approved"
                                       : cls.status === "pending"
@@ -418,14 +438,17 @@ export default function ScheduledClassesClient({
                                             ? "Cancelled"
                                             : cls.status || "Unknown"}
                                 </Button>
-                                {/* ✅ Always show edit icon for debugging */}
-                                <ChevronDown 
-                                  className="h-3 w-3 text-gray-400 cursor-pointer hover:text-gray-600" 
-                                  onClick={() => handleStatusEditClick(cls.id)}
-                                  title="Click to edit status"
-                                />
-                                {/* ✅ Show current editing state */}
-                                {editingStatusId === cls.id && (
+                                {/* ✅ Only show edit icon for Super Admin (from localStorage) */}
+                                {user?.role === "super_admin" && (
+                                  <div title="Click to edit status">
+                                    <ChevronDown 
+                                      className="h-3 w-3 text-gray-400 cursor-pointer hover:text-gray-600" 
+                                      onClick={() => handleStatusEditClick(cls.id)}
+                                    />
+                                  </div>
+                                )}
+                                {/* ✅ Show current editing state - only for Super Admin (from localStorage) */}
+                                {editingStatusId === cls.id && user?.role === "super_admin" && (
                                   <span className="text-xs text-blue-600 font-medium">EDITING</span>
                                 )}
                               </div>

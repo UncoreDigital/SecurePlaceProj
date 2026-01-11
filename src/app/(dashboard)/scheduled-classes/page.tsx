@@ -117,7 +117,7 @@ async function getScheduledClasses(): Promise<any[]> {
         phone: cls.creator.phone,
         createdAt: cls.creator.created_at
       } : null,
-      currentUserRole: "admin", // Will be controlled by AdminGuard
+      currentUserRole: cls.creator ? cls.creator.role : "", // Will be controlled by AdminGuard
       safetyClassId: cls?.safety_class?.id || null,
     }));
     if (error) {
