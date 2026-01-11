@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter, Calendar, Pencil, X, Check, Eye, Trash2 } from "lucide-react";
+import { Play, Clock, Users, Filter, Calendar, Pencil, X, Check, Eye, Trash2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -119,7 +119,8 @@ export default function ScheduledClassesClient({
   initialType,
   isSuperAdmin,
   approveScheduledClass,
-  cancelScheduledClass
+  cancelScheduledClass,
+  updateScheduledClassStatus
 }: {
   scheduledClasses: any[];
   initialCategory: string;
@@ -127,6 +128,7 @@ export default function ScheduledClassesClient({
   isSuperAdmin: boolean;
   approveScheduledClass: (scheduledClassId: string) => Promise<{ success: boolean }>;
   cancelScheduledClass: (scheduledClassId: string) => Promise<{ success: boolean }>;
+  updateScheduledClassStatus: (scheduledClassId: string, newStatus: string) => Promise<{ success: boolean }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -143,6 +145,10 @@ export default function ScheduledClassesClient({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [approveId, setApproveId] = useState<string | null>(null);
+  
+  // ✅ Add state for inline status editing
+  const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
@@ -184,6 +190,41 @@ export default function ScheduledClassesClient({
     } finally {
       setApprovingId(null);
       setApproveId(null);
+    }
+  };
+
+  // ✅ Handle inline status updates
+  const handleStatusUpdate = async (classId: string, newStatus: string) => {
+    setUpdatingStatusId(classId);
+    setError(null);
+
+    try {
+      const result = await updateScheduledClassStatus(classId, newStatus);
+
+      if (result.success) {
+        console.log('✅ Status updated successfully:', classId, 'to', newStatus);
+        setEditingStatusId(null);
+        // The page will be revalidated by the server action, so the UI will update automatically
+      }
+    } catch (error) {
+      console.error('❌ Failed to update status:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update status');
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  // ✅ Handle status edit click
+  const handleStatusEditClick = (classId: string) => {
+    console.log('🔄 Status edit clicked for class:', classId);
+    console.log('🔍 Current editingStatusId:', editingStatusId);
+    
+    if (editingStatusId === classId) {
+      console.log('❌ Closing edit mode');
+      setEditingStatusId(null); // Close if already editing
+    } else {
+      console.log('✅ Opening edit mode');
+      setEditingStatusId(classId); // Open for editing
     }
   };
 
@@ -249,7 +290,20 @@ export default function ScheduledClassesClient({
             <nav className="text-sm text-gray-500 mb-2">
               Home &gt; Requested Classes
             </nav>
-            <span className="text-3xl font-bold text-brand-blue">Requested Classes</span>
+            <div className="flex items-center gap-4">
+              <span className="text-3xl font-bold text-brand-blue">Requested Classes</span>
+              {/* ✅ Debug button to test state */}
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  console.log('🔍 Current editingStatusId:', editingStatusId);
+                  setEditingStatusId(editingStatusId ? null : 'test-id');
+                }}
+              >
+                Toggle Edit (Debug)
+              </Button>
+            </div>
           </div>
           {/* Add New Safety Class Button (for admins) */}
 
@@ -320,23 +374,62 @@ export default function ScheduledClassesClient({
 
                           <td className="px-4 py-2">{cls.date || "-"}</td>
                           <td className="px-4 py-2">{cls.time || "-"}</td>
-                          <td className="gap-2 mt-2">
-                            <Button
-                              className={`cursor-pointer flex-1 ${statusBtnStyles[cls.status]}`} style={{ padding: '0px 9px' }}
-                              // disabled={cls.status === "approved" || approvingId === cls.id || cls.status === "cancelled"}
-                              onClick={cls.currentUserRole === "super_admin" && cls.status === "pending" ? () => handleApproveClick(cls.id) : undefined}
-                            >
-                              {approvingId === cls.id
-                                ? "Approving..."
-                                : cls.status === "approved"
-                                  ? "Approved"
-                                  : cls.status === "pending"
-                                    ? "Pending"
-                                    : cls.status === "cancelled"
-                                      ? "Cancelled"
-                                      : ""}
-                            </Button>
-                            {/* {cls.status || "—"} */}
+                          <td className="px-4 py-2">
+                            {/* ✅ Inline Status Editing */}
+                            {editingStatusId === cls.id ? (
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={cls.status}
+                                  onValueChange={(newStatus) => handleStatusUpdate(cls.id, newStatus)}
+                                  disabled={updatingStatusId === cls.id}
+                                >
+                                  <SelectTrigger className="w-32 h-8 text-xs border-2 border-blue-500">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="z-50">
+                                    <SelectItem value="approved">Approved</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingStatusId(null)}
+                                  className="h-6 w-6 p-0"
+                                  disabled={updatingStatusId === cls.id}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  className={`cursor-pointer text-xs px-2 py-1 h-7 ${statusBtnStyles[cls.status]} ${editingStatusId === cls.id ? 'ring-2 ring-blue-500' : ''}`}
+                                  onClick={() => handleStatusEditClick(cls.id)}
+                                  disabled={updatingStatusId === cls.id}
+                                >
+                                  {updatingStatusId === cls.id
+                                    ? "Approving..."
+                                    : cls.status === "approved"
+                                      ? "Approved"
+                                      : cls.status === "pending"
+                                        ? "Pending"
+                                          : cls.status === "cancelled"
+                                            ? "Cancelled"
+                                            : cls.status || "Unknown"}
+                                </Button>
+                                {/* ✅ Always show edit icon for debugging */}
+                                <ChevronDown 
+                                  className="h-3 w-3 text-gray-400 cursor-pointer hover:text-gray-600" 
+                                  onClick={() => handleStatusEditClick(cls.id)}
+                                  title="Click to edit status"
+                                />
+                                {/* ✅ Show current editing state */}
+                                {editingStatusId === cls.id && (
+                                  <span className="text-xs text-blue-600 font-medium">EDITING</span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           {/* <td className="px-4 py-2">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${location.is_active

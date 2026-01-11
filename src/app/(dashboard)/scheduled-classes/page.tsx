@@ -132,6 +132,50 @@ async function getScheduledClasses(): Promise<any[]> {
   }
 }
 
+// Server action to update scheduled class status
+export async function updateScheduledClassStatus(scheduledClassId: string, newStatus: string) {
+  "use server";
+
+  try {
+    // Use service role key to bypass RLS for admin operations
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    // Validate status
+    const validStatuses = ['approved', 'pending'];
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error(`Invalid status: ${newStatus}`);
+    }
+
+    // Update the status
+    const { error: updateError } = await admin
+      .from("scheduled_classes")
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", scheduledClassId);
+
+    if (updateError) {
+      console.error("Error updating scheduled class status:", updateError);
+      throw new Error("Failed to update scheduled class status");
+    }
+
+    console.log('✅ Successfully updated scheduled class status:', scheduledClassId, 'to', newStatus);
+
+    // Revalidate the page to show updated data
+    revalidatePath("/scheduled-classes");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Server action error:", error);
+    throw error;
+  }
+}
+
 // Server action to approve a scheduled class
 export async function approveScheduledClass(scheduledClassId: string) {
   "use server";
@@ -258,6 +302,7 @@ async function ScheduledClassesContent({
           isSuperAdmin={true} // Will be controlled by AdminGuard
           approveScheduledClass={approveScheduledClass}
           cancelScheduledClass={cancelScheduledClass}
+          updateScheduledClassStatus={updateScheduledClassStatus}
         />
       </div>
     );
