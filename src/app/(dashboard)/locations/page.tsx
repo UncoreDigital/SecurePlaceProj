@@ -53,7 +53,7 @@ export async function createLocation(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const address = String(formData.get("address") || "").trim();
-  const description = String(formData.get("description") || "").trim();
+  const description = String(formData.get("contact") || "").trim();
   const firmId = String(formData.get("firmId") || "");
   const latitude = parseFloat(String(formData.get("latitude") || "0"));
   const longitude = parseFloat(String(formData.get("longitude") || "0"));
