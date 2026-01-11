@@ -109,18 +109,23 @@ export async function updateLocation(formData: FormData) {
 
 export async function deleteLocation(formData: FormData) {
   "use server";
-
+  
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  if (!id) {
+    throw new Error("Location ID is required");
+  }
 
   const supabase = await createServerSupabase();
-
+  
   const { error } = await supabase
     .from("locations")
     .update({ is_active: false })
     .eq("id", id);
 
-  if (error) console.error("delete location error:", error.message);
+  if (error) {
+    console.error("delete location error:", error.message);
+    throw new Error(`Failed to delete location: ${error.message}`);
+  }
 
   revalidatePath(REVALIDATE_PATH);
 }

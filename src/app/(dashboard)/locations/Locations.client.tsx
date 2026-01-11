@@ -293,6 +293,7 @@ export default function LocationsClient({
                 key={location.id}
                 location={location}
                 onActionComplete={() => handleRefresh()}
+                deleteLocation={deleteLocation}
               />
             ))}
           </div>

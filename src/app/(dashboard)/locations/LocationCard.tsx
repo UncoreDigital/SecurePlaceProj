@@ -31,15 +31,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EditLocationDialog } from "./edit-location-dialog";
-import { supabase } from "@/lib/supabaseClient";
 
 interface LocationCardProps {
   location: Location;
   onActionComplete: () => void; // Function to trigger a refetch
+  deleteLocation: (formData: FormData) => Promise<void>; // Add server action prop
 }
 
-const LocationCard = ({ location, onActionComplete }: LocationCardProps) => {
+const LocationCard = ({ location, onActionComplete, deleteLocation }: LocationCardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const Map = useMemo(
     () =>
@@ -51,20 +53,33 @@ const LocationCard = ({ location, onActionComplete }: LocationCardProps) => {
   );
 
   const handleDelete = async () => {
+    console.log('🔄 Starting delete process for location:', location.id, location.name);
+    setIsDeleting(true);
+    setDeleteError(null);
+
     try {
-      const { error } = await supabase
-        .from('locations')
-        .delete()
-        .eq('id', location.id);
+      // Create FormData as expected by server action
+      const formData = new FormData();
+      formData.append("id", location.id);
 
-      if (error) {
-        throw error;
-      }
-
+      console.log('📤 Calling server action deleteLocation...');
+      await deleteLocation(formData);
+      
+      console.log('✅ Location delete successful');
       onActionComplete(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete location:", error);
-      alert("Failed to delete location.");
+    } catch (error: any) {
+      console.error("❌ Failed to delete location:", error);
+      
+      // Set user-friendly error message
+      if (error.message?.includes('foreign key') || error.message?.includes('referenced')) {
+        setDeleteError("This location cannot be deleted because it's being used by scheduled classes. The location has been deactivated instead.");
+      } else if (error.message?.includes('deactivate')) {
+        setDeleteError("Location has been deactivated due to existing dependencies.");
+      } else {
+        setDeleteError(error.message || "Failed to delete location. Please try again.");
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -102,14 +117,27 @@ const LocationCard = ({ location, onActionComplete }: LocationCardProps) => {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   className="bg-red-600 hover:bg-red-700"
+                  disabled={isDeleting}
                 >
-                  Delete
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
+              {deleteError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{deleteError}</p>
+                </div>
+              )}
             </AlertDialogContent>
           </AlertDialog>
         </div>
