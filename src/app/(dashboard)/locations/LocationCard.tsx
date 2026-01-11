@@ -53,7 +53,6 @@ const LocationCard = ({ location, onActionComplete, deleteLocation }: LocationCa
   );
 
   const handleDelete = async () => {
-    console.log('🔄 Starting delete process for location:', location.id, location.name);
     setIsDeleting(true);
     setDeleteError(null);
 
@@ -62,22 +61,11 @@ const LocationCard = ({ location, onActionComplete, deleteLocation }: LocationCa
       const formData = new FormData();
       formData.append("id", location.id);
 
-      console.log('📤 Calling server action deleteLocation...');
       await deleteLocation(formData);
       
-      console.log('✅ Location delete successful');
       onActionComplete(); // Refresh the list
     } catch (error: any) {
       console.error("❌ Failed to delete location:", error);
-      
-      // Set user-friendly error message
-      if (error.message?.includes('foreign key') || error.message?.includes('referenced')) {
-        setDeleteError("This location cannot be deleted because it's being used by scheduled classes. The location has been deactivated instead.");
-      } else if (error.message?.includes('deactivate')) {
-        setDeleteError("Location has been deactivated due to existing dependencies.");
-      } else {
-        setDeleteError(error.message || "Failed to delete location. Please try again.");
-      }
     } finally {
       setIsDeleting(false);
     }
