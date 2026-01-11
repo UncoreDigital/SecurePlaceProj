@@ -83,7 +83,7 @@ export async function updateLocation(formData: FormData) {
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
   const address = String(formData.get("address") || "").trim();
-  const description = String(formData.get("description") || "").trim();
+  const description = String(formData.get("contact") || "").trim();
   const latitude = parseFloat(String(formData.get("latitude") || "0"));
   const longitude = parseFloat(String(formData.get("longitude") || "0"));
 
