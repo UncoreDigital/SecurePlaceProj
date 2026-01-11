@@ -312,17 +312,6 @@ export default function ScheduledClassesClient({
             </nav>
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold text-brand-blue">Requested Classes</span>
-              {/* ✅ Debug button to test state */}
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  console.log('🔍 Current editingStatusId:', editingStatusId);
-                  setEditingStatusId(editingStatusId ? null : 'test-id');
-                }}
-              >
-                Toggle Edit (Debug)
-              </Button>
             </div>
           </div>
           {/* Add New Safety Class Button (for admins) */}
