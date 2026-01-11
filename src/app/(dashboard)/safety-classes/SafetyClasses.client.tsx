@@ -245,15 +245,22 @@ export default function SafetyClassesClient({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSafetyClasses.map((safetyClass, index) => (
             <Card key={safetyClass.id} className="py-0 overflow-hidden hover:shadow-lg transition-shadow gap-3">
-              <div className="relative aspect-video bg-gray-100 h-40">
+              <div className="relative aspect-video bg-gray-100 h-40 overflow-hidden rounded-t-lg">
                 {safetyClass.thumbnail_url ? (
-                  <img
-                    src={safetyClass.thumbnail_url}
-                    alt={safetyClass.title + " thumbnail"}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                    <img
+                      src={safetyClass.thumbnail_url}
+                      alt={safetyClass.title + " thumbnail"}
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.classList.add('hidden');
+                      }}
+                    />
+                  </div>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
                     <div className="text-center">
                       <div className="w-16 h-16 bg-brand-orange rounded-full flex items-center justify-center mx-auto mb-2">
                         <Play className="h-8 w-8 text-white ml-1" />
