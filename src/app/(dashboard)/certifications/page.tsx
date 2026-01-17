@@ -98,17 +98,24 @@ export default function CertificationsLandingPage() {
       </nav>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Certifications</h1>
-        <Button
-          onClick={() => router.push('/certifications/new')}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" /> Create Certificate
-        </Button>
+        {user?.role === "super_admin" && (
+          <Button
+            onClick={() => router.push('/dashboard/certifications/new')}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Create Certificate
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
         {!hasItems ? (
-          <p className="text-slate-500 text-sm">No certifications yet. Click "Create Certificate" to add one.</p>
+          <p className="text-slate-500 text-sm">
+            {user?.role === "super_admin" 
+              ? 'No certifications yet. Click "Create Certificate" to add one.'
+              : 'No certifications available.'
+            }
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">
