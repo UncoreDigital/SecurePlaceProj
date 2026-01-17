@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
+import { supabase } from "@/lib/supabaseClient";
 import { Eye, Plus, Printer } from "lucide-react";
 import {
   Dialog,
@@ -17,13 +19,12 @@ type CertItem = {
   title: string;
   recipient: string;
   firm?: string;
-  date?: string;
+  issue_date?: string;
   signature?: string;
 };
 
-const STORAGE_LIST_KEY = "secure_place_certs";
-
 export default function CertificationsLandingPage() {
+  const { user, loading: userLoading } = useUser();
   const [items, setItems] = useState<CertItem[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<CertItem | null>(null);
@@ -31,11 +32,50 @@ export default function CertificationsLandingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_LIST_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-  }, []);
+    const fetchCertificates = async () => {
+      if (userLoading || !user) return;
+
+      try {
+        let query = supabase
+          .from("certificates")
+          .select(`
+            id,
+            title,
+            issue_date,
+            recipient_name,
+            firm_name,
+            signer_name
+          `)
+          .order("created_at", { ascending: false });
+
+        // Filter by firm for firm admins
+        if (user.role === "firm_admin" && user.firmId) {
+          query = query.eq("firm_id", user.firmId);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          console.error("Error fetching certificates:", error);
+          return;
+        }
+
+        // Transform database data to match existing UI structure
+        const transformedData: CertItem[] = (data || []).map((cert: any) => ({
+          id: cert.id,
+          title: cert.title,
+          recipient: cert.recipient_name,
+          firm: cert.firm_name,
+          issue_date: cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : undefined,
+          signature: cert.signer_name || undefined,
+        }));
+        setItems(transformedData);
+      } catch (error) {
+        console.error("Failed to fetch certificates:", error);
+      }
+    };
+
+    fetchCertificates();
+  }, [user, userLoading]);
 
   const hasItems = items.length > 0;
 
@@ -87,7 +127,7 @@ export default function CertificationsLandingPage() {
                     <td className="py-2 pr-4">{c.title}</td>
                     <td className="py-2 pr-4">{c.recipient}</td>
                     <td className="py-2 pr-4">{c.firm || '-'}</td>
-                    <td className="py-2 pr-4">{c.date || '-'}</td>
+                    <td className="py-2 pr-4">{c.issue_date || '-'}</td>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
                         <button
@@ -141,13 +181,12 @@ export default function CertificationsLandingPage() {
                   title: selected.title,
                   recipient: selected.recipient,
                   firm: selected.firm,
-                  date: selected.date,
+                  date: selected.issue_date,
                   signature: selected.signature,
                 }}
                 showSave={false}
                 showPrint={true}
                 previewOnly={true}
-                persistKey={null}
               />
             )}
           </div>
