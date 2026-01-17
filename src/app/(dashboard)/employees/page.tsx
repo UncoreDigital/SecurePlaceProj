@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Suspense } from "react";
 import { AdminGuard } from "@/components/AuthGuard";
 import { generateSecurePassword, sendEmployeeWelcomeEmail } from "@/lib/email-service";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -23,9 +24,13 @@ type FirmOption = { id: string; name: string };
 async function getEmployees({
   q,
   firmFilter,
+  userRole,
+  userFirmId,
 }: {
   q?: string;
   firmFilter?: string | null;
+  userRole?: string;
+  userFirmId?: string | null;
 }): Promise<EmployeeRow[]> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +56,15 @@ async function getEmployees({
     .order("full_name", { ascending: true });
 
   if (q && q.trim()) query = query.ilike("full_name", `%${q}%`);
-  if (firmFilter) query = query.eq("firm_id", firmFilter);
+  
+  // Apply firm filtering based on user role
+  if (userRole === "firm_admin" && userFirmId) {
+    // Firm admins can only see employees from their firm
+    query = query.eq("firm_id", userFirmId);
+  } else if (userRole === "super_admin" && firmFilter) {
+    // Super admins can filter by any firm
+    query = query.eq("firm_id", firmFilter);
+  }
 
   const { data, error } = await query;
   if (error) {
@@ -104,10 +117,27 @@ export async function createEmployee(formData: FormData) {
   const isVolunteer = String(formData.get("isVolunteer") || "") === "on";
 
   const firmIdRaw = String(formData.get("firmId") || "");
-  const firmId = firmIdRaw || null;
+  let firmId = firmIdRaw || null;
 
   if (!name || !email) {
     throw new Error("Name and email are required");
+  }
+
+  // Get current user context to determine firm_id for firm admins
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role, firm_id")
+      .eq("id", user.id)
+      .single();
+    
+    // If user is firm_admin, force the firm_id to their firm
+    if (profile?.role === "firm_admin" && profile?.firm_id) {
+      firmId = profile.firm_id;
+    }
   }
 
   // Generate secure password
@@ -322,8 +352,30 @@ async function EmployeesContent({
   const firmParam = sp?.firm ?? "__ALL__";
   const firmFilter = firmParam && firmParam !== "__ALL__" ? firmParam : null;
 
+  // Get current user context
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  let userRole = "employee";
+  let userFirmId = null;
+  let isSuperAdmin = false;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role, firm_id")
+      .eq("id", user.id)
+      .single();
+    
+    if (profile) {
+      userRole = profile.role;
+      userFirmId = profile.firm_id;
+      isSuperAdmin = profile.role === "super_admin";
+    }
+  }
+
   const [employees, firms] = await Promise.all([
-    getEmployees({ q, firmFilter }),
+    getEmployees({ q, firmFilter, userRole, userFirmId }),
     getFirms(),
   ]);
 
@@ -331,16 +383,16 @@ async function EmployeesContent({
     <div className="container mx-auto">
       <div className="mb-6">
         <nav className="text-sm text-gray-500 mb-2">
-          Home &gt; Requested Classes
+          Home &gt; Employee Management
         </nav>
         <span className="text-3xl font-bold text-brand-blue">Employee Management</span>
       </div>
       <EmployeesClient
         employees={employees}
         firms={firms}
-        isSuperAdmin={true} // Will be controlled by AdminGuard
+        isSuperAdmin={isSuperAdmin}
         initialQuery={q}
-        initialFirm={firmParam}
+        initialFirm={isSuperAdmin ? firmParam : userFirmId || ""}
         createEmployee={createEmployee}
         updateEmployee={updateEmployee}
         deleteEmployee={deleteEmployee}
