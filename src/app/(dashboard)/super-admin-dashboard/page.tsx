@@ -22,7 +22,8 @@ async function getDashboardData() {
       completedDrillsRes,
       pendingDrillsRes,
       workshopsRes,
-      locationsRes
+      locationsRes,
+      safetyClassesRes
     ] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "employee").eq("is_volunteer", true),
@@ -30,7 +31,18 @@ async function getDashboardData() {
       supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "completed"),
       supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
-      supabase.from('locations').select('*', { count: 'exact', head: true })
+      supabase.from('locations').select('*', { count: 'exact', head: true }),
+      supabase.from("safety_classes").select(`
+        id,
+        title,
+        duration_minutes,
+        type,
+        mode,
+        created_at,
+        is_active,
+        firm_id,
+        thumbnail_url
+      `).eq("is_active", true).order("created_at", { ascending: false }).limit(20)
     ]);
     // console.log("Workshops Data:", workshopsRes);
     // console.log("Test Data:", workshopsRes);
@@ -74,6 +86,7 @@ async function getDashboardData() {
           { name: "Done", value: completedDrillsRes.count ?? 0 },
         ],
       },
+      safetyClasses: safetyClassesRes.data ?? [],
     };
   } catch (error) {
     console.error("Failed to fetch dashboard data:", error);
@@ -81,6 +94,7 @@ async function getDashboardData() {
     return {
       stats: { employees: 0, volunteers: 0, emergencies: 0, locations: 0 },
       chartData: { drills: [], workshops: [], compliance: [] },
+      safetyClasses: [],
     };
   }
 
@@ -166,13 +180,13 @@ async function getDashboardData() {
 
 // The page is now an async Server Component
 export default async function SuperAdminDashboardPage() {
-  const { stats, chartData } = await getDashboardData();
+  const { stats, chartData, safetyClasses } = await getDashboardData();
 
   // Note: We can't use the useUser hook on the server.
   // The user's name would be fetched differently, but we'll use a placeholder for now.
   const userName = "Super Admin";
 
   return (
-    <DashboardUI stats={stats} chartData={chartData} userName={userName} />
+    <DashboardUI stats={stats} chartData={chartData} userName={userName} safetyClasses={safetyClasses} />
   );
 }

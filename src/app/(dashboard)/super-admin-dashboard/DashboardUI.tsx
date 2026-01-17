@@ -13,10 +13,12 @@ export function DashboardUI({
   stats,
   chartData,
   userName,
+  safetyClasses = [],
 }: {
   stats: any;
   chartData: any;
   userName: string;
+  safetyClasses?: any[];
 }) {
   return (
     <div>
@@ -82,7 +84,7 @@ export function DashboardUI({
           <MonthlyEmergenciesChart />
         </div>
         <div className="lg:col-span-3">
-          <SafetyClassesTable />
+          <SafetyClassesTable data={safetyClasses} />
         </div>
       </div>
     </div>

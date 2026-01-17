@@ -1,5 +1,4 @@
 "use client";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -12,48 +11,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Dummy data for the table
-const classesData = [
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "In-Person",
-    duration: "15 Min",
-    status: "Pending",
-  },
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "In-Person",
-    duration: "50 Min",
-    status: "Pending",
-  },
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "Remote",
-    duration: "45 Min",
-    status: "Approved",
-  },
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "Remote",
-    duration: "45 Min",
-    status: "Approved",
-  },
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "Remote",
-    duration: "45 Min",
-    status: "Approved",
-  },
-  {
-    courseName: "Workplace Safety Training: Pro...",
-    type: "Remote",
-    duration: "45 Min",
-    status: "Approved",
-  },
-];
+interface SafetyClassesTableProps {
+  data?: any[];
+}
 
-const SafetyClassesTable = () => {
-  const getStatusBadge = (status: string) => {
+const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
+    const getStatusBadge = (status: string) => {
     switch (status) {
       case "Pending":
         return (
@@ -71,7 +34,6 @@ const SafetyClassesTable = () => {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
-
   return (
     <Card className="h-[400px] flex flex-col">
       <CardHeader>
@@ -79,35 +41,49 @@ const SafetyClassesTable = () => {
           Safety Classes
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <Tabs defaultValue="completed">
+      <CardContent className="flex-grow overflow-hidden">
+        <Tabs defaultValue="completed" className="h-full flex flex-col">
           <TabsList>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
           </TabsList>
-          <TabsContent value="completed" className="mt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Course Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classesData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.courseName}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell>{item.duration}</TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <TabsContent value="completed" className="mt-4 flex-grow overflow-hidden">
+            {data.length > 0 ? (
+              <div className="h-full overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white z-10">
+                    <TableRow>
+                      <TableHead>Course Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Mode</TableHead>
+                      {/* <TableHead>Status</TableHead> */}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.safety_class ? item.safety_class.title : item.title}</TableCell>
+                        <TableCell>{item.safety_class ? item.safety_class.type : item.type}</TableCell>
+                        <TableCell>{item.safety_class ? item.safety_class.duration_minutes: item.duration_minutes} Min</TableCell>
+                        <TableCell>
+                          {/* {getStatusBadge(item.status)} */}
+                          <Badge variant={(item?.safety_class?.mode === "Remote" || item.mode) ? "secondary" : "default"}>
+                            {item?.safety_class ? item?.safety_class?.mode : item?.mode}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-slate-500 p-8">
+                No classes found.
+              </p>
+            )}
           </TabsContent>
-          <TabsContent value="upcoming">
+          <TabsContent value="upcoming" className="mt-4 flex-grow">
             <p className="text-center text-slate-500 p-8">
               No upcoming classes scheduled.
             </p>

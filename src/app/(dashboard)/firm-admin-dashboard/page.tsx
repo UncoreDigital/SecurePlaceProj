@@ -49,6 +49,7 @@ const FirmAdminDashboardPage = () => {
     workshops: [],
     compliance: [],
   });
+  const [safetyClasses, setSafetyClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -93,6 +94,29 @@ const FirmAdminDashboardPage = () => {
         //   .from("trainings")
         //   .select("*").eq("firm_id", user?.firmId);;
 
+        // --- Fetch Safety Classes Data ---
+        let classesQuery = supabase
+          .from("scheduled_classes")
+          .select(`
+            *, 
+            safety_class: safety_class_id(title, id, type, duration_minutes, mode), 
+            firms:firm_id ( name ), 
+            locations:location_id ( id, name )
+          `)
+          .order("start_time", { ascending: false });
+        // Filter by firm_id for firm admins
+        if (user?.role === "firm_admin" && user?.firmId) {
+          classesQuery = classesQuery.eq("firm_id", user.firmId);
+        }
+
+        const { data: classesData, error: classesError } = await classesQuery;
+        
+        if (classesError) {
+          console.error("Error fetching safety classes:", classesError);
+        } else {
+          setSafetyClasses(classesData || []);
+        }
+
         // Set state for stat cards
         setStats({
           employees: employeeRes.count ?? 0,
@@ -133,10 +157,15 @@ const FirmAdminDashboardPage = () => {
       }
     };
 
-    if (!userLoading) {
+    if (!userLoading && user) {
       fetchDashboardData();
+    } else {
+      // If user is not loading but also not available, still set loading to false
+      if (!userLoading && !user) {
+        setLoading(false);
+      }
     }
-  }, [userLoading]);
+  }, [userLoading, user]);
 
   // The loading skeleton JSX remains the same
   if (loading) {
@@ -167,7 +196,7 @@ const FirmAdminDashboardPage = () => {
           title="Total Employees"
           value={stats.employees}
           icon={Users}
-          href="/dashboard/employees"
+          href="/employees"
           change="+15"
           changeType="positive"
         />
@@ -211,7 +240,7 @@ const FirmAdminDashboardPage = () => {
           <MonthlyEmergenciesChart />
         </div>
         <div className="lg:col-span-3">
-          <SafetyClassesTable />
+          <SafetyClassesTable data={safetyClasses} />
         </div>
       </div>
     </div>

@@ -32,7 +32,7 @@ const StatCard = ({
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-brand-blue">{value}</div>
-          {change && (
+          {/* {change && (
             <p
               className={`text-xs mt-1 ${
                 changeType === "positive" ? "text-green-600" : "text-red-600"
@@ -40,7 +40,7 @@ const StatCard = ({
             >
               {change} from last month
             </p>
-          )}
+          )} */}
         </CardContent>
       </Card>
     </Link>
