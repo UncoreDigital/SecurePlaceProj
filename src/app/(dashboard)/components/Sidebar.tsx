@@ -49,6 +49,7 @@ const FIRM_ADMIN_ITEMS: NavItem[] = [
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
+  { href: "/certifications", label: "Certification", icon: BookOpen },
 ];
 
 const Sidebar = () => {

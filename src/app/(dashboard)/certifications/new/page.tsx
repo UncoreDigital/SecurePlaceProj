@@ -14,6 +14,7 @@ export default function NewCertificationPage() {
     signature?: string;
   }) => {
     try {
+      router.push("/certifications");
     } catch (e) {
       console.error("Failed to save certificate:", e);
     }
