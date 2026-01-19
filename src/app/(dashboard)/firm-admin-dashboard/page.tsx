@@ -1,250 +1,241 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useUser } from "@/hooks/useUser";
-import { databases } from "@/lib/appwrite-server";
-import { Query, Models } from "appwrite";
-import StatCard from "../components/StatCard";
-import CircularGraph from "../components/CircularGraph";
-import { Users, UserCheck, Siren } from "lucide-react";
+import { Suspense } from "react";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { Skeleton } from "@/components/ui/skeleton";
-import MonthlyEmergenciesChart from "../components/MonthlyEmergenciesChart";
-import SafetyClassesTable from "../components/SafetyClassesTable";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
-
-// Use the singleton browser client
-const supabase = createBrowserSupabase();
-
-
-// Define the colors for our charts
-const COLORS = ["#001D49", "#FF5F15", "#F1F5F9", "#64748B"]; // Brand Blue, Orange, Slates
-
-// Add an interface for the safety training document
-interface SafetyTraining extends Models.Document {
-  status: string;
-  type: string;
-}
+import FirmAdminDashboardClient from "./FirmAdminDashboard.client";
 
 interface ChartDataPoint {
   name: string;
   value: number;
 }
 
-// NEW: Define a type for the chart state object
 interface ChartState {
   drills: ChartDataPoint[];
   workshops: ChartDataPoint[];
   compliance: ChartDataPoint[];
 }
 
-const FirmAdminDashboardPage = () => {
-  const { user, loading: userLoading } = useUser();
-  const [stats, setStats] = useState({
-    employees: 0,
-    volunteers: 0,
-    emergencies: 0,
-  });
-  const [chartData, setChartData] = useState<ChartState>({
-    drills: [],
-    workshops: [],
-    compliance: [],
-  });
-  const [safetyClasses, setSafetyClasses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface DashboardStats {
+  employees: number;
+  volunteers: number;
+  emergencies: number;
+}
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // --- Fetch Stat Card Data ---
-        const employeeRes = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "employee")
-          .eq("firm_id", user?.firmId);
+interface DashboardData {
+  stats: DashboardStats;
+  chartData: ChartState;
+  safetyClasses: any[];
+  userFullName: string;
+}
 
-        const volunteerRes = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "employee")
-          .eq("firm_id", user?.firmId)
-          .eq("is_volunteer", true);
+async function getDashboardData(userFirmId: string): Promise<DashboardData> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
-        const emergencyRes = { count: 0 };
-        // await supabase
-        //   .from("incidents")
-        //   .select("*", { count: "exact", head: true }).eq("firm_id", user?.firmId);;
+  try {
+    // --- Fetch Stat Card Data ---
+    const employeeRes = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "employee")
+      .eq("firm_id", userFirmId);
 
-        // --- Fetch Chart Data ---
-        const completedDrillsRes: any = { count: 0 };
-          // await supabase
-          // .from("drills")
-          // .select("*", { count: "exact", head: true })
-          // .eq("status", "completed").eq("firm_id", user?.firmId);;
+    const volunteerRes = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "employee")
+      .eq("firm_id", userFirmId)
+      .eq("is_volunteer", true);
 
-        const pendingDrillsRes: any = { count: 0 };
-        // await supabase
-        //   .from("drills")
-        //   .select("*", { count: "exact", head: true })
-        //   .eq("status", "pending").eq("firm_id", user?.firmId);;
+    const emergencyRes = { count: 0 };
+    // await supabase
+    //   .from("incidents")
+    //   .select("*", { count: "exact", head: true }).eq("firm_id", userFirmId);
 
-        // Fetch all safety training documents
-        const workshopsRes: any = { count: 0 };
-        //  await supabase
-        //   .from("trainings")
-        //   .select("*").eq("firm_id", user?.firmId);;
+    // --- Fetch Chart Data ---
+    const completedDrillsRes: any = { count: 0 };
+    // await supabase
+    // .from("drills")
+    // .select("*", { count: "exact", head: true })
+    // .eq("status", "completed").eq("firm_id", userFirmId);
 
-        // --- Fetch Safety Classes Data ---
-        let classesQuery = supabase
-          .from("scheduled_classes")
-          .select(`
-            *, 
-            safety_class: safety_class_id(title, id, type, duration_minutes, mode), 
-            firms:firm_id ( name ), 
-            locations:location_id ( id, name )
-          `)
-          .order("start_time", { ascending: false });
-        // Filter by firm_id for firm admins
-        if (user?.role === "firm_admin" && user?.firmId) {
-          classesQuery = classesQuery.eq("firm_id", user.firmId);
-        }
+    const pendingDrillsRes: any = { count: 0 };
+    // await supabase
+    //   .from("drills")
+    //   .select("*", { count: "exact", head: true })
+    //   .eq("status", "pending").eq("firm_id", userFirmId);
 
-        const { data: classesData, error: classesError } = await classesQuery;
-        
-        if (classesError) {
-          console.error("Error fetching safety classes:", classesError);
-        } else {
-          setSafetyClasses(classesData || []);
-        }
+    // Fetch all safety training documents
+    const workshopsRes: any = { count: 0 };
+    //  await supabase
+    //   .from("trainings")
+    //   .select("*").eq("firm_id", userFirmId);
 
-        // Set state for stat cards
-        setStats({
-          employees: employeeRes.count ?? 0,
-          volunteers: volunteerRes.count ?? 0,
-          emergencies: emergencyRes.count ?? 0,
-        });
+    // --- Fetch Safety Classes Data ---
+    const { data: classesData, error: classesError } = await supabase
+      .from("scheduled_classes")
+      .select(`
+        *, 
+        safety_class: safety_class_id(title, id, type, duration_minutes, mode), 
+        firms:firm_id ( name ), 
+        locations:location_id ( id, name )
+      `)
+      .eq("firm_id", userFirmId)
+      .order("start_time", { ascending: false });
 
-        // Process workshop data to group by type
-        const workshopTypes: { [key: string]: number } = {};
-        (workshopsRes?.data ?? []).forEach((doc: SafetyTraining) => {
-          workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
-        });
-        const processedWorkshops = Object.entries(workshopTypes).map(
-          ([name, value]) => ({ name, value })
-        );
+    if (classesError) {
+      console.error("Error fetching safety classes:", classesError);
+    }
 
-        // Process and set state for charts
-        setChartData({
-          drills: [
-            { name: "Completed", value: completedDrillsRes.count ?? 0 },
-            { name: "Pending", value: pendingDrillsRes.count ?? 0 },
-          ],
-          workshops: processedWorkshops,
-          compliance: [
-            {
-              name: "Workshops Done",
-              value: (workshopsRes.data ?? []).filter(
-                (d: SafetyTraining) => d.status === "completed"
-              ).length,
-            },
-            { name: "Drills Done", value: completedDrillsRes.count ?? 0 },
-          ],
-        });
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
+    // Process workshop data to group by type
+    const workshopTypes: { [key: string]: number } = {};
+    (workshopsRes?.data ?? []).forEach((doc: any) => {
+      workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
+    });
+    const processedWorkshops = Object.entries(workshopTypes).map(
+      ([name, value]) => ({ name, value })
+    );
+
+    return {
+      stats: {
+        employees: employeeRes.count ?? 0,
+        volunteers: volunteerRes.count ?? 0,
+        emergencies: emergencyRes.count ?? 0,
+      },
+      chartData: {
+        drills: [
+          { name: "Completed", value: completedDrillsRes.count ?? 0 },
+          { name: "Pending", value: pendingDrillsRes.count ?? 0 },
+        ],
+        workshops: processedWorkshops,
+        compliance: [
+          {
+            name: "Workshops Done",
+            value: (workshopsRes.data ?? []).filter(
+              (d: any) => d.status === "completed"
+            ).length,
+          },
+          { name: "Drills Done", value: completedDrillsRes.count ?? 0 },
+        ],
+      },
+      safetyClasses: classesData || [],
+      userFullName: "", // Will be set from user profile
     };
+  } catch (error) {
+    console.error("Failed to fetch dashboard data:", error);
+    return {
+      stats: { employees: 0, volunteers: 0, emergencies: 0 },
+      chartData: { drills: [], workshops: [], compliance: [] },
+      safetyClasses: [],
+      userFullName: "",
+    };
+  }
+}
 
-    if (!userLoading && user) {
-      fetchDashboardData();
-    } else {
-      // If user is not loading but also not available, still set loading to false
-      if (!userLoading && !user) {
-        setLoading(false);
+function LoadingSpinner() {
+  return (
+    <>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+      </div>
+      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80" />
+      </div>
+    </>
+  );
+}
+
+async function FirmAdminDashboardContent() {
+  // Get current user context server-side (same pattern as employees page)
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  let userRole = "employee";
+  let userFirmId = null;
+  let userFullName = "";
+  let dashboardData: DashboardData | null = null;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role, firm_id, first_name, last_name")
+      .eq("id", user.id)
+      .single();
+    
+    if (profile) {
+      userRole = profile.role;
+      userFirmId = profile.firm_id;
+      userFullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || user.email || 'User';
+      
+      // Fetch dashboard data if user has a firm
+      if (userFirmId) {
+        dashboardData = await getDashboardData(userFirmId);
+        dashboardData.userFullName = userFullName;
       }
     }
-  }, [userLoading, user]);
+  }
 
-  // The loading skeleton JSX remains the same
-  if (loading) {
+  // Handle different states
+  if (!user) {
     return (
-      <>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-brand-blue mb-6">Dashboard</h1>
+        <div className="text-center py-12">
+          <p className="text-lg text-gray-600">User not found</p>
+          <p className="text-sm text-gray-500">Please log in to view your dashboard.</p>
         </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
-        </div>
-      </>
+      </div>
     );
   }
 
-  // The main return JSX with the updated chart title
+  if (!userFirmId) {
+    return (
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-brand-blue mb-6">Dashboard</h1>
+        <div className="text-center py-12">
+          <p className="text-lg text-gray-600">No firm associated</p>
+          <p className="text-sm text-gray-500">Your account is not associated with any firm.</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Debug: userId={user.id}, role={userRole}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-brand-blue mb-6">Dashboard</h1>
+        <div className="text-center py-12">
+          <p className="text-lg text-gray-600">Failed to load dashboard data</p>
+          <p className="text-sm text-gray-500">Please try refreshing the page.</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Debug: firmId={userFirmId}, userId={user.id}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-brand-blue mb-6">
-        Welcome, {user?.fullName}!
-      </h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Total Employees"
-          value={stats.employees}
-          icon={Users}
-          href="/employees"
-          change="+15"
-          changeType="positive"
-        />
-        <StatCard
-          title="Total Volunteers"
-          value={stats.volunteers}
-          icon={UserCheck}
-          href="#"
-          change="+2"
-          changeType="positive"
-        />
-        <StatCard
-          title="Total Emergencies"
-          value={stats.emergencies}
-          icon={Siren}
-          href="/dashboard/emergencies"
-          change="-1"
-          changeType="negative"
-        />
-      </div>
-      <div className="mt-8 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        <CircularGraph
-          title="Drill Alerts Status"
-          data={chartData.drills}
-          colors={COLORS}
-        />
-        <CircularGraph
-          title="Workshop Types"
-          data={chartData.workshops}
-          colors={COLORS}
-        />
-        <CircularGraph
-          title="Compliance Overview"
-          data={chartData.compliance}
-          colors={COLORS}
-        />
-      </div>
-
-      <div className="mt-8 grid gap-6 grid-cols-1 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <MonthlyEmergenciesChart />
-        </div>
-        <div className="lg:col-span-3">
-          <SafetyClassesTable data={safetyClasses} />
-        </div>
-      </div>
-    </div>
+    <FirmAdminDashboardClient 
+      initialDashboardData={dashboardData}
+    />
   );
-};
+}
 
-export default FirmAdminDashboardPage;
+export default async function FirmAdminDashboardPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <FirmAdminDashboardContent />
+    </Suspense>
+  );
+}
