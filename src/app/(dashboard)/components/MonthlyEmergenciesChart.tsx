@@ -11,17 +11,38 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Dummy data for the bar chart
-const data = [
-  { month: "Mar", emergencies: 5 },
-  { month: "Apr", emergencies: 7 },
-  { month: "May", emergencies: 4 },
-  { month: "Jun", emergencies: 8 },
-  { month: "Jul", emergencies: 6 },
-  { month: "Aug", emergencies: 10 },
-];
+interface EmergencyData {
+  month: string;
+  emergencies: number;
+}
 
-const MonthlyEmergenciesChart = () => {
+interface MonthlyEmergenciesChartProps {
+  data?: EmergencyData[];
+}
+
+// Function to generate last 6 months data
+const generateLast6MonthsData = (): EmergencyData[] => {
+  const months = [];
+  const now = new Date();
+  
+  // Generate last 6 months
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    
+    months.push({
+      month: monthName,
+      emergencies: 0, // Set to 0 for now as requested
+    });
+  }
+  
+  return months;
+};
+
+const MonthlyEmergenciesChart = ({ data }: MonthlyEmergenciesChartProps) => {
+  // Use provided data or generate default last 6 months with 0 emergencies
+  const chartData = data || generateLast6MonthsData();
+
   return (
     <Card className="h-[400px] flex flex-col">
       <CardHeader>
@@ -32,7 +53,7 @@ const MonthlyEmergenciesChart = () => {
       <CardContent className="flex-grow">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={chartData}
             margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} />

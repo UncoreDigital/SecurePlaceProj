@@ -24,7 +24,6 @@ type CertItem = {
 interface CertificationsClientProps {
   initialCertificates: CertItem[];
   userRole: string;
-  userId: string;
 }
 
 export default function CertificationsClient({ 
