@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
 
 interface SchedulingModalProps {
@@ -38,23 +39,30 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [locationList, setLocationList] = useState<Location[]>([]);
+  const [locationList, setLocationList] = useState<Location[]>(locations || []);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const fetchedRef = useRef(false);
 
-  // Use pre-loaded locations from props - this is the reliable approach
-  useEffect(() => {
-    if (isOpen) {
-      if (locations && locations.length > 0) {
-        setLocationList(locations);
-      } else {
-        setLocationList([]);
-      }
-    } else {
-      setLocationList([]);
-      setSelectedLocation("");
-      setSelectedDate(null);
-      setSelectedTimeSlot("");
-    }
-  }, [isOpen, locations]);
+  // Fetch locations when modal opens and firmId is present, only once per open
+  if (isOpen && firmId && !fetchedRef.current) {
+    fetchedRef.current = true;
+    setLoadingLocations(true);
+    supabase
+      .from("locations")
+      .select("id, name, address")
+      .eq("firm_id", firmId)
+      .eq("is_active", true)
+      .then(({ data, error }) => {
+        if (!error) setLocationList(data || []);
+        setLoadingLocations(false);
+      });
+  }
+  // Reset fetchedRef when modal closes
+  if (!isOpen && fetchedRef.current) {
+    fetchedRef.current = false;
+    setLocationList([]);
+    setSelectedLocation("");
+  }
 
   if (!isOpen) return null;
 
@@ -100,6 +108,9 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
     if (dayOfWeek === 0) {
       return false;
     }
+    
+    // Optional: Add holiday restrictions here
+    // Optional: Check for existing scheduled classes conflicts here
     
     return true; // Available for scheduling
   };
@@ -150,9 +161,9 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   const parseTimeSlot = (date: Date, slot: string) => {
     // Example slot: "09:00 AM TO 10:00 AM"
-    const parts = slot.split(" ");
-    const [startTime, startPeriod] = [parts[0], parts[1]];
-    const [endTime, endPeriod] = [parts[3], parts[4]];
+    const [start, , end] = slot.split(" ");
+    const [startTime, startPeriod] = [start, slot.split(" ")[1]];
+    const [endTime, endPeriod] = [slot.split(" ")[3], slot.split(" ")[4]];
 
     // Helper to parse "09:00 AM" to 24h time
     const to24Hour = (time: string, period: string) => {
@@ -176,11 +187,14 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   const handleSchedule = async () => {
     if (selectedLocation && selectedDate && selectedTimeSlot) {
+      setLoadingLocations(true); // Optionally show loading
+      
       // Get current user ID for created_by field
       const currentUserId = user?.id;
       
       if (!currentUserId) {
         alert("User not authenticated. Please log in again.");
+        setLoadingLocations(false);
         return;
       }
 
@@ -188,31 +202,30 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
       const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
       const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
 
-      try {
-        const supabase = createBrowserSupabase();
-        const { error } = await supabase
-          .from("scheduled_classes") // <-- your table name
-          .insert([
-            {
-              safety_class_id: safetyClass.id,
-              location_id: selectedLocation,
-              scheduled_date: selectedDate.toISOString().split("T")[0],
-              start_time: startDate.toISOString(),
-              end_time: endDate.toISOString(),
-              firm_id: firmId,
-              created_by: currentUserId, // Add the logged-in user ID
-              created_at: new Date().toISOString(),
-              status: "pending",
-            },
-          ]);
-        
-        if (!error) {
-          onClose();
-        } else {
-          alert("Failed to schedule class: " + error.message);
-        }
-      } catch (err) {
-        alert("An error occurred while scheduling the class.");
+      const { error } = await supabase
+        .from("scheduled_classes") // <-- your table name
+        .insert([
+          {
+            safety_class_id: safetyClass.id,
+            location_id: selectedLocation,
+            scheduled_date: selectedDate.toISOString().split("T")[0],
+            start_time: startDate.toISOString(),
+            end_time: endDate.toISOString(),
+            firm_id: firmId,
+            created_by: currentUserId, // Add the logged-in user ID
+            created_at: new Date().toISOString(),
+            status: "pending",
+          },
+        ]);
+      
+      setLoadingLocations(false);
+      
+      if (!error) {
+        console.log('✅ Class scheduled successfully by user:', currentUserId);
+        onClose();
+      } else {
+        console.error('❌ Failed to schedule class:', error);
+        alert("Failed to schedule class: " + error.message);
       }
     } else {
       alert("Please select location, date, and time slot");
@@ -224,6 +237,8 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   // Adjust starting day to Monday (0 = Sunday, 1 = Monday, etc.)
   const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -260,22 +275,18 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
             <div className="p-4 sm:p-6 border-b lg:border-b-0 lg:border-r">
               {/* Location Selector */}
               <div className="mb-4 sm:mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Select Location
-                  </label>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Location
+                </label>
                 <div className="relative">
                   <select
                     value={selectedLocation}
-                    onChange={(e) => {
-                      setSelectedLocation(e.target.value);
-                    }}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent text-sm"
                   >
                     <option value="">Select a location</option>
-                    {locationList.length === 0 ? (
-                      <option disabled>No locations available</option>
+                    {loadingLocations ? (
+                      <option disabled>Loading...</option>
                     ) : (
                       locationList.map((location) => (
                         <option key={location.id} value={location.id}>
@@ -283,9 +294,13 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
                         </option>
                       ))
                     )}
+                    {/* {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))} */}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                  {/* Debug info */}
                 </div>
               </div>
 
