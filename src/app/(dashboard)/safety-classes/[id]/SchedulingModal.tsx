@@ -41,24 +41,36 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const [locationList, setLocationList] = useState<Location[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
 
-  // Fetch locations when modal opens and firmId is present
+  // Initialize locationList with passed locations, then fetch if needed
   useEffect(() => {
-    if (isOpen && firmId) {
-      setLoadingLocations(true);
-      supabase
-        .from("locations")
-        .select("id, name, address")
-        .eq("firm_id", firmId)
-        .eq("is_active", true)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setLocationList(data);
-          } else {
-            console.error('Error fetching locations:', error);
-            setLocationList([]);
-          }
-          setLoadingLocations(false);
-        });
+    console.log('SchedulingModal useEffect - isOpen:', isOpen, 'locations:', locations, 'firmId:', firmId);
+    
+    if (isOpen) {
+      if (locations && locations.length > 0) {
+        // Use the locations passed from the server
+        console.log('Using passed locations:', locations);
+        setLocationList(locations);
+        setLoadingLocations(false);
+      } else if (firmId) {
+        // Fallback: fetch from client if no locations passed
+        console.log('Fetching locations from client for firmId:', firmId);
+        setLoadingLocations(true);
+        supabase
+          .from("locations")
+          .select("id, name, address")
+          .eq("firm_id", firmId)
+          .eq("is_active", true)
+          .then(({ data, error }) => {
+            if (!error && data) {
+              console.log('Client fetched locations:', data);
+              setLocationList(data);
+            } else {
+              console.error('Error fetching locations:', error);
+              setLocationList([]);
+            }
+            setLoadingLocations(false);
+          });
+      }
     } else if (!isOpen) {
       // Reset state when modal closes
       setLocationList([]);
@@ -66,7 +78,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
       setSelectedDate(null);
       setSelectedTimeSlot("");
     }
-  }, [isOpen, firmId]);
+  }, [isOpen, firmId, locations]);
 
   if (!isOpen) return null;
 
@@ -294,11 +306,14 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
                     {loadingLocations ? (
                       <option disabled>Loading...</option>
                     ) : (
-                      locationList.map((location) => (
-                        <option key={location.id} value={location.id}>
-                          {location.name}
-                        </option>
-                      ))
+                      locationList.map((location) => {
+                        console.log('Rendering location option:', location);
+                        return (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        );
+                      })
                     )}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
