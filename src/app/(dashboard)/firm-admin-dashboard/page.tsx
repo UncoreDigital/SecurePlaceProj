@@ -210,9 +210,9 @@ async function FirmAdminDashboardContent() {
         <div className="text-center py-12">
           <p className="text-lg text-gray-600">No firm associated</p>
           <p className="text-sm text-gray-500">Your account is not associated with any firm.</p>
-          <p className="text-xs text-gray-400 mt-2">
+          {/* <p className="text-xs text-gray-400 mt-2">
             Debug: userId={user.id}, role={userRole}
-          </p>
+          </p> */}
         </div>
       </div>
     );
@@ -225,9 +225,9 @@ async function FirmAdminDashboardContent() {
         <div className="text-center py-12">
           <p className="text-lg text-gray-600">Failed to load dashboard data</p>
           <p className="text-sm text-gray-500">Please try refreshing the page.</p>
-          <p className="text-xs text-gray-400 mt-2">
+          {/* <p className="text-xs text-gray-400 mt-2">
             Debug: firmId={userFirmId}, userId={user.id}
-          </p>
+          </p> */}
         </div>
       </div>
     );

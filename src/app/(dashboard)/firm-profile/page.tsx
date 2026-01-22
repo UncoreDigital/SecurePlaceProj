@@ -130,9 +130,9 @@ async function FirmProfileContent() {
               <Building className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-lg text-gray-600">No firm associated</p>
               <p className="text-sm text-gray-500">Your account is not associated with any firm.</p>
-              <p className="text-xs text-gray-400 mt-2">
+              {/* <p className="text-xs text-gray-400 mt-2">
                 Debug: userId={user.id}, role={userRole}
-              </p>
+              </p> */}
             </CardContent>
           </Card>
         </div>
@@ -150,9 +150,9 @@ async function FirmProfileContent() {
               <Building className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-lg text-gray-600">No firm data found</p>
               <p className="text-sm text-gray-500">Please contact support if this is an error.</p>
-              <p className="text-xs text-gray-400 mt-2">
+              {/* <p className="text-xs text-gray-400 mt-2">
                 Debug: firmId={userFirmId}, userId={user.id}
-              </p>
+              </p> */}
             </CardContent>
           </Card>
         </div>

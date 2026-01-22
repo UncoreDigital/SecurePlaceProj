@@ -59,12 +59,16 @@ export default function CertificateCreator({
   showSave = true,
   showPrint = true,
   previewOnly = false,
+  isEditing = false,
+  certificateId,
 }: {
   initial?: Partial<CertificateData>;
   onSave?: (data: CertificateData) => void;
   showSave?: boolean;
   showPrint?: boolean;
   previewOnly?: boolean;
+  isEditing?: boolean;
+  certificateId?: string;
 }) {
   const { user, loading: userLoading } = useUser();
   const [firms, setFirms] = useState<Firm[]>([]);
@@ -80,9 +84,12 @@ export default function CertificateCreator({
 
   // Fetch firms data
   useEffect(() => {
+    console.log('CertificateCreator useEffect - user:', user, 'userLoading:', userLoading, 'isEditing:', isEditing);
+    
     const fetchFirms = async () => {
       try {
         setLoadingFirms(true);
+        console.log('Fetching firms...');
         
         let query = supabase
           .from("firms")
@@ -91,6 +98,7 @@ export default function CertificateCreator({
 
         // If user is firm_admin, only show their firm
         if (user?.role === "firm_admin" && user?.firmId) {
+          console.log('Filtering firms for firm_admin, firmId:', user.firmId);
           query = query.eq("id", user.firmId);
         }
 
@@ -98,26 +106,37 @@ export default function CertificateCreator({
         
         if (error) {
           console.error("Error fetching firms:", error);
+          setFirms([]);
           return;
         }
 
+        console.log('Fetched firms:', data);
         setFirms(data || []);
         
         // Auto-select firm if user is firm_admin and no initial firm is set
         if (user?.role === "firm_admin" && data && data.length === 1 && !initial?.firm) {
+          console.log('Auto-selecting firm for firm_admin:', data[0].name);
           setForm(prev => ({ ...prev, firm: data[0].name }));
         }
       } catch (error) {
         console.error("Failed to fetch firms:", error);
+        setFirms([]);
       } finally {
         setLoadingFirms(false);
       }
     };
 
     if (!userLoading && user) {
+      console.log('User is ready, fetching firms. User role:', user.role, 'User firmId:', user.firmId);
       fetchFirms();
+    } else if (!userLoading && !user) {
+      console.log('No user found, but still fetching all firms for super admin access');
+      // Still fetch firms even if no user (might be a super admin case)
+      fetchFirms();
+    } else {
+      console.log('User not ready yet. userLoading:', userLoading, 'user:', !!user);
     }
-  }, [user, userLoading, initial?.firm]);
+  }, [user, userLoading, isEditing]); // Removed initial?.firm from dependencies
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -170,53 +189,93 @@ export default function CertificateCreator({
         return;
       }
 
-      // Get next certificate number from sequence
-      const { data: certNumberData, error: certNumberError } = await supabase
-        .rpc('get_next_certificate_number');
+      if (isEditing && certificateId) {
+        // Update existing certificate
+        const updateData = {
+          title: form.title.trim(),
+          recipient_name: form.recipient.trim(),
+          firm_id: selectedFirm.id,
+          firm_name: form.firm.trim(),
+          issue_date: completionDate,
+          signer_name: form.signature.trim() || null,
+          updated_by: user.id,
+          updated_at: new Date().toISOString(),
+        };
 
-      if (certNumberError) {
-        console.error("Error getting certificate number:", certNumberError);
-        alert("Failed to generate certificate number");
-        return;
-      }
+        console.log("Updating certificate:", updateData);
 
-      // Prepare certificate data
-      const certificateData = {
-        certificate_number: certNumberData.toString(),
-        title: form.title.trim(),
-        recipient_name: form.recipient.trim(),
-        firm_id: selectedFirm.id,
-        firm_name: form.firm.trim(),
-        issue_date: completionDate,
-        signer_name: form.signature.trim() || null,
-        status: 'issued' as const,
-        created_by: user.id,
-        updated_by: user.id,
-      };
+        const { data, error } = await supabase
+          .from("certificates")
+          .update(updateData)
+          .eq("id", certificateId)
+          .select()
+          .single();
 
-      console.log("Saving certificate:", certificateData);
+        if (error) {
+          console.error("Error updating certificate:", error);
+          alert(`Failed to update certificate: ${error.message}`);
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from("certificates")
-        .insert([certificateData])
-        .select()
-        .single();
+        console.log("Certificate updated successfully:", data);
+        
+        // Call the onSave callback if provided
+        if (onSave) {
+          onSave(form);
+        } else {
+          alert("Certificate updated successfully!");
+        }
 
-      if (error) {
-        console.error("Error saving certificate:", error);
-        alert(`Failed to save certificate: ${error.message}`);
-        return;
-      }
-
-      console.log("Certificate saved successfully:", data);
-      
-      // Call the onSave callback if provided
-      if (onSave) {
-        onSave(form);
       } else {
-        alert("Certificate saved successfully!");
-        // Optionally redirect or reset form
-        // window.location.href = "/dashboard/certifications";
+        // Create new certificate
+        // Get next certificate number from sequence
+        const { data: certNumberData, error: certNumberError } = await supabase
+          .rpc('get_next_certificate_number');
+
+        if (certNumberError) {
+          console.error("Error getting certificate number:", certNumberError);
+          alert("Failed to generate certificate number");
+          return;
+        }
+
+        // Prepare certificate data
+        const certificateData = {
+          certificate_number: certNumberData.toString(),
+          title: form.title.trim(),
+          recipient_name: form.recipient.trim(),
+          firm_id: selectedFirm.id,
+          firm_name: form.firm.trim(),
+          issue_date: completionDate,
+          signer_name: form.signature.trim() || null,
+          status: 'issued' as const,
+          created_by: user.id,
+          updated_by: user.id,
+        };
+
+        console.log("Saving certificate:", certificateData);
+
+        const { data, error } = await supabase
+          .from("certificates")
+          .insert([certificateData])
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error saving certificate:", error);
+          alert(`Failed to save certificate: ${error.message}`);
+          return;
+        }
+
+        console.log("Certificate saved successfully:", data);
+        
+        // Call the onSave callback if provided
+        if (onSave) {
+          onSave(form);
+        } else {
+          alert("Certificate saved successfully!");
+          // Optionally redirect or reset form
+          // window.location.href = "/dashboard/certifications";
+        }
       }
 
     } catch (error) {
@@ -266,13 +325,17 @@ export default function CertificateCreator({
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40 bg-white"
               >
                 <option value="">Select a firm...</option>
-                {firms.map((firm) => (
-                  <option key={firm.id} value={firm.name}>
-                    {firm.name}
-                  </option>
-                ))}
+                {firms.map((firm) => {
+                  console.log('Rendering firm option:', firm);
+                  return (
+                    <option key={firm.id} value={firm.name}>
+                      {firm.name}
+                    </option>
+                  );
+                })}
               </select>
             )}
+            
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -292,7 +355,7 @@ export default function CertificateCreator({
                 disabled={saving || !user}
                 className="px-4 py-2 rounded bg-brand-blue text-white text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Saving..." : (isEditing ? "Update" : "Save")}
               </button>
             )}
             {showPrint && (
