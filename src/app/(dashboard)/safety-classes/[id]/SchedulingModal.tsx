@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ interface Location {
 
 export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, locations }: SchedulingModalProps) {
   const { user } = useUser(); // Get current logged-in user
+  const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
@@ -222,6 +224,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
       
       if (!error) {
         console.log('✅ Class scheduled successfully by user:', currentUserId);
+        router.push('/safety-classes');
         onClose();
       } else {
         console.error('❌ Failed to schedule class:', error);
