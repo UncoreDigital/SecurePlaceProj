@@ -127,13 +127,14 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   if (!isOpen) return null;
 
   const timeSlots: TimeSlot[] = [
+    { id: "1", time: "08:00 AM TO 9:00 AM", available: true },
     { id: "1", time: "09:00 AM TO 10:00 AM", available: true },
     { id: "2", time: "10:00 AM TO 11:00 AM", available: true },
     { id: "3", time: "11:00 AM TO 12:00 PM", available: true },
     { id: "4", time: "02:00 PM TO 03:00 PM", available: true },
     { id: "5", time: "03:00 PM TO 04:00 PM", available: true },
     { id: "6", time: "04:00 PM TO 05:00 PM", available: true },
-    { id: "7", time: "07:00 PM TO 08:00 PM", available: true },
+    { id: "6", time: "05:00 PM TO 06:00 PM", available: true },
   ];
 
   // Calendar helpers
