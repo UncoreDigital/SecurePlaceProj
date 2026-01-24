@@ -87,7 +87,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
             .select("id, name, address, firm_id, is_active")
             .limit(10);
           
-          setLocationList([]);
+          // setLocationList([]);
         } else {
           if (!data || data.length === 0) {
             
@@ -97,7 +97,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
               .select("id, name, address, is_active")
               .eq("firm_id", firmId);
           }
-          setLocationList(data || []);
+          // setLocationList(data || []);
         }
       } catch (catchError: any) {
         // Try a simple test query
@@ -109,7 +109,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
           console.error('❌ Even simple test query failed:', testError);
         }
         
-        setLocationList([]);
+        // setLocationList([]);
       } finally {
         setLoadingLocations(false);
       }
@@ -120,7 +120,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   // Reset fetchedRef when modal closes
   if (!isOpen && fetchedRef.current) {
     fetchedRef.current = false;
-    setLocationList([]);
+    // setLocationList([]);
     setSelectedLocation("");
   }
 
