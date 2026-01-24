@@ -49,16 +49,72 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   if (isOpen && firmId && !fetchedRef.current) {
     fetchedRef.current = true;
     setLoadingLocations(true);
+    
+    // First, test basic table access
     supabase
       .from("locations")
-      .select("id, name, address")
-      .eq("firm_id", firmId)
-      .eq("is_active", true)
-      .then(({ data, error }) => {
-        if (!error) setLocationList(data || []);
-        setLoadingLocations(false);
+      .select("count", { count: 'exact', head: true })
+      .then(({ count, error: countError }) => {
+        console.log('📊 Locations table test:', { count, countError });
       });
-      console.log("Locations", locationList);
+    
+    // Fetch locations function
+    const fetchLocations = async () => {
+      try {
+        // Test basic connection first
+        const connectionTest = await supabase.from("locations").select("count", { count: 'exact', head: true });
+        
+        // Add timeout to the query
+        const queryPromise = supabase
+          .from("locations")
+          .select("id, name, address")
+          .eq("firm_id", firmId)
+          .eq("is_active", true);
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+        });
+        
+        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+        const { data, error } = result;
+        
+        
+        if (error) {
+          // Try fetching all locations as a fallback to test table access
+          const { data: allData, error: allError } = await supabase
+            .from("locations")
+            .select("id, name, address, firm_id, is_active")
+            .limit(10);
+          
+          setLocationList([]);
+        } else {
+          if (!data || data.length === 0) {
+            
+            // Check if there are any locations for this firm at all
+            const { data: allFirmData, error: allFirmError } = await supabase
+              .from("locations")
+              .select("id, name, address, is_active")
+              .eq("firm_id", firmId);
+          }
+          setLocationList(data || []);
+        }
+      } catch (catchError: any) {
+        // Try a simple test query
+        try {
+          console.log('🔄 Attempting simple test query...');
+          const testResult = await supabase.from("locations").select("*").limit(1);
+          console.log('🧪 Simple test query result:', testResult);
+        } catch (testError) {
+          console.error('❌ Even simple test query failed:', testError);
+        }
+        
+        setLocationList([]);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+    
+    fetchLocations();
   }
   // Reset fetchedRef when modal closes
   if (!isOpen && fetchedRef.current) {
