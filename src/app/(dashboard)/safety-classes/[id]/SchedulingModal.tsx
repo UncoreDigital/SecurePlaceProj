@@ -44,7 +44,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const [locationList, setLocationList] = useState<Location[]>(locations || []);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const fetchedRef = useRef(false);
-
+  console.log("Locations on switch", locationList);
   // Fetch locations when modal opens and firmId is present, only once per open
   if (isOpen && firmId && !fetchedRef.current) {
     fetchedRef.current = true;
@@ -58,6 +58,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
         if (!error) setLocationList(data || []);
         setLoadingLocations(false);
       });
+      console.log("Locations", locationList);
   }
   // Reset fetchedRef when modal closes
   if (!isOpen && fetchedRef.current) {
