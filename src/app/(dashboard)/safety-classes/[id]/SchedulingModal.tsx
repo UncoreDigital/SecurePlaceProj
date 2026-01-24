@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
+import { toast } from "sonner";
 
 interface SchedulingModalProps {
   isOpen: boolean;
@@ -246,49 +247,71 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   const handleSchedule = async () => {
     if (selectedLocation && selectedDate && selectedTimeSlot) {
-      setLoadingLocations(true); // Optionally show loading
+      setLoadingLocations(true); // Show loading state
+      
+      // Show loading toast
+      const loadingToast = toast.loading("Scheduling safety class...");
       
       // Get current user ID for created_by field
       const currentUserId = user?.id;
       
       if (!currentUserId) {
-        alert("User not authenticated. Please log in again.");
+        toast.dismiss(loadingToast);
+        toast.error("User not authenticated. Please log in again.");
         setLoadingLocations(false);
         return;
       }
 
-      // Insert scheduling logic here (e.g., call an API or Supabase)
-      const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
-      const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
+      try {
+        // Insert scheduling logic here (e.g., call an API or Supabase)
+        const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
+        const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
 
-      const { error } = await supabase
-        .from("scheduled_classes") // <-- your table name
-        .insert([
-          {
-            safety_class_id: safetyClass.id,
-            location_id: selectedLocation,
-            scheduled_date: selectedDate.toISOString().split("T")[0],
-            start_time: startDate.toISOString(),
-            end_time: endDate.toISOString(),
-            firm_id: firmId,
-            created_by: currentUserId, // Add the logged-in user ID
-            created_at: new Date().toISOString(),
-            status: "pending",
-          },
-        ]);
-      
-      setLoadingLocations(false);
-      
-      if (!error) {
-        console.log('✅ Class scheduled successfully by user:', currentUserId);
-        router.push('/safety-classes');
-        onClose();
-      } else {
-        console.error('❌ Failed to schedule class:', error);
-        alert("Failed to schedule class: " + error.message);
+        const { error } = await supabase
+          .from("scheduled_classes")
+          .insert([
+            {
+              safety_class_id: safetyClass.id,
+              location_id: selectedLocation,
+              scheduled_date: selectedDate.toISOString().split("T")[0],
+              start_time: startDate.toISOString(),
+              end_time: endDate.toISOString(),
+              firm_id: firmId,
+              created_by: currentUserId,
+              created_at: new Date().toISOString(),
+              status: "pending",
+            },
+          ]);
+        
+        toast.dismiss(loadingToast);
+        
+        if (!error) {
+          console.log('✅ Class scheduled successfully by user:', currentUserId);
+          toast.success("Safety class scheduled successfully!", {
+            description: `Scheduled for ${selectedDate.toLocaleDateString()} at ${slotText}`,
+            duration: 4000,
+          });
+          router.push('/safety-classes');
+          onClose();
+        } else {
+          console.error('❌ Failed to schedule class:', error);
+          toast.error("Failed to schedule safety class", {
+            description: error.message,
+            duration: 5000,
+          });
+        }
+      } catch (error: any) {
+        toast.dismiss(loadingToast);
+        console.error('❌ Unexpected error during scheduling:', error);
+        toast.error("An unexpected error occurred", {
+          description: "Please try again or contact support if the problem persists.",
+          duration: 5000,
+        });
+      } finally {
+        setLoadingLocations(false);
       }
     } else {
-      alert("Please select location, date, and time slot");
+      toast.error("Please complete all sel and time slot");
     }
   };
 
