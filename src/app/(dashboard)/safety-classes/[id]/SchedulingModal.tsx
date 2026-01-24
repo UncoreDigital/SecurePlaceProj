@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
 
@@ -38,47 +39,30 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [locationList, setLocationList] = useState<Location[]>([]);
+  const [locationList, setLocationList] = useState<Location[]>(locations || []);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  const fetchedRef = useRef(false);
 
-  // Initialize locationList with passed locations, then fetch if needed
-  useEffect(() => {
-    console.log('SchedulingModal useEffect - isOpen:', isOpen, 'locations:', locations, 'firmId:', firmId);
-    
-    if (isOpen) {
-      if (locations && locations.length > 0) {
-        // Use the locations passed from the server
-        console.log('Using passed locations:', locations);
-        setLocationList(locations);
+  // Fetch locations when modal opens and firmId is present, only once per open
+  if (isOpen && firmId && !fetchedRef.current) {
+    fetchedRef.current = true;
+    setLoadingLocations(true);
+    supabase
+      .from("locations")
+      .select("id, name, address")
+      .eq("firm_id", firmId)
+      .eq("is_active", true)
+      .then(({ data, error }) => {
+        if (!error) setLocationList(data || []);
         setLoadingLocations(false);
-      } else if (firmId) {
-        // Fallback: fetch from client if no locations passed
-        console.log('Fetching locations from client for firmId:', firmId);
-        setLoadingLocations(true);
-        supabase
-          .from("locations")
-          .select("id, name, address")
-          .eq("firm_id", firmId)
-          .eq("is_active", true)
-          .then(({ data, error }) => {
-            if (!error && data) {
-              console.log('Client fetched locations:', data);
-              setLocationList(data);
-            } else {
-              console.error('Error fetching locations:', error);
-              setLocationList([]);
-            }
-            setLoadingLocations(false);
-          });
-      }
-    } else if (!isOpen) {
-      // Reset state when modal closes
-      setLocationList([]);
-      setSelectedLocation("");
-      setSelectedDate(null);
-      setSelectedTimeSlot("");
-    }
-  }, [isOpen, firmId, locations]);
+      });
+  }
+  // Reset fetchedRef when modal closes
+  if (!isOpen && fetchedRef.current) {
+    fetchedRef.current = false;
+    setLocationList([]);
+    setSelectedLocation("");
+  }
 
   if (!isOpen) return null;
 
@@ -177,11 +161,9 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   const parseTimeSlot = (date: Date, slot: string) => {
     // Example slot: "09:00 AM TO 10:00 AM"
-    const parts = slot.split(" ");
-    const startTime = parts[0];
-    const startPeriod = parts[1];
-    const endTime = parts[3];
-    const endPeriod = parts[4];
+    const [start, , end] = slot.split(" ");
+    const [startTime, startPeriod] = [start, slot.split(" ")[1]];
+    const [endTime, endPeriod] = [slot.split(" ")[3], slot.split(" ")[4]];
 
     // Helper to parse "09:00 AM" to 24h time
     const to24Hour = (time: string, period: string) => {
@@ -306,15 +288,17 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
                     {loadingLocations ? (
                       <option disabled>Loading...</option>
                     ) : (
-                      locationList.map((location) => {
-                        console.log('Rendering location option:', location);
-                        return (
-                          <option key={location.id} value={location.id}>
-                            {location.name}
-                          </option>
-                        );
-                      })
+                      locationList.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name}
+                        </option>
+                      ))
                     )}
+                    {/* {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))} */}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
