@@ -53,6 +53,7 @@ export default function SafetyClassesClient({
   const [editingSafetyClass, setEditingSafetyClass] = useState<SafetyClass | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingWorkshopId, setLoadingWorkshopId] = useState<string | null>(null);
 
   // // ✅ Enhanced user data handling with proper TypeScript types
   // useEffect(() => {
@@ -101,6 +102,7 @@ export default function SafetyClassesClient({
   };
 
   const handleExploreWorkshop = (safetyClass: SafetyClass) => {
+    setLoadingWorkshopId(safetyClass.id);
     router.push(`/safety-classes/${safetyClass.id}`);
   };
 
@@ -297,8 +299,16 @@ export default function SafetyClassesClient({
                     onClick={() => handleExploreWorkshop(safetyClass)}
                     variant="outline"
                     className="flex-1 border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-colors cursor-pointer"
+                    disabled={loadingWorkshopId === safetyClass.id}
                   >
-                    Explore Workshop
+                    {loadingWorkshopId === safetyClass.id ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-brand-orange border-t-transparent rounded-full animate-spin"></div>
+                        Loading...
+                      </div>
+                    ) : (
+                      "Explore Workshop"
+                    )}
                   </Button>
                   {/* ✅ Show edit button based on user permissions */}
                   {user?.role === 'super_admin' && (
