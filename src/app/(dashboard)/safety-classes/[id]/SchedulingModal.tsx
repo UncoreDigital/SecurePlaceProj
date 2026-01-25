@@ -47,7 +47,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
   const fetchedRef = useRef(false);
   console.log("Locations on switch", locationList);
   // Fetch locations when modal opens and firmId is present, only once per open
-  if (isOpen && firmId && !fetchedRef.current) {
+  if (locationList.length == 0 && isOpen && firmId && !fetchedRef.current) {
     fetchedRef.current = true;
     setLoadingLocations(true);
     
@@ -62,9 +62,6 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
     // Fetch locations function
     const fetchLocations = async () => {
       try {
-        // Test basic connection first
-        const connectionTest = await supabase.from("locations").select("count", { count: 'exact', head: true });
-        
         // Add timeout to the query
         const queryPromise = supabase
           .from("locations")
@@ -103,8 +100,6 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
         // Try a simple test query
         try {
           console.log('🔄 Attempting simple test query...');
-          const testResult = await supabase.from("locations").select("*").limit(1);
-          console.log('🧪 Simple test query result:', testResult);
         } catch (testError) {
           console.error('❌ Even simple test query failed:', testError);
         }
@@ -128,13 +123,13 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
 
   const timeSlots: TimeSlot[] = [
     { id: "1", time: "08:00 AM TO 9:00 AM", available: true },
-    { id: "1", time: "09:00 AM TO 10:00 AM", available: true },
-    { id: "2", time: "10:00 AM TO 11:00 AM", available: true },
-    { id: "3", time: "11:00 AM TO 12:00 PM", available: true },
-    { id: "4", time: "02:00 PM TO 03:00 PM", available: true },
-    { id: "5", time: "03:00 PM TO 04:00 PM", available: true },
-    { id: "6", time: "04:00 PM TO 05:00 PM", available: true },
-    { id: "6", time: "05:00 PM TO 06:00 PM", available: true },
+    { id: "2", time: "09:00 AM TO 10:00 AM", available: true },
+    { id: "3", time: "10:00 AM TO 11:00 AM", available: true },
+    { id: "4", time: "11:00 AM TO 12:00 PM", available: true },
+    { id: "5", time: "02:00 PM TO 03:00 PM", available: true },
+    { id: "6", time: "03:00 PM TO 04:00 PM", available: true },
+    { id: "7", time: "04:00 PM TO 05:00 PM", available: true },
+    { id: "8", time: "05:00 PM TO 06:00 PM", available: true },
   ];
 
   // Calendar helpers
