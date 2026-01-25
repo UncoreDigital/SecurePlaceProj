@@ -343,7 +343,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 ml-2 flex-shrink-0"
+              className="cursor-pointer h-8 w-8 ml-2 flex-shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -472,7 +472,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
                     onClick={() => setSelectedTimeSlot(slot.id)}
                     disabled={!slot.available}
                     className={`
-                      w-full p-2 sm:p-3 text-left rounded-md border transition-colors time-slot text-sm
+                      cursor-pointer w-full p-2 sm:p-3 text-left rounded-md border transition-colors time-slot text-sm
                       ${selectedTimeSlot === slot.id
                         ? 'bg-brand-orange text-white border-brand-orange'
                         : slot.available
@@ -490,7 +490,7 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
               <Button
                 onClick={handleSchedule}
                 disabled={!selectedLocation || !selectedDate || !selectedTimeSlot}
-                className="w-full mt-4 sm:mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                className="cursor-pointer w-full mt-4 sm:mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               >
                 Schedule
               </Button>

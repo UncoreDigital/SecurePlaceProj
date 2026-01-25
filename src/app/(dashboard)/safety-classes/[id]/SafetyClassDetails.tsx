@@ -336,7 +336,7 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                   {!isSuperAdmin && currentFirmId && (
                     <Button
                       onClick={handleSchedule}
-                      className="mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white"
+                      className="cursor-pointer mt-6 bg-brand-orange hover:bg-brand-orange/90 text-white"
                     >
                       Schedule
                     </Button>

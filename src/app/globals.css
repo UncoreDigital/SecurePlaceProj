@@ -176,14 +176,17 @@
 /* Calendar Styles */
 .calendar-day {
   transition: all 0.2s ease-in-out;
+  cursor: pointer;
 }
 
 .calendar-day:hover {
   transform: scale(1.05);
+  cursor: pointer;
 }
 
 .calendar-day:active {
   transform: scale(0.95);
+  cursor: pointer;
 }
 
 /* Time Slot Styles */
@@ -214,5 +217,6 @@
   
   .calendar-day:hover {
     transform: none;
+    cursor: pointer;
   }
 }
