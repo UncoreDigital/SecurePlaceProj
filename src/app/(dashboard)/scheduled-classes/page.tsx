@@ -104,6 +104,7 @@ async function getScheduledClasses(): Promise<any[]> {
       type: cls.type ?? "In-Person",
       thumbnailUrl: cls.safety_class?.thumbnail_url ?? "/images/safety-class-demo.png",
       firm: cls.firms?.name || "-",
+      firmId: cls?.firm_id || "",
       location: cls.locations?.name || "Remote",
       locationId: cls.locations?.id || null,
       // Creator info - fetched from profiles table linked to auth.users

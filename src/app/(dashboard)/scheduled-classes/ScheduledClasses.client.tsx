@@ -138,8 +138,6 @@ export default function ScheduledClassesClient({
   // ✅ Get user from localStorage using useUser hook
   const { user, loading: userLoading } = useUser();
   
-  // console.log(scheduledClasses)
-
   const category = sp.get("category") ?? initialCategory ?? "all";
   const type = sp.get("type") ?? initialType ?? "in-person";
 
@@ -285,6 +283,23 @@ export default function ScheduledClassesClient({
     );
   }
 
+  // ✅ Apply client-side filtering based on user role
+  let filteredScheduledClasses = scheduledClasses;
+  
+  if (user?.role === "super_admin") {
+    // Super admin sees all data - no additional filtering
+    console.log('🔑 Super admin access: showing all scheduled classes');
+    filteredScheduledClasses = scheduledClasses;
+  } else if (user?.role === "firm_admin" && user?.firmId) {
+    // Firm admin sees only their firm's data
+    console.log('🏢 Firm admin access: filtering by firm_id:', user.firmId);
+    filteredScheduledClasses = scheduledClasses.filter(cls => cls.firmId === user.firmId);
+  } else {
+    // Default: no data for unauthorized users
+    console.log('❌ Unauthorized access: returning empty data');
+    filteredScheduledClasses = [];
+  }
+
   return (
     <div className="">
       {/* Filters and Toggle Buttons */}
@@ -320,7 +335,7 @@ export default function ScheduledClassesClient({
       </div>
 
       {/* Video Cards Grid */}
-      {scheduledClasses.length === 0 ? (
+      {filteredScheduledClasses.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -332,7 +347,7 @@ export default function ScheduledClassesClient({
         </div>
       ) : (
         <div className="grid gap-6">
-          {scheduledClasses.length === 0 ? (
+          {filteredScheduledClasses.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <p className="text-gray-500 text-lg">No scheduled classes found.</p>
             </div>
@@ -346,7 +361,7 @@ export default function ScheduledClassesClient({
                     <thead>
                       <tr className="bg-gray-100 text-gray-700 text-sm">
                         <th className="px-4 py-2 text-left font-semibold">Title</th>
-                        {scheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
+                        {filteredScheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
                           <th className="px-4 py-2 text-left font-semibold">Firm</th>
                         )}
                         <th className="px-4 py-2 text-left font-semibold">Location</th>
@@ -357,13 +372,13 @@ export default function ScheduledClassesClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {scheduledClasses.map((cls, idx) => (
+                      {filteredScheduledClasses.map((cls, idx) => (
                         <tr
                           key={cls.firm_id || idx}
                           className="bg-white border-b hover:bg-gray-50 text-gray-700"
                         >
                           <td className="px-4 py-2">{cls.title || "-"}</td>
-                          {scheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
+                          {filteredScheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
                             <td className="px-4 py-2">{cls.firm || "-"}</td>
                           )}
                           <td className="px-4 py-2">
@@ -510,7 +525,7 @@ export default function ScheduledClassesClient({
                 {/* Pagination placeholder */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    Showing {scheduledClasses.length} of {scheduledClasses.length} classes
+                    Showing {filteredScheduledClasses.length} of {filteredScheduledClasses.length} classes
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 text-sm">Page 1 of 1</span>
