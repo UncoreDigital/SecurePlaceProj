@@ -6,7 +6,7 @@ import { X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabaseClient";
+import { scheduleClass, fetchLocations } from "./actions";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 
@@ -51,66 +51,24 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
     fetchedRef.current = true;
     setLoadingLocations(true);
     
-    // First, test basic table access
-    supabase
-      .from("locations")
-      .select("count", { count: 'exact', head: true })
-      .then(({ count, error: countError }) => {
-        console.log('📊 Locations table test:', { count, countError });
-      });
-    
     // Fetch locations function
-    const fetchLocations = async () => {
+    const fetchLocs = async () => {
       try {
-        // Add timeout to the query
-        const queryPromise = supabase
-          .from("locations")
-          .select("id, name, address")
-          .eq("firm_id", firmId)
-          .eq("is_active", true);
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
-        });
-        
-        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
-        const { data, error } = result;
-        
+        const { data, error } = await fetchLocations(firmId);
         
         if (error) {
-          // Try fetching all locations as a fallback to test table access
-          const { data: allData, error: allError } = await supabase
-            .from("locations")
-            .select("id, name, address, firm_id, is_active")
-            .limit(10);
-          
-          // setLocationList([]);
+          console.error('❌ Failed to fetch locations:', error);
         } else {
-          if (!data || data.length === 0) {
-            
-            // Check if there are any locations for this firm at all
-            const { data: allFirmData, error: allFirmError } = await supabase
-              .from("locations")
-              .select("id, name, address, is_active")
-              .eq("firm_id", firmId);
-          }
-          // setLocationList(data || []);
+          setLocationList(data || []);
         }
       } catch (catchError: any) {
-        // Try a simple test query
-        try {
-          console.log('🔄 Attempting simple test query...');
-        } catch (testError) {
-          console.error('❌ Even simple test query failed:', testError);
-        }
-        
-        // setLocationList([]);
+        console.error('❌ Error fetching locations:', catchError);
       } finally {
         setLoadingLocations(false);
       }
     };
     
-    fetchLocations();
+    fetchLocs();
   }
   // Reset fetchedRef when modal closes
   if (!isOpen && fetchedRef.current) {
@@ -259,51 +217,38 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
       }
 
       try {
-        // Insert scheduling logic here (e.g., call an API or Supabase)
         const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
         const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
 
-        const { error } = await supabase
-          .from("scheduled_classes")
-          .insert([
-            {
-              safety_class_id: safetyClass.id,
-              location_id: selectedLocation,
-              scheduled_date: selectedDate.toISOString().split("T")[0],
-              start_time: startDate.toISOString(),
-              end_time: endDate.toISOString(),
-              firm_id: firmId,
-              created_by: currentUserId,
-              created_at: new Date().toISOString(),
-              status: "pending",
-            },
-          ]);
-        
+        const { error } = await scheduleClass({
+          safety_class_id: safetyClass.id,
+          location_id: selectedLocation,
+          scheduled_date: selectedDate.toISOString().split("T")[0],
+          start_time: startDate.toISOString(),
+          end_time: endDate.toISOString(),
+          firm_id: firmId,
+          created_by: currentUserId,
+          created_at: new Date().toISOString(),
+          status: "pending",
+        });
+
         toast.dismiss(loadingToast);
         
-        if (!error) {
-          console.log('✅ Class scheduled successfully by user:', currentUserId);
+        if (error) {
+          console.error('❌ Failed to schedule class:', error);
+        } else {
+          console.log('✅ Class scheduled successfully');
           toast.success("Safety class scheduled successfully!", {
             description: `Scheduled for ${selectedDate.toLocaleDateString()} at ${slotText}`,
             duration: 4000,
           });
+          setLoadingLocations(false);
           router.push('/safety-classes');
           onClose();
-        } else {
-          console.error('❌ Failed to schedule class:', error);
-          toast.error("Failed to schedule safety class", {
-            description: error.message,
-            duration: 5000,
-          });
         }
       } catch (error: any) {
         toast.dismiss(loadingToast);
-        console.error('❌ Unexpected error during scheduling:', error);
-        toast.error("An unexpected error occurred", {
-          description: "Please try again or contact support if the problem persists.",
-          duration: 5000,
-        });
-      } finally {
+        console.error('❌ Unexpected error:', error);
         setLoadingLocations(false);
       }
     } else {
