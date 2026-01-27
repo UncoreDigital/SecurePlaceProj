@@ -4,9 +4,9 @@ import ScheduledClassesClient from "./ScheduledClasses.client";
 import { Suspense } from "react";
 import { AdminGuard } from "@/components/AuthGuard";
 
-// Use ISR with a reasonable revalidation time for better performance
-export const dynamic = 'force-static';
-export const revalidate = 300; // Revalidate every 5 minutes
+// Disable caching for this page - always fetch fresh data from server
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Get scheduled classes function
 async function getScheduledClasses(): Promise<any[]> {

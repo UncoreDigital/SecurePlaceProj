@@ -163,7 +163,10 @@ export default function ScheduledClassesClient({
     setCancellingId(cancelId);
     try {
       const result = await cancelScheduledClass(cancelId);
-      if (!result.success) {
+      if (result.success) {
+        console.log("✅ Class cancelled successfully");
+        router.refresh(); // Refresh to get fresh data
+      } else {
         console.error("Failed to cancel class");
       }
     } catch (error) {
@@ -185,7 +188,7 @@ export default function ScheduledClassesClient({
 
       if (result.success) {
         console.log('✅ Class approved successfully:', approveId);
-        // The page will be revalidated by the server action, so the UI will update automatically
+        router.refresh(); // Refresh to get fresh data
       }
     } catch (error) {
       console.error('❌ Failed to approve class:', error);
@@ -208,7 +211,7 @@ export default function ScheduledClassesClient({
       if (result.success) {
         console.log('✅ Status updated successfully:', classId, 'to', newStatus);
         setEditingStatusId(null);
-        // The page will be revalidated by the server action, so the UI will update automatically
+        router.refresh(); // Refresh to get fresh data
       }
     } catch (error) {
       console.error('❌ Failed to update status:', error);
