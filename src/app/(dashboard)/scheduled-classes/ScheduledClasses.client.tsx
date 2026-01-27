@@ -365,6 +365,7 @@ export default function ScheduledClassesClient({
                           <th className="px-4 py-2 text-left font-semibold">Firm</th>
                         )}
                         <th className="px-4 py-2 text-left font-semibold">Location</th>
+                        <th className="px-4 py-2 text-left font-semibold">Requested Date</th>
                         <th className="px-4 py-2 text-left font-semibold">Date</th>
                         <th className="px-4 py-2 text-left font-semibold">Time</th>
                         <th className="px-4 py-2 text-left font-semibold">Status</th>
@@ -395,7 +396,7 @@ export default function ScheduledClassesClient({
                               )}
                             </div>
                           </td>
-
+                          <td className="px-4 py-2">{cls.created_at || "-"}</td>
                           <td className="px-4 py-2">{cls.date || "-"}</td>
                           <td className="px-4 py-2">{cls.time || "-"}</td>
                           <td className="px-4 py-2">

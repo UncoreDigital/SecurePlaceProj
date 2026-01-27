@@ -107,6 +107,13 @@ async function getScheduledClasses(): Promise<any[]> {
       firmId: cls?.firm_id || "",
       location: cls.locations?.name || "Remote",
       locationId: cls.locations?.id || null,
+      created_at: cls.start_time
+        ? new Date(cls.created_at).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+        : "",
       // Creator info - fetched from profiles table linked to auth.users
       createdBy: cls.creator?.full_name || cls.creator?.official_email || "System",
       createdById: cls.creator?.id || cls.created_by || null,
