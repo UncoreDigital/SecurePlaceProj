@@ -31,15 +31,17 @@ const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
   };
 
   // Filter data into completed and upcoming based on scheduled date
-  const completedClasses = data.filter(item => {
-    const scheduledDate = item.scheduled_date || item.start_time || item.date;
-    return isClassCompleted(scheduledDate);
-  });
+  const completedClasses = data.filter(item => item?.status?.toLowerCase() === "completed");
+  // data.filter(item => {
+  //   const scheduledDate = item.scheduled_date || item.start_time || item.date;
+  //   return isClassCompleted(scheduledDate);
+  // });
 
-  const upcomingClasses = data.filter(item => {
-    const scheduledDate = item.scheduled_date || item.start_time || item.date;
-    return !isClassCompleted(scheduledDate);
-  });
+  const upcomingClasses = data.filter(item => item?.status?.toLowerCase() !== "completed");
+  // data.filter(item => {
+  //   const scheduledDate = item.scheduled_date || item.start_time || item.date;
+  //   return !isClassCompleted(scheduledDate);
+  // });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -89,7 +91,7 @@ const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
         <TableBody>
           {classes.map((item) => {
             const scheduledDate = item.scheduled_date || item.start_time || item.date;
-            const isCompleted = isClassCompleted(scheduledDate);
+            const isCompleted = item.status?.toLowerCase() === "completed";
             const dateStatus = isCompleted ? "Completed" : "Upcoming";
             
             return (
