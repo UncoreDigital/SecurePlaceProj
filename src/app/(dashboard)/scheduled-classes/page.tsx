@@ -161,7 +161,7 @@ export async function updateScheduledClassStatus(scheduledClassId: string, newSt
     );
 
     // Validate status
-    const validStatuses = ['approved', 'pending'];
+    const validStatuses = ['approved', 'pending', 'completed'];
     if (!validStatuses.includes(newStatus)) {
       throw new Error(`Invalid status: ${newStatus}`);
     }

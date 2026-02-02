@@ -22,6 +22,7 @@ import { useUser } from "@/hooks/useUser"; // ✅ Import useUser hook
 const statusBtnStyles: Record<string, string> = {
   approved: "bg-emerald-500 text-white hover:bg-emerald-600",
   pending: "bg-yellow-400 text-white hover:bg-yellow-500",
+  completed: "bg-blue-500 text-white hover:bg-blue-600",
 };
 
 const statusLabelStyles: Record<string, string> = {
@@ -417,6 +418,7 @@ export default function ScheduledClassesClient({
                                   <SelectContent className="z-50">
                                     <SelectItem value="approved">Approved</SelectItem>
                                     <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <Button
