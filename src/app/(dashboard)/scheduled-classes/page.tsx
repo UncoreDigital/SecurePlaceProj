@@ -90,15 +90,17 @@ async function getScheduledClasses(): Promise<any[]> {
         : "",
       time:
         cls.start_time && cls.end_time
-          ? `${new Date(cls.start_time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })} to ${new Date(cls.end_time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })}`
+          ? `${new Date(cls.start_time).toLocaleTimeString("en-IN", {
+          timeZone: 'Asia/Kolkata',
+          hour: "2-digit",
+          minute: '2-digit',
+          hour12: true,
+        })} to ${new Date(cls.end_time).toLocaleTimeString("en-IN", {
+          timeZone: 'Asia/Kolkata',
+          hour: "2-digit",
+          minute: '2-digit',
+          hour12: true,
+        })}`
           : "",
       status: cls.status ?? "pending",
       type: cls.type ?? "In-Person",
