@@ -220,12 +220,17 @@ export default function SchedulingModal({ isOpen, onClose, safetyClass, firmId, 
         const slotText = timeSlots.find(s => s.id === selectedTimeSlot)?.time || "";
         const { startDate, endDate } = parseTimeSlot(selectedDate, slotText);
 
+        // Save timestamps in ISO 8601 UTC (timestamptz compatible)
+        const start_timeISO = startDate.toISOString();
+        const end_timeISO = endDate.toISOString();
+
         const { error } = await scheduleClass({
           safety_class_id: safetyClass.id,
           location_id: selectedLocation,
           scheduled_date: selectedDate.toISOString().split("T")[0],
-          start_time: startDate.toISOString(),
-          end_time: endDate.toISOString(),
+          // store as full ISO timestamps (UTC)
+          start_time: start_timeISO,
+          end_time: end_timeISO,
           firm_id: firmId,
           created_by: currentUserId,
           created_at: new Date().toISOString(),

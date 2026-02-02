@@ -78,6 +78,22 @@ async function getScheduledClasses(): Promise<any[]> {
       }
     }
     
+    // Helper: format stored ISO/timestamptz into Asia/Kolkata local time (matches what user selected)
+    const formatToIST = (iso?: string) => {
+      if (!iso || typeof iso !== "string") return "";
+      try {
+        const d = new Date(iso);
+        return d.toLocaleTimeString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } catch (e) {
+        return "";
+      }
+    };
+
     const formatted = (classesWithCreators || []).map((cls: any) => ({
       id: cls.id,
       title: cls.safety_class?.title ?? "Untitled",
@@ -90,17 +106,7 @@ async function getScheduledClasses(): Promise<any[]> {
         : "",
       time:
         cls.start_time && cls.end_time
-          ? `${new Date(cls.start_time).toLocaleTimeString("en-IN", {
-          timeZone: 'Asia/Kolkata',
-          hour: "2-digit",
-          minute: '2-digit',
-          hour12: true,
-        })} to ${new Date(cls.end_time).toLocaleTimeString("en-IN", {
-          timeZone: 'Asia/Kolkata',
-          hour: "2-digit",
-          minute: '2-digit',
-          hour12: true,
-        })}`
+          ? `${formatToIST(cls.start_time)} to ${formatToIST(cls.end_time)}`
           : "",
       status: cls.status ?? "pending",
       type: cls.type ?? "In-Person",
