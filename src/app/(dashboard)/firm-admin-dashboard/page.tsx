@@ -56,7 +56,7 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     //   .select("*", { count: "exact", head: true }).eq("firm_id", userFirmId);
 
     // --- Fetch Chart Data ---
-    const completedDrillsRes: any = { count: 0 };
+    // const completedDrillsRes: any = { count: 0 };
     // await supabase
     // .from("drills")
     // .select("*", { count: "exact", head: true })
@@ -86,18 +86,20 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
       .eq("firm_id", userFirmId)
       .order("start_time", { ascending: false });
 
+    const completedDrillsRes = classesData?.filter((x: any) => x.status === "completed" && x?.safety_class?.type?.toLocaleLowerCase() == "drill") || [];
+    const workshopTypes = classesData?.filter((x: any) => x.status === "completed" && x?.safety_class?.type?.toLocaleLowerCase() == "safety class") || [];
     if (classesError) {
       console.error("Error fetching safety classes:", classesError);
     }
 
     // Process workshop data to group by type
-    const workshopTypes: { [key: string]: number } = {};
-    (workshopsRes?.data ?? []).forEach((doc: any) => {
-      workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
-    });
-    const processedWorkshops = Object.entries(workshopTypes).map(
-      ([name, value]) => ({ name, value })
-    );
+    // const workshopTypes: { [key: string]: number } = {};
+    // (workshopsRes?.data ?? []).forEach((doc: any) => {
+    //   workshopTypes[doc.type] = (workshopTypes[doc.type] || 0) + 1;
+    // });
+    // const processedWorkshops = Object.entries(workshopTypes).map(
+    //   ([name, value]) => ({ name, value })
+    // );
 
     return {
       stats: {
@@ -108,25 +110,25 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
       chartData: {
         drills: [
           { name: "Total", value: 2 },
-          { name: "Done", value: completedDrillsRes.count ?? 0 },
+          { name: "Done", value: completedDrillsRes?.length ?? 0 },
           // { name: "Completed", value: completedDrillsRes.count ?? 0 },
           // { name: "Pending", value: pendingDrillsRes.count ?? 0 },
         ],
         // workshops: processedWorkshops,
         workshops: [
-          { name: "Total", value: 4 },
-          { name: "Done", value: workshopTypes ?? 0 },
+          { name: "Total", value: 5 },
+          { name: "Done", value: workshopTypes?.length ?? 0 },
         ],
         // Fixed compliance: total=4, done=3
         compliance: [
           {
             name: "Total",
-            value: 2
+            value: 7
             // (workshopsRes.data ?? []).filter(
             //   (d: { status: string }) => d.status === "approved" || d.status === "completed"
             // ).length,
           },
-          { name: "Done", value: completedDrillsRes.count ?? 0 },
+          { name: "Done", value: ((completedDrillsRes?.length ?? 0)  + (workshopTypes?.length ?? 0)) },
         ],
       },
       safetyClasses: classesData || [],
