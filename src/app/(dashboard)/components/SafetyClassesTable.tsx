@@ -90,7 +90,13 @@ const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
         </TableHeader>
         <TableBody>
           {classes.map((item) => {
-            const scheduledDate = item.scheduled_date || item.start_time || item.date;
+            const scheduledDate = item.scheduled_date
+            ? new Date(item.scheduled_date).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+            : "";
             const isCompleted = item.status?.toLowerCase() === "completed";
             const dateStatus = isCompleted ? "Completed" : "Upcoming";
             
@@ -112,7 +118,7 @@ const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
                 </TableCell>
                 {showDateStatus && (
                   <TableCell>
-                    {scheduledDate ? new Date(scheduledDate).toLocaleDateString() : '-'}
+                    {scheduledDate ? scheduledDate : '-'}
                   </TableCell>
                 )}
                 <TableCell>

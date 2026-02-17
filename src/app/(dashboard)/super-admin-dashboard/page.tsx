@@ -32,7 +32,7 @@ async function getDashboardData() {
       supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
       supabase.from('locations').select('*', { count: 'exact', head: true }),
-      supabase.from("safety_classes").select(`
+      supabase.from("scheduled_classes").select(`
         id,
         title,
         duration_minutes,
