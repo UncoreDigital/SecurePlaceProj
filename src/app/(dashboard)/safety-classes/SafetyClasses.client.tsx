@@ -54,6 +54,7 @@ export default function SafetyClassesClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingWorkshopId, setLoadingWorkshopId] = useState<string | null>(null);
+  const [isTypeChanging, setIsTypeChanging] = useState(false);
 
   // // ✅ Enhanced user data handling with proper TypeScript types
   // useEffect(() => {
@@ -98,7 +99,10 @@ export default function SafetyClassesClient({
   };
 
   const handleTypeChange = (newType: string) => {
+    setIsTypeChanging(true);
     setParams(router, pathname, sp, { type: newType });
+    // Reset loading state after a short delay to allow for the UI update
+    setTimeout(() => setIsTypeChanging(false), 500);
   };
 
   const handleExploreWorkshop = (safetyClass: SafetyClass) => {
@@ -168,6 +172,16 @@ export default function SafetyClassesClient({
 
   return (
     <div className="">
+      {/* Full Screen Loading Overlay */}
+      {isTypeChanging && (
+        <div className="container mx-auto flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center">
+            <img src="/loadingImg.svg" alt="Loading..." className="h-16 w-16" />
+            <p className="mt-2 text-gray-600 text-lg">Loading Safety Classes...</p>
+          </div>
+        </div>
+      )}
+
       {/* Filters and Toggle Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
