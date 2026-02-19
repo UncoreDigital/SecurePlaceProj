@@ -14,8 +14,13 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   const { user, loading } = useUser();
   const [showSupportModal, setShowSupportModal] = useState(false);
 
-  const displayName = user?.fullName || user?.email?.split("@")[0] || "Admin";
-  const roleLabel = user?.role || "—";
+  let displayName = user?.fullName || user?.email?.split("@")[0] || "Admin";
+  displayName = displayName?.toLowerCase()?.trim()?.split(' ')?.map((word, index) =>
+      word?.charAt(0)?.toUpperCase() + word?.slice(1)
+    ).join(' ');
+  displayName = displayName?.trim();
+  const roleLabel = (user?.role?.toLowerCase()?.trim()?.split('_')?.map(word => word?.charAt(0)?.toUpperCase() + word.slice(1))
+  .join(' ')) || user?.role || "—";
 
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-white border-b">
