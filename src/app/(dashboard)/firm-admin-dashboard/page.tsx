@@ -7,12 +7,25 @@ import FirmAdminDashboardClient from "./FirmAdminDashboard.client";
 interface ChartDataPoint {
   name: string;
   value: number;
+  [key: string]: any;
 }
 
 interface ChartState {
-  drills: ChartDataPoint[];
-  workshops: ChartDataPoint[];
-  compliance: ChartDataPoint[];
+  drills: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
+  workshops: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
+  compliance: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
 }
 
 interface DashboardStats {
@@ -101,6 +114,45 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     //   ([name, value]) => ({ name, value })
     // );
 
+    // compute drill totals with special overage handling
+    const drillTotal = 2; // fixed for now
+    const drillDone = completedDrillsRes?.length ?? 0;
+    let drillsChartData: ChartDataPoint[];
+    if (drillDone >= drillTotal) {
+      drillsChartData = [{ name: "Done", value: drillDone }];
+    } else {
+      drillsChartData = [
+        { name: "Total", value: drillTotal },
+        { name: "Done", value: drillDone },
+      ];
+    }
+
+    // compute workshop totals similarly
+    const workshopTotal = 5; // fixed placeholder
+    const workshopDone = workshopTypes?.length ?? 0;
+    let workshopsChartData: ChartDataPoint[];
+    if (workshopDone >= workshopTotal) {
+      workshopsChartData = [{ name: "Done", value: workshopDone }];
+    } else {
+      workshopsChartData = [
+        { name: "Total", value: workshopTotal },
+        { name: "Done", value: workshopDone },
+      ];
+    }
+
+    // compliance rolls up drills + workshops
+    const complianceTotal = 7; // hard‑coded until API provides real value
+    const complianceDone = drillDone + workshopDone;
+    let complianceChartData: ChartDataPoint[];
+    if (complianceDone >= complianceTotal) {
+      complianceChartData = [{ name: "Done", value: complianceDone }];
+    } else {
+      complianceChartData = [
+        { name: "Total", value: complianceTotal },
+        { name: "Done", value: complianceDone },
+      ];
+    }
+
     return {
       stats: {
         employees: employeeRes.count ?? 0,
@@ -108,28 +160,21 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
         emergencies: emergencyRes.count ?? 0,
       },
       chartData: {
-        drills: [
-          { name: "Total", value: 2 },
-          { name: "Done", value: completedDrillsRes?.length ?? 0 },
-          // { name: "Completed", value: completedDrillsRes.count ?? 0 },
-          // { name: "Pending", value: pendingDrillsRes.count ?? 0 },
-        ],
-        // workshops: processedWorkshops,
-        workshops: [
-          { name: "Total", value: 5 },
-          { name: "Done", value: workshopTypes?.length ?? 0 },
-        ],
-        // Fixed compliance: total=4, done=3
-        compliance: [
-          {
-            name: "Total",
-            value: 7
-            // (workshopsRes.data ?? []).filter(
-            //   (d: { status: string }) => d.status === "approved" || d.status === "completed"
-            // ).length,
-          },
-          { name: "Done", value: ((completedDrillsRes?.length ?? 0)  + (workshopTypes?.length ?? 0)) },
-        ],
+        drills: {
+          data: drillsChartData,
+          totalValue: drillTotal,
+          doneValue: drillDone,
+        },
+        workshops: {
+          data: workshopsChartData,
+          totalValue: workshopTotal,
+          doneValue: workshopDone,
+        },
+        compliance: {
+          data: complianceChartData,
+          totalValue: complianceTotal,
+          doneValue: complianceDone,
+        },
       },
       safetyClasses: classesData || [],
       userFullName: "", // Will be set from user profile
@@ -138,7 +183,11 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     console.error("Failed to fetch dashboard data:", error);
     return {
       stats: { employees: 0, volunteers: 0, emergencies: 0 },
-      chartData: { drills: [], workshops: [], compliance: [] },
+      chartData: {
+        drills: { data: [], totalValue: 0, doneValue: 0 },
+        workshops: { data: [], totalValue: 0, doneValue: 0 },
+        compliance: { data: [], totalValue: 0, doneValue: 0 },
+      },
       safetyClasses: [],
       userFullName: "",
     };

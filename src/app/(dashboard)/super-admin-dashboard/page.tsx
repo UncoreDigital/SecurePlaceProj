@@ -49,6 +49,13 @@ async function getDashboardData() {
       ([name, value]) => ({ name, value })
     );
     // Return all processed data
+    const drillTotal = 2;
+    const drillDone = completedDrillsRes.count ?? 0;
+    const workshopTotal = 4;
+    const workshopDone = workshopTypes.length ?? 0;
+    const complianceTotal = 2;
+    const complianceDone = drillDone;
+
     return {
       stats: {
         employees: employeeRes.count ?? 0,
@@ -57,28 +64,36 @@ async function getDashboardData() {
         locations: locationsRes.count ?? 0,
       },
       chartData: {
-        drills: [
-          { name: "Total", value: 2 },
-          { name: "Done", value: completedDrillsRes.count ?? 0 },
-          // { name: "Completed", value: completedDrillsRes.count ?? 0 },
-          // { name: "Pending", value: pendingDrillsRes.count ?? 0 },
-        ],
-        // workshops: processedWorkshops,
-        workshops: [
-          { name: "Total", value: 4 },
-          { name: "Done", value: workshopTypes ?? 0 },
-        ],
-        // Fixed compliance: total=4, done=3
-        compliance: [
-          {
-            name: "Total",
-            value: 2
-            // (workshopsRes.data ?? []).filter(
-            //   (d: { status: string }) => d.status === "approved" || d.status === "completed"
-            // ).length,
-          },
-          { name: "Done", value: completedDrillsRes.count ?? 0 },
-        ],
+        drills: {
+          data: drillDone > drillTotal 
+            ? [{ name: "Done", value: drillDone }]
+            : [
+                { name: "Total", value: drillTotal },
+                { name: "Done", value: drillDone },
+              ],
+          totalValue: drillTotal,
+          doneValue: drillDone,
+        },
+        workshops: {
+          data: workshopDone > workshopTotal
+            ? [{ name: "Done", value: workshopDone }]
+            : [
+                { name: "Total", value: workshopTotal },
+                { name: "Done", value: workshopDone },
+              ],
+          totalValue: workshopTotal,
+          doneValue: workshopDone,
+        },
+        compliance: {
+          data: complianceDone > complianceTotal
+            ? [{ name: "Done", value: complianceDone }]
+            : [
+                { name: "Total", value: complianceTotal },
+                { name: "Done", value: complianceDone },
+              ],
+          totalValue: complianceTotal,
+          doneValue: complianceDone,
+        },
       },
       safetyClasses: safetyClassesRes.data ?? [],
     };
@@ -87,7 +102,11 @@ async function getDashboardData() {
     // Return empty data on error
     return {
       stats: { employees: 0, volunteers: 0, emergencies: 0, locations: 0 },
-      chartData: { drills: [], workshops: [], compliance: [] },
+      chartData: {
+        drills: { data: [], totalValue: 0, doneValue: 0 },
+        workshops: { data: [], totalValue: 0, doneValue: 0 },
+        compliance: { data: [], totalValue: 0, doneValue: 0 },
+      },
       safetyClasses: [],
     };
   }

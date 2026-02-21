@@ -12,20 +12,30 @@ import {
 interface ChartData {
   name: string;
   value: number;
+  [key: string]: any;
 }
 
 interface CircularGraphProps {
   title: string;
   data: ChartData[];
   colors: string[];
+  totalValue?: number;
+  doneValue?: number;
 }
 
-const CircularGraph = ({ title, data, colors }: CircularGraphProps) => {
+const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularGraphProps) => {
+  const totalEntry = data.find(d => d.name.toLowerCase() === "total");
+  const doneEntry = data.find(d => d.name.toLowerCase() === "done");
+  
+  // Use provided values or fall back to data entries
+  const displayTotal = totalValue ?? totalEntry?.value ?? 0;
+  const displayDone = doneValue ?? doneEntry?.value ?? 0;
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md h-80 flex flex-col">
       <h3 className="text-lg font-semibold text-brand-blue mb-4">{title}</h3>
       <div className="flex-grow">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" style={{ marginTop: '-1rem' }}>
           <PieChart>
             <Pie
               data={data}
@@ -38,20 +48,46 @@ const CircularGraph = ({ title, data, colors }: CircularGraphProps) => {
               dataKey="value"
               nameKey="name"
             >
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={colors[index % colors.length]}
-                />
-              ))}
+              {data.map((entry, index) => {
+                const isOverage =
+                  totalEntry && doneEntry && doneEntry.value > totalEntry.value;
+                const isSingleDone =
+                  data.length === 1 && entry.name.toLowerCase() === "done";
+
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={
+                      isOverage || isSingleDone
+                        ? colors[1] // force orange when done exceeds total or only done slice
+                        : colors[index % colors.length]
+                    }
+                  />
+                );
+              })}
             </Pie>
             <Tooltip />
-            <Legend iconType="circle" />
           </PieChart>
         </ResponsiveContainer>
+        {/* custom legend always showing Total and Done */}
+        <div className="flex justify-center space-x-6" style={{ marginTop: '-1rem' }}>
+          <div className="flex items-center space-x-1">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ background: colors[0] }}
+            />
+            <span>Total ({displayTotal})</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ background: colors[1] }}
+            />
+            <span>Done ({displayDone})</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
 export default CircularGraph;

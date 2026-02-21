@@ -16,9 +16,21 @@ interface ChartDataPoint {
 }
 
 interface ChartState {
-  drills: ChartDataPoint[];
-  workshops: ChartDataPoint[];
-  compliance: ChartDataPoint[];
+  drills: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
+  workshops: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
+  compliance: {
+    data: ChartDataPoint[];
+    totalValue: number;
+    doneValue: number;
+  };
 }
 
 interface DashboardStats {
@@ -77,18 +89,24 @@ export default function FirmAdminDashboardClient({
       <div className="mt-8 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <CircularGraph
           title="Drill Alerts Status"
-          data={dashboardData.chartData.drills}
+          data={dashboardData.chartData.drills.data}
           colors={COLORS}
+          totalValue={dashboardData.chartData.drills.totalValue}
+          doneValue={dashboardData.chartData.drills.doneValue}
         />
         <CircularGraph
           title="Workshop Types"
-          data={dashboardData.chartData.workshops}
+          data={dashboardData.chartData.workshops.data}
           colors={COLORS}
+          totalValue={dashboardData.chartData.workshops.totalValue}
+          doneValue={dashboardData.chartData.workshops.doneValue}
         />
         <CircularGraph
           title="Compliance Overview"
-          data={dashboardData.chartData.compliance}
+          data={dashboardData.chartData.compliance.data}
           colors={COLORS}
+          totalValue={dashboardData.chartData.compliance.totalValue}
+          doneValue={dashboardData.chartData.compliance.doneValue}
         />
       </div>
 

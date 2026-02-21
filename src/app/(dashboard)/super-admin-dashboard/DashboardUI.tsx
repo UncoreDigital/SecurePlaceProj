@@ -64,18 +64,24 @@ export function DashboardUI({
       <div className="mt-8 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <CircularGraph
           title="Drill Status"
-          data={chartData.drills}
+          data={chartData.drills.data}
           colors={COLORS}
+          totalValue={chartData.drills.totalValue}
+          doneValue={chartData.drills.doneValue}
         />
         <CircularGraph
           title="Workshop Types"
-          data={chartData.workshops}
+          data={chartData.workshops.data}
           colors={COLORS}
+          totalValue={chartData.workshops.totalValue}
+          doneValue={chartData.workshops.doneValue}
         />
         <CircularGraph
           title="Compliance Overview"
-          data={chartData.compliance}
+          data={chartData.compliance.data}
           colors={COLORS}
+          totalValue={chartData.compliance.totalValue}
+          doneValue={chartData.compliance.doneValue}
         />
       </div>
       {/* Bottom Row Section */}
