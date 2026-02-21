@@ -31,6 +31,25 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
   const displayTotal = totalValue ?? totalEntry?.value ?? 0;
   const displayDone = doneValue ?? doneEntry?.value ?? 0;
 
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      let label = data.name;
+      if (label.toLowerCase() === "pending") {
+        label = "Required";
+      }
+      return (
+        <div className="bg-white p-2 rounded border border-gray-300 shadow">
+          <p className="text-sm font-semibold text-gray-800">
+            {label}: {data.value}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md h-80 flex flex-col">
       <h3 className="text-lg font-semibold text-brand-blue mb-4">{title}</h3>
@@ -69,10 +88,10 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
                 );
               })}
             </Pie>
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
-        {/* custom legend always showing Total and Done */}
+        {/* custom legend showing Done and Required */}
         <div className="flex justify-center space-x-6" style={{ marginTop: '-1rem' }}>
           <div className="flex items-center space-x-1">
             <span
@@ -86,7 +105,7 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
               className="w-3 h-3 rounded-full"
               style={{ background: colors[0] }}
             />
-            <span className="text-sm text-gray-700">Total ({displayTotal})</span>
+            <span className="text-sm text-gray-700">Required ({displayTotal})</span>
           </div>
         </div>
       </div>
