@@ -1,4 +1,3 @@
-import { databases } from "@/lib/appwrite-server"; // <-- Use the server client
 import { Query, Models } from "appwrite";
 import { DashboardUI } from "./DashboardUI";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -12,7 +11,6 @@ interface SafetyTraining extends Models.Document {
 // This function now runs securely on the server
 async function getDashboardData() {
   const supabase = await createServerSupabase();
-
   try {
     // Fetch all data concurrently
     const [
@@ -32,17 +30,13 @@ async function getDashboardData() {
       supabase.from("drills").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("scheduled_classes").select("status").in("status", ["approved", "pending"]), // Get actual data for processing
       supabase.from('locations').select('*', { count: 'exact', head: true }),
-      supabase.from("scheduled_classes").select(`
-        id,
-        title,
-        duration_minutes,
-        type,
-        mode,
-        created_at,
-        is_active,
-        firm_id,
-        thumbnail_url
-      `).eq("is_active", true).order("created_at", { ascending: false }).limit(20)
+      supabase.from("scheduled_classes")
+      .select(`
+        *, 
+        safety_class: safety_class_id(title, id, type, mode), 
+        firms:firm_id ( name )
+      `)
+      .order("start_time", { ascending: false })
     ]);
     // console.log("Workshops Data:", workshopsRes);
     // console.log("Test Data:", workshopsRes);
