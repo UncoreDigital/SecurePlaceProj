@@ -289,7 +289,7 @@ export default function ScheduledClassesClient({
 
   // ✅ Apply client-side filtering based on user role
   let filteredScheduledClasses = scheduledClasses;
-  
+
   if (user?.role === "super_admin") {
     // Super admin sees all data - no additional filtering
     console.log('🔑 Super admin access: showing all scheduled classes');
@@ -365,10 +365,10 @@ export default function ScheduledClassesClient({
                     <thead>
                       <tr className="bg-gray-100 text-gray-700 text-sm">
                         <th className="px-4 py-2 text-left font-semibold">Title</th>
-                        {filteredScheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
+                        <th className="px-4 py-2 text-left font-semibold">Location</th>
+                        {user?.role === "super_admin" && (
                           <th className="px-4 py-2 text-left font-semibold">Firm</th>
                         )}
-                        <th className="px-4 py-2 text-left font-semibold">Location</th>
                         <th className="px-4 py-2 text-left font-semibold">Requested Date</th>
                         <th className="px-4 py-2 text-left font-semibold">Date</th>
                         <th className="px-4 py-2 text-left font-semibold">Time</th>
@@ -383,9 +383,6 @@ export default function ScheduledClassesClient({
                           className="bg-white border-b hover:bg-gray-50 text-gray-700"
                         >
                           <td className="px-4 py-2">{cls.title || "-"}</td>
-                          {filteredScheduledClasses?.map(x => x.currentUserRole)?.[0] === "super_admin" && (
-                            <td className="px-4 py-2">{cls.firm || "-"}</td>
-                          )}
                           <td className="px-4 py-2">
                             <div>
                               <div className="font-medium">{cls.location || "Remote"}</div>
@@ -400,6 +397,9 @@ export default function ScheduledClassesClient({
                               )}
                             </div>
                           </td>
+                          {user?.role === "super_admin" && (
+                            <td className="px-4 py-2">{cls.firm || "-"}</td>
+                          )}
                           <td className="px-4 py-2">{cls.created_at || "-"}</td>
                           <td className="px-4 py-2">{cls.date || "-"}</td>
                           <td className="px-4 py-2">{cls.time || "-"}</td>
