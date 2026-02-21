@@ -37,7 +37,7 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
       const data = payload[0].payload;
       let label = data.name;
       if (label.toLowerCase() === "pending") {
-        label = "Required";
+        label = "Remaining";
       }
       return (
         <div className="bg-white p-2 rounded border border-gray-300 shadow">
@@ -91,7 +91,7 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
-        {/* custom legend showing Done and Required */}
+        {/* custom legend showing Done and Remaining */}
         <div className="flex justify-center space-x-6" style={{ marginTop: '-1rem' }}>
           <div className="flex items-center space-x-1">
             <span
