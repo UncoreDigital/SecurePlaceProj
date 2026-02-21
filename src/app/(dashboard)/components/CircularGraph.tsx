@@ -53,6 +53,7 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
                   totalEntry && doneEntry && doneEntry.value > totalEntry.value;
                 const isSingleDone =
                   data.length === 1 && entry.name.toLowerCase() === "done";
+                const isDone = entry.name.toLowerCase() === "done";
 
                 return (
                   <Cell
@@ -60,7 +61,9 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
                     fill={
                       isOverage || isSingleDone
                         ? colors[1] // force orange when done exceeds total or only done slice
-                        : colors[index % colors.length]
+                        : isDone
+                        ? colors[1] // orange for "Done"
+                        : colors[0] // blue for "Pending" or others
                     }
                   />
                 );
@@ -74,16 +77,16 @@ const CircularGraph = ({ title, data, colors, totalValue, doneValue }: CircularG
           <div className="flex items-center space-x-1">
             <span
               className="w-3 h-3 rounded-full"
-              style={{ background: colors[0] }}
+              style={{ background: colors[1] }}
             />
-            <span>Total ({displayTotal})</span>
+            <span className="text-sm text-gray-700">Done ({displayDone})</span>
           </div>
           <div className="flex items-center space-x-1">
             <span
               className="w-3 h-3 rounded-full"
-              style={{ background: colors[1] }}
+              style={{ background: colors[0] }}
             />
-            <span>Done ({displayDone})</span>
+            <span className="text-sm text-gray-700">Total ({displayTotal})</span>
           </div>
         </div>
       </div>

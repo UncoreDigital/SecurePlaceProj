@@ -68,8 +68,8 @@ async function getDashboardData() {
           data: drillDone > drillTotal 
             ? [{ name: "Done", value: drillDone }]
             : [
-                { name: "Total", value: drillTotal },
                 { name: "Done", value: drillDone },
+                { name: "Pending", value: drillTotal - drillDone },
               ],
           totalValue: drillTotal,
           doneValue: drillDone,
@@ -78,8 +78,8 @@ async function getDashboardData() {
           data: workshopDone > workshopTotal
             ? [{ name: "Done", value: workshopDone }]
             : [
-                { name: "Total", value: workshopTotal },
                 { name: "Done", value: workshopDone },
+                { name: "Pending", value: workshopTotal - workshopDone },
               ],
           totalValue: workshopTotal,
           doneValue: workshopDone,
@@ -88,8 +88,8 @@ async function getDashboardData() {
           data: complianceDone > complianceTotal
             ? [{ name: "Done", value: complianceDone }]
             : [
-                { name: "Total", value: complianceTotal },
                 { name: "Done", value: complianceDone },
+                { name: "Pending", value: complianceTotal - complianceDone },
               ],
           totalValue: complianceTotal,
           doneValue: complianceDone,

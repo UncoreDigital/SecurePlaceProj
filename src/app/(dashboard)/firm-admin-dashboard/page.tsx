@@ -121,9 +121,10 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     if (drillDone >= drillTotal) {
       drillsChartData = [{ name: "Done", value: drillDone }];
     } else {
+      const drillPending = drillTotal - drillDone;
       drillsChartData = [
-        { name: "Total", value: drillTotal },
         { name: "Done", value: drillDone },
+        { name: "Pending", value: drillPending },
       ];
     }
 
@@ -134,9 +135,10 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     if (workshopDone >= workshopTotal) {
       workshopsChartData = [{ name: "Done", value: workshopDone }];
     } else {
+      const workshopPending = workshopTotal - workshopDone;
       workshopsChartData = [
-        { name: "Total", value: workshopTotal },
         { name: "Done", value: workshopDone },
+        { name: "Pending", value: workshopPending },
       ];
     }
 
@@ -147,9 +149,10 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     if (complianceDone >= complianceTotal) {
       complianceChartData = [{ name: "Done", value: complianceDone }];
     } else {
+      const compliancePending = complianceTotal - complianceDone;
       complianceChartData = [
-        { name: "Total", value: complianceTotal },
         { name: "Done", value: complianceDone },
+        { name: "Pending", value: compliancePending },
       ];
     }
 
