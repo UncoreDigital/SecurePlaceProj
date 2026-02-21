@@ -129,7 +129,7 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     }
 
     // compute workshop totals similarly
-    const workshopTotal = 5; // fixed placeholder
+    const workshopTotal = 4; // fixed placeholder
     const workshopDone = workshopTypes?.length ?? 0;
     let workshopsChartData: ChartDataPoint[];
     if (workshopDone >= workshopTotal) {
@@ -142,9 +142,9 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
       ];
     }
 
-    // compliance rolls up drills + workshops
-    const complianceTotal = 7; // hard‑coded until API provides real value
-    const complianceDone = drillDone + workshopDone;
+    // compliance rolls up drills + workshops (capped at their respective totals for display)
+    const complianceTotal = 6; // hard‑coded until API provides real value
+    const complianceDone = Math.min(drillDone, drillTotal) + Math.min(workshopDone, workshopTotal);
     let complianceChartData: ChartDataPoint[];
     if (complianceDone >= complianceTotal) {
       complianceChartData = [{ name: "Done", value: complianceDone }];

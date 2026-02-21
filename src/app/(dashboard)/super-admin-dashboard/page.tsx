@@ -53,7 +53,7 @@ async function getDashboardData() {
     const drillDone = completedDrillsRes.count ?? 0;
     const workshopTotal = 4;
     const workshopDone = workshopTypes.length ?? 0;
-    const complianceTotal = 2;
+    const complianceTotal = 6;
     const complianceDone = drillDone;
 
     return {
