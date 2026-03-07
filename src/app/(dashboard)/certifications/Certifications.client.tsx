@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Printer, Pencil, Download } from "lucide-react";
+import { Eye, Plus, Pencil, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -395,20 +395,46 @@ export default function CertificationsClient({
           <DialogHeader>
             <DialogTitle>{selected?.title || 'Certificate'}</DialogTitle>
           </DialogHeader>
-          <div className="pt-2 flex items-center justify-center">
+          <div className="pt-2">
             {selected && (
-              <CertificateCreator
-                initial={{
-                  title: selected.title,
-                  recipient: selected.recipient,
-                  firm: selected.firm,
-                  date: selected.issue_date,
-                  signature: selected.signature,
-                }}
-                showSave={false}
-                showPrint={true}
-                previewOnly={true}
-              />
+              <div className="space-y-4">
+                <CertificateCreator
+                  initial={{
+                    title: selected.title,
+                    recipient: selected.recipient,
+                    firm: selected.firm,
+                    date: selected.issue_date,
+                    signature: selected.signature,
+                  }}
+                  showSave={false}
+                  showPrint={false}
+                  previewOnly={true}
+                />
+                <div className="flex justify-center gap-3">
+                  {/* <button 
+                    type="button" 
+                    onClick={() => window.print()} 
+                    className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600"
+                  >
+                    Print
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      await downloadCertificate({
+                        recipient: selected.recipient,
+                        title: selected.title,
+                        firm: selected.firm,
+                        date: selected.issue_date,
+                        signature: selected.signature,
+                      });
+                    }}
+                    className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                  >
+                    Download
+                  </button> */}
+                </div>
+              </div>
             )}
           </div>
         </DialogContent>
