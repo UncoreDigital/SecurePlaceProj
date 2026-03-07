@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Printer, Pencil } from "lucide-react";
+import { Eye, Plus, Printer, Pencil, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,119 @@ interface CertificationsClientProps {
   userRole: string;
 }
 
+// Extract the download logic to be reusable
+const downloadCertificate = async (certificateData: {
+  recipient: string;
+  title: string;
+  firm?: string;
+  date?: string;
+  signature?: string;
+}) => {
+  try {
+    // Get the certificate element to measure its actual dimensions
+    const certificateElement = document.getElementById("certificate-print");
+    if (!certificateElement) {
+      alert("Certificate element not found");
+      return;
+    }
+
+    // Load the background image
+    const bgImage = new Image();
+    bgImage.crossOrigin = 'anonymous';
+    
+    await new Promise((resolve, reject) => {
+      bgImage.onload = resolve;
+      bgImage.onerror = () => reject(new Error('Failed to load background image'));
+      bgImage.src = '/images/certificate-bg.png';
+    });
+
+    // Get the actual rendered dimensions of the certificate
+    const rect = certificateElement.getBoundingClientRect();
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    // Create canvas with high resolution
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      alert('Failed to get canvas context');
+      return;
+    }
+
+    // Set canvas dimensions to match display aspect ratio but higher resolution
+    canvas.width = 1200;
+    canvas.height = Math.round(1200 / (displayWidth / displayHeight));
+
+    // Draw background image
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+    // Scale factor for converting display coordinates to canvas coordinates
+    const scaleX = canvas.width / displayWidth;
+    const scaleY = canvas.height / displayHeight;
+
+    // Get all text elements and their positions
+    const textElements = certificateElement.querySelectorAll('span');
+    
+    textElements.forEach((element, index) => {
+      const textRect = element.getBoundingClientRect();
+      const text = element.textContent || '';
+      
+      // Calculate position relative to certificate container
+      let x = (textRect.left - rect.left + textRect.width / 2) * scaleX;
+      let y = (textRect.top - rect.top + textRect.height / 2) * scaleY;
+      
+      // Adjust signature and date (2nd and 3rd elements) down by 1%
+      if (index === 1 || index === 2) {
+        y += canvas.height * 0.01;
+      }
+      
+      // Get computed styles
+      const styles = window.getComputedStyle(element);
+      const fontSize = parseFloat(styles.fontSize) * scaleX;
+      const fontWeight = styles.fontWeight;
+      const color = styles.color;
+      const fontFamily = styles.fontFamily;
+      
+      // Set font
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Draw text
+      ctx.fillText(text, x, y);
+    });
+
+    // Convert canvas to blob and download
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert('Failed to create image blob');
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = certificateData.recipient ? certificateData.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
+      link.download = `certificate-${fileName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 'image/png', 1.0);
+
+  } catch (error) {
+    console.error('Error generating certificate image:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('Failed to load background image')) {
+      alert('Failed to load certificate background image. Please check that /images/certificate-bg.png exists.');
+    } else {
+      alert(`Failed to download certificate: ${errorMessage}`);
+    }
+  }
+};
+
 export default function CertificationsClient({ 
   initialCertificates, 
   userRole 
@@ -34,20 +147,26 @@ export default function CertificationsClient({
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<CertItem | null>(null);
-  const [autoPrint, setAutoPrint] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(false);
   const router = useRouter();
 
   const hasItems = items.length > 0;
 
-  // If autoPrint is requested, trigger print shortly after the dialog opens
+  // If autoDownload is requested, trigger download shortly after the dialog opens
   useEffect(() => {
-    if (open && autoPrint) {
+    if (open && autoDownload && selected) {
       const t = setTimeout(() => {
-        try { window.print(); } catch {}
-      }, 300);
+        downloadCertificate({
+          recipient: selected.recipient,
+          title: selected.title,
+          firm: selected.firm,
+          date: selected.issue_date,
+          signature: selected.signature,
+        });
+      }, 500);
       return () => clearTimeout(t);
     }
-  }, [open, autoPrint]);
+  }, [open, autoDownload, selected]);
 
   const handleEditSave = (updatedData: any) => {
     if (selected) {
@@ -134,7 +253,7 @@ export default function CertificationsClient({
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
                           onClick={() => {
                             setSelected(c);
-                            setAutoPrint(false);
+                            setAutoDownload(false);
                             setOpen(true);
                           }}
                         >
@@ -144,11 +263,11 @@ export default function CertificationsClient({
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
                           onClick={() => {
                             setSelected(c);
-                            setAutoPrint(true);
+                            setAutoDownload(true);
                             setOpen(true);
                           }}
                         >
-                          <Printer className="w-4 h-4" />Print
+                          <Download className="w-4 h-4" />Download
                         </button>
                       </div>
                     </td>
@@ -203,7 +322,7 @@ export default function CertificationsClient({
           setOpen(o);
           if (!o) {
             setSelected(null);
-            setAutoPrint(false);
+            setAutoDownload(false);
           }
         }}
       >
