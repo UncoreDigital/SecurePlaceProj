@@ -355,7 +355,7 @@ export default function CertificationsClient({
           }
         }}
       >
-        <DialogContent className="w-[95vw] max-w-[1600px] h-[95vh] overflow-auto">
+        <DialogContent className="w-[90vw] max-w-[1800px] h-[95vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Edit Certificate - {selected?.title || 'Certificate'}</DialogTitle>
           </DialogHeader>
@@ -391,7 +391,7 @@ export default function CertificationsClient({
           }
         }}
       >
-        <DialogContent className="w-[95vw] max-w-[1600px] h-[95vh] overflow-auto">
+        <DialogContent className="w-[90vw] max-w-[1800px] h-[95vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>{selected?.title || 'Certificate'}</DialogTitle>
           </DialogHeader>
