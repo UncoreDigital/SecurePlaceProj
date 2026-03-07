@@ -147,26 +147,9 @@ export default function CertificationsClient({
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<CertItem | null>(null);
-  const [autoDownload, setAutoDownload] = useState(false);
   const router = useRouter();
 
   const hasItems = items.length > 0;
-
-  // If autoDownload is requested, trigger download shortly after the dialog opens
-  useEffect(() => {
-    if (open && autoDownload && selected) {
-      const t = setTimeout(() => {
-        downloadCertificate({
-          recipient: selected.recipient,
-          title: selected.title,
-          firm: selected.firm,
-          date: selected.issue_date,
-          signature: selected.signature,
-        });
-      }, 500);
-      return () => clearTimeout(t);
-    }
-  }, [open, autoDownload, selected]);
 
   const handleEditSave = (updatedData: any) => {
     if (selected) {
@@ -253,7 +236,6 @@ export default function CertificationsClient({
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
                           onClick={() => {
                             setSelected(c);
-                            setAutoDownload(false);
                             setOpen(true);
                           }}
                         >
@@ -261,10 +243,94 @@ export default function CertificationsClient({
                         </button>
                         <button
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
-                          onClick={() => {
-                            setSelected(c);
-                            setAutoDownload(true);
-                            setOpen(true);
+                          onClick={async () => {
+                            // Create a temporary hidden element for download that matches CertificatePreview structure
+                            const tempDiv = document.createElement('div');
+                            tempDiv.id = 'certificate-print';
+                            tempDiv.style.position = 'absolute';
+                            tempDiv.style.left = '-9999px';
+                            tempDiv.style.width = '1000px'; // Fixed width for consistent rendering
+                            tempDiv.style.height = '707px'; // Maintain aspect ratio (1.414:1)
+                            tempDiv.style.backgroundImage = 'url(/images/certificate-bg.png)';
+                            tempDiv.style.backgroundSize = 'cover';
+                            tempDiv.style.backgroundPosition = 'center';
+                            tempDiv.style.backgroundRepeat = 'no-repeat';
+                            tempDiv.style.position = 'relative';
+                            tempDiv.style.overflow = 'hidden';
+                            
+                            // Create recipient name element (matching CertificatePreview structure)
+                            const recipientEl = document.createElement('div');
+                            recipientEl.style.position = 'absolute';
+                            recipientEl.style.inset = '0';
+                            recipientEl.style.display = 'flex';
+                            recipientEl.style.alignItems = 'center';
+                            recipientEl.style.justifyContent = 'center';
+                            recipientEl.style.marginTop = '-13%';
+                            recipientEl.style.marginLeft = '-30%';
+                            
+                            const recipientSpan = document.createElement('span');
+                            recipientSpan.style.fontSize = '32px';
+                            recipientSpan.style.fontWeight = 'bold';
+                            recipientSpan.style.color = '#ff6b35';
+                            recipientSpan.style.fontFamily = 'Arial, sans-serif';
+                            recipientSpan.textContent = c.recipient;
+                            recipientEl.appendChild(recipientSpan);
+                            tempDiv.appendChild(recipientEl);
+                            
+                            // Create signature element
+                            const signatureEl = document.createElement('div');
+                            signatureEl.style.position = 'absolute';
+                            signatureEl.style.inset = '0';
+                            signatureEl.style.display = 'flex';
+                            signatureEl.style.alignItems = 'center';
+                            signatureEl.style.justifyContent = 'center';
+                            signatureEl.style.marginTop = '23%';
+                            signatureEl.style.marginLeft = '2%';
+                            
+                            const signatureSpan = document.createElement('span');
+                            signatureSpan.style.fontSize = '18px';
+                            signatureSpan.style.fontWeight = '600';
+                            signatureSpan.style.color = '#1e3a5f';
+                            signatureSpan.style.fontFamily = 'Arial, sans-serif';
+                            signatureSpan.textContent = c.signature || '';
+                            signatureEl.appendChild(signatureSpan);
+                            tempDiv.appendChild(signatureEl);
+                            
+                            // Create date element
+                            const dateEl = document.createElement('div');
+                            dateEl.style.position = 'absolute';
+                            dateEl.style.inset = '0';
+                            dateEl.style.display = 'flex';
+                            dateEl.style.alignItems = 'center';
+                            dateEl.style.justifyContent = 'center';
+                            dateEl.style.marginTop = '23%';
+                            dateEl.style.marginLeft = '-58%';
+                            
+                            const dateSpan = document.createElement('span');
+                            dateSpan.style.fontSize = '18px';
+                            dateSpan.style.fontWeight = '600';
+                            dateSpan.style.color = '#1e3a5f';
+                            dateSpan.style.fontFamily = 'Arial, sans-serif';
+                            dateSpan.textContent = c.issue_date || '';
+                            dateEl.appendChild(dateSpan);
+                            tempDiv.appendChild(dateEl);
+                            
+                            document.body.appendChild(tempDiv);
+                            
+                            // Wait a bit for rendering
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                            
+                            // Download
+                            await downloadCertificate({
+                              recipient: c.recipient,
+                              title: c.title,
+                              firm: c.firm,
+                              date: c.issue_date,
+                              signature: c.signature,
+                            });
+                            
+                            // Clean up
+                            document.body.removeChild(tempDiv);
                           }}
                         >
                           <Download className="w-4 h-4" />Download
@@ -322,7 +388,6 @@ export default function CertificationsClient({
           setOpen(o);
           if (!o) {
             setSelected(null);
-            setAutoDownload(false);
           }
         }}
       >

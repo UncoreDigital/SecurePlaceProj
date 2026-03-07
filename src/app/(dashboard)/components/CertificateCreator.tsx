@@ -19,35 +19,35 @@ interface Firm {
 
 function CertificatePreview({ data }: { data: CertificateData }) {
   return (
-    <div className="w-full bg-white rounded-xl shadow relative overflow-hidden print:shadow-none">
-      <div className="m-4 border-[3px] border-slate-200 rounded-lg">
-        <div className="m-6 p-8 md:p-12 border border-slate-300 rounded-lg text-center">
-          <p className="uppercase tracking-widest text-xs text-slate-500 mb-2">Certificate of Appreciation</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-brand-blue mb-3">{data.title || "Title of Certification"}</h1>
-          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">This certificate is proudly presented to</p>
-          <div className="mt-4 mb-6">
-            <span className="inline-block text-2xl md:text-3xl font-semibold text-brand-orange">{data.recipient || "{Recipient Name}"}</span>
-          </div>
-          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            In appreciation of outstanding participation and successful completion of the safety training program.
-          </p>
-          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed mt-2">
-            Awarded by {data.firm || "{Firm Name}"} for dedication to safety excellence and continuous improvement.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-            <div className="flex flex-col items-center">
-              <div className="w-48 border-b border-slate-400" />
-              <span className="mt-2 text-sm text-slate-500">Signature</span>
-              <span className="mt-1 text-slate-700">{data.signature || "{Signature}"}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="w-48 border-b border-slate-400" />
-              <span className="mt-2 text-sm text-slate-500">Date</span>
-              <span className="mt-1 text-slate-700">{data.date || "DD/MM/YYYY"}</span>
-            </div>
-          </div>
-          <div className="mt-10 text-slate-500 text-sm">{data.firm || "{Firm Name}"}</div>
-        </div>
+    <div
+      id="certificate-print"
+      className="w-full aspect-[1.414/1] relative overflow-hidden print:shadow-none"
+      style={{
+        backgroundImage: 'url(/images/certificate-bg.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Recipient Name positioned where "Company Name" appears on the image */}
+      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '-13%', marginLeft: '-30%' }}>
+        <span className="text-2xl md:text-2xl font-bold text-[#ff6b35]">
+          {data.recipient || "{Recipient Name}"}
+        </span>
+      </div>
+      
+      {/* Signature positioned at the signature line on the image */}
+      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '23%', marginLeft: '2%' }}>
+        <span className="text-sm md:text-sm font-semibold text-[#1e3a5f]">
+          {data.signature || "{Signature}"}
+        </span>
+      </div>
+      
+      {/* Date positioned at the date placeholder on the image */}
+      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '23%', marginLeft: '-58%' }}>
+        <span className="text-sm md:text-sm font-semibold text-[#1e3a5f]">
+          {data.date || "{DD/MM/YYYY}"}
+        </span>
       </div>
     </div>
   );
@@ -145,6 +145,112 @@ export default function CertificateCreator({
 
   const handlePrint = () => {
     if (typeof window !== "undefined") window.print();
+  };
+
+  const handleDownload = async () => {
+    try {
+      // Get the certificate element to measure its actual dimensions
+      const certificateElement = document.getElementById("certificate-print");
+      if (!certificateElement) {
+        alert("Certificate element not found");
+        return;
+      }
+
+      // Load the background image
+      const bgImage = new Image();
+      bgImage.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        bgImage.onload = resolve;
+        bgImage.onerror = () => reject(new Error('Failed to load background image'));
+        bgImage.src = '/images/certificate-bg.png';
+      });
+
+      // Get the actual rendered dimensions of the certificate
+      const rect = certificateElement.getBoundingClientRect();
+      const displayWidth = rect.width;
+      const displayHeight = rect.height;
+
+      // Create canvas with high resolution
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        alert('Failed to get canvas context');
+        return;
+      }
+
+      // Set canvas dimensions to match display aspect ratio but higher resolution
+      canvas.width = 1200;
+      canvas.height = Math.round(1200 / (displayWidth / displayHeight));
+
+      // Draw background image
+      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+      // Scale factor for converting display coordinates to canvas coordinates
+      const scaleX = canvas.width / displayWidth;
+      const scaleY = canvas.height / displayHeight;
+
+      // Get all text elements and their positions
+      const textElements = certificateElement.querySelectorAll('span');
+      
+      textElements.forEach((element, index) => {
+        const textRect = element.getBoundingClientRect();
+        const text = element.textContent || '';
+        
+        // Calculate position relative to certificate container
+        let x = (textRect.left - rect.left + textRect.width / 2) * scaleX;
+        let y = (textRect.top - rect.top + textRect.height / 2) * scaleY;
+        
+        // Adjust signature and date (2nd and 3rd elements) down by 1%
+        if (index === 1 || index === 2) {
+          y += canvas.height * 0.01;
+        }
+        
+        // Get computed styles
+        const styles = window.getComputedStyle(element);
+        const fontSize = parseFloat(styles.fontSize) * scaleX;
+        const fontWeight = styles.fontWeight;
+        const color = styles.color;
+        const fontFamily = styles.fontFamily;
+        
+        // Set font
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Draw text
+        ctx.fillText(text, x, y);
+      });
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image blob');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = form.recipient ? form.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
+        link.download = `certificate-${fileName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png', 1.0);
+
+    } catch (error) {
+      console.error('Error generating certificate image:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to load background image')) {
+        alert('Failed to load certificate background image. Please check that /images/certificate-bg.png exists.');
+      } else {
+        alert(`Failed to download certificate: ${errorMessage}`);
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -290,10 +396,19 @@ export default function CertificateCreator({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Print-only CSS */}
       <style jsx global>{`
-        @media print {
+                @media print {
           body * { visibility: hidden !important; }
           #certificate-print, #certificate-print * { visibility: visible !important; }
-          #certificate-print { position: absolute !important; inset: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; background: white !important; }
+          #certificate-print { 
+            position: absolute !important; 
+            inset: 0 !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            box-shadow: none !important; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
         }
         @page { size: A4; margin: 16mm; }
       `}</style>
@@ -359,15 +474,20 @@ export default function CertificateCreator({
               </button>
             )}
             {showPrint && (
-              <button type="button" onClick={handlePrint} className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600">Print</button>
+              <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600">Print</button>
             )}
+            {/* <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700">Download</button> */}
           </div>
         </div>
       </section>
       )}
 
       {/* Preview */}
-      <section id="certificate-print" className={`${previewOnly ? 'lg:col-span-12' : 'lg:col-span-8'} bg-slate-50 rounded-xl p-4 print:bg-white print:col-span-12`}>
+      <section 
+        id="certificate-print" 
+        className={`${previewOnly ? 'lg:col-span-12' : 'lg:col-span-8'} rounded-xl p-4 print:col-span-12`}
+        style={{ backgroundColor: 'rgb(248, 250, 252)' }}
+      >
         <CertificatePreview data={form} />
       </section>
     </div>
