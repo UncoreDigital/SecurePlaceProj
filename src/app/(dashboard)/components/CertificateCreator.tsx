@@ -468,13 +468,13 @@ export default function CertificateCreator({
                 type="button" 
                 onClick={handleSave} 
                 disabled={saving || !user}
-                className="px-4 py-2 rounded bg-brand-blue text-white text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded bg-brand-blue text-white text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
               >
                 {saving ? "Saving..." : (isEditing ? "Update" : "Save")}
               </button>
             )}
             {showPrint && (
-              <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600">Print</button>
+              <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600 cursor-pointer">Print</button>
             )}
             {/* <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700">Download</button> */}
           </div>

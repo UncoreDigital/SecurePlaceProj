@@ -185,7 +185,7 @@ export default function CertificationsClient({
         {userRole === "super_admin" && (
           <Button
             onClick={() => router.push('/certifications/new')}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-black text-white text-sm font-medium cursor-pointer hover:bg-gray-800"
           >
             <Plus className="w-4 h-4" /> Create Certificate
           </Button>
@@ -223,7 +223,7 @@ export default function CertificationsClient({
                       <div className="flex items-center gap-2">
                         {userRole === "super_admin" && (
                           <button
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50 cursor-pointer"
                             onClick={() => {
                               setSelected(c);
                               setEditOpen(true);
@@ -233,7 +233,7 @@ export default function CertificationsClient({
                           </button>
                         )}
                         <button
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50 cursor-pointer"
                           onClick={() => {
                             setSelected(c);
                             setOpen(true);
@@ -242,7 +242,7 @@ export default function CertificationsClient({
                           <Eye className="w-4 h-4" /> View
                         </button>
                         <button
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50 cursor-pointer"
                           onClick={async () => {
                             // Create a temporary hidden element for download that matches CertificatePreview structure
                             const tempDiv = document.createElement('div');
