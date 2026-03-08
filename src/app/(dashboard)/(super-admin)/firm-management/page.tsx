@@ -17,8 +17,8 @@ async function getFirms(q?: string): Promise<Firm[]> {
   let query = supabase
     .from("firms")
     .select(
-      "id, name, industry, contact_email, phone_number, created_at"
-    ) // Removed address to reduce payload
+      "id, name, industry, contact_email, phone_number, address, created_at, logo_url"
+    )
     .order("name") // Use name index for better performance
     .limit(100); // Add reasonable limit
 
@@ -48,7 +48,8 @@ async function getFirms(q?: string): Promise<Firm[]> {
     industry: f.industry ?? "",
     contactEmail: f.contact_email ?? "",
     phoneNumber: f.phone_number ?? "",
-    address: "", // Removed from query to reduce payload
+    address: f.address ?? "",
+    logoUrl: f.logo_url ?? "",
     createdAt: f.created_at ?? null,
   }));
 }
@@ -66,6 +67,9 @@ export async function createFirm(formData: FormData) {
   const phoneNumber = String(formData.get("phoneNumber") || "").trim() || null;
   const address = String(formData.get("address") || "").trim() || null;
 
+  // Handle logo as base64
+  const logoBase64 = String(formData.get("logo") || "").trim() || null;
+
   if (!name) return;
 
   const { error } = await supabase.from("firms").insert({
@@ -74,6 +78,7 @@ export async function createFirm(formData: FormData) {
     contact_email: contactEmail,
     phone_number: phoneNumber,
     address,
+    logo_url: logoBase64,
   });
 
   if (error) console.error("createFirm error:", error.message);
@@ -94,15 +99,25 @@ export async function updateFirm(formData: FormData) {
 
   if (!id || !name) return;
 
+  // Handle logo as base64
+  const logoBase64 = String(formData.get("logo") || "").trim();
+  
+  const updateData: Record<string, unknown> = {
+    name,
+    industry,
+    contact_email: contactEmail,
+    phone_number: phoneNumber,
+    address,
+  };
+  
+  // Only update logo if a new one was uploaded (base64 string is not empty)
+  if (logoBase64) {
+    updateData.logo_url = logoBase64;
+  }
+
   const { error } = await supabase
     .from("firms")
-    .update({
-      name,
-      industry,
-      contact_email: contactEmail,
-      phone_number: phoneNumber,
-      address,
-    })
+    .update(updateData)
     .eq("id", id);
 
   if (error) console.error("updateFirm error:", error.message);

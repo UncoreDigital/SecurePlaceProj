@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Search } from "lucide-react";
+import { ArrowUpDown, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,81 @@ import { RowActions } from "../../components/admin/RowActions";
 import { FormDialog } from "../../components/admin/FormDialog";
 
 import type { Firm } from "@/lib/types";
+
+// Custom CSS for edit data
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = '#editData div { width: auto; }';
+  document.head.appendChild(style);
+}
+
+// Logo Upload Component - converts file to base64
+function LogoUpload({ defaultValue = "", name = "logo" }: { defaultValue?: string; name?: string }) {
+  const [preview, setPreview] = useState<string>(defaultValue);
+  const [fileName, setFileName] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setPreview(base64);
+      setFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClear = () => {
+    setPreview("");
+    setFileName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <label
+          htmlFor={`logo-upload-${name}`}
+          className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-sm"
+        >
+          <Upload className="w-4 h-4" />
+          <span>Upload Logo</span>
+        </label>
+        <input
+          id={`logo-upload-${name}`}
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <span className="text-xs text-gray-500">PNG, JPG, SVG</span>
+        {preview && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="text-xs text-red-500 hover:text-red-600"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {/* Hidden input to store base64 value for form submission */}
+      <input type="hidden" name={name} value={preview} />
+      {preview && (
+        <div className="mt-2">
+          <img src={preview} alt="Logo preview" className="w-16 h-16 object-contain rounded-md border" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Actions = {
   createFirm: (formData: FormData) => void | Promise<void>;
@@ -56,6 +131,7 @@ export default function FirmManagement({
             <table className="min-w-full border-separate border-spacing-y-2">
               <thead>
                 <tr className="bg-gray-100 text-gray-700 text-sm">
+                  <th className="px-4 py-2 text-left font-semibold">Logo</th>
                   <th className="px-4 py-2 text-left font-semibold">Firm Name</th>
                   <th className="px-4 py-2 text-left font-semibold">Industry</th>
                   <th className="px-4 py-2 text-left font-semibold">Contact Email</th>
@@ -70,6 +146,19 @@ export default function FirmManagement({
                     key={firm.id || idx}
                     className="bg-white border-b hover:bg-gray-50 text-gray-700"
                   >
+                    <td className="px-4 py-2">
+                      {firm.logoUrl ? (
+                        <img 
+                          src={firm.logoUrl} 
+                          alt={`${firm.name} logo`} 
+                          className="w-10 h-10 object-contain rounded-md border"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                          <span className="text-xs">No logo</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-2 font-medium">{firm.name}</td>
                     <td className="px-4 py-2">{firm.industry || "—"}</td>
                     <td className="px-4 py-2">{firm.contactEmail || "—"}</td>
@@ -80,13 +169,13 @@ export default function FirmManagement({
                       </span>
                     </td>
                     <td className="px-4 py-2">
-                      <div className="flex gap-2 justify-center">
+                      <div className="flex gap-2 justify-center" id="editData">
                         <FormDialog
                           triggerLabel={
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 px-3 text-xs"
+                              className="h-8 px-3 text-xs cursor-pointer"
                             >
                               Edit
                             </Button>
@@ -100,6 +189,15 @@ export default function FirmManagement({
                           errorMessage="Failed to update firm."
                         >
                           <input type="hidden" name="id" value={firm.id} />
+                          {/* Logo Upload */}
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="logo" className="text-right">
+                              Logo
+                            </Label>
+                            <div className="col-span-3">
+                              <LogoUpload name="logo" defaultValue={firm.logoUrl || ""} />
+                            </div>
+                          </div>
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">
                               Name
@@ -166,7 +264,7 @@ export default function FirmManagement({
                             formData.set("id", firm.id);
                             await deleteFirm(formData);
                           }}
-                          className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                         >
                           Delete
                         </Button>
@@ -225,6 +323,15 @@ export default function FirmManagement({
       successMessage="Firm created"
       errorMessage="Failed to create firm."
     >
+      {/* Logo Upload */}
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="logo" className="text-right">
+          Logo
+        </Label>
+        <div className="col-span-3">
+          <LogoUpload />
+        </div>
+      </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="name" className="text-right">
           Name

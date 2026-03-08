@@ -7,6 +7,7 @@ export type Firm = {
   contactEmail?: string;
   phoneNumber?: string;
   address?: string;
+  logoUrl?: string;
   createdAt?: string | null;
 };
 
