@@ -543,9 +543,9 @@ export default function CertificateCreator({
                 {saving ? "Saving..." : (isEditing ? "Update" : "Save")}
               </button>
             )}
-            {showPrint && (
+            {/* {showPrint && (
               <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-brand-orange text-white text-sm font-medium hover:bg-orange-600 cursor-pointer">Print</button>
-            )}
+            )} */}
             {/* <button type="button" onClick={handleDownload} className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700">Download</button> */}
           </div>
         </div>
