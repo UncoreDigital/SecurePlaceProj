@@ -22,28 +22,26 @@ if (typeof document !== 'undefined') {
 }
 
 // Logo Upload Component - converts file to base64
-function LogoUpload({ defaultValue = "", name = "logo" }: { defaultValue?: string; name?: string }) {
+function LogoUpload({ defaultValue = "", name = "logo", required = false }: { defaultValue?: string; name?: string; required?: boolean }) {
   const [preview, setPreview] = useState<string>(defaultValue);
-  const [fileName, setFileName] = useState<string>("");
+  const [error, setError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+    setError("");
     // Convert to base64
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
       setPreview(base64);
-      setFileName(file.name);
     };
     reader.readAsDataURL(file);
   };
 
   const handleClear = () => {
     setPreview("");
-    setFileName("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -78,8 +76,11 @@ function LogoUpload({ defaultValue = "", name = "logo" }: { defaultValue?: strin
           </button>
         )}
       </div>
+      {required && !preview && error && (
+        <p className="text-xs text-red-500">{error}</p>
+      )}
       {/* Hidden input to store base64 value for form submission */}
-      <input type="hidden" name={name} value={preview} />
+      <input type="hidden" name={name} value={preview} data-logo-required={required ? "true" : undefined} />
       {preview && (
         <div className="mt-2">
           <img src={preview} alt="Logo preview" className="w-16 h-16 object-contain rounded-md border" />
@@ -320,16 +321,21 @@ export default function FirmManagement({
       description="Enter the details for the new firm."
       submitLabel="Save Firm"
       onAction={createFirm}
+      onBeforeSubmit={(fd) => {
+        if (!fd.get("logo")) {
+          throw new Error("Logo is required");
+        }
+      }}
       successMessage="Firm created"
-      errorMessage="Failed to create firm."
+      errorMessage="Logo is required. Please upload a firm logo."
     >
       {/* Logo Upload */}
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="logo" className="text-right">
-          Logo
+          Logo <span className="text-red-500">*</span>
         </Label>
         <div className="col-span-3">
-          <LogoUpload />
+          <LogoUpload required />
         </div>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
