@@ -60,33 +60,51 @@ function CertificatePreview({ data }: { data: CertificateData }) {
 
   return (
     <div
-      id="certificate-print"
-      className="relative overflow-hidden"
       style={{
-        width: '960px',
-        height: '680px',
-        background: '#f5f0eb',
-        border: '6px solid #1c2a4a',
-        overflow: 'hidden',
+        width: '100%',
+        overflowX: 'hidden',
+        display: 'flex',
+        justifyContent: 'center',
       }}
     >
-      {/* Background HTML Layer with dynamic content */}
-      {htmlContent && (
-        <iframe
-          srcDoc={htmlContent}
+      <div
+        style={{
+          transform: 'scale(0.65)',
+          transformOrigin: 'top center',
+          marginBottom: '-238px', // compensate for scale shrink: 680 * (1 - 0.65) = 238
+        }}
+      >
+        <div
+          id="certificate-print"
+          className="relative overflow-hidden"
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            zIndex: 1,
+            width: '960px',
+            height: '680px',
+            background: '#f5f0eb',
+            border: '6px solid #1c2a4a',
+            overflow: 'hidden',
           }}
-          sandbox="allow-same-origin"
-          title="Certificate Background"
-        />
-      )}
+        >
+          {htmlContent && (
+            <iframe
+              srcDoc={htmlContent}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                zIndex: 1,
+                overflow: 'hidden',
+              }}
+              scrolling="no"
+              sandbox="allow-same-origin"
+              title="Certificate Background"
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
