@@ -28,100 +28,78 @@ interface CertificationsClientProps {
   userRole: string;
 }
 
-// Extract the download logic to be reusable
-const downloadCertificate = async (certificateData: {
-  recipient: string;
-  title: string;
-  firm?: string;
-  date?: string;
-  signature?: string;
-}) => {
+// Download certificate by rendering the actual HTML template (same as view mode)
+const downloadCertificate = async (cert: CertItem) => {
   try {
-    // Get the certificate element to measure its actual dimensions
-    const certificateElement = document.getElementById("certificate-print");
-    if (!certificateElement) {
-      alert("Certificate element not found");
-      return;
-    }
+    // Format date with ordinal suffix
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return '';
+      try {
+        const [day, month, year] = dateStr.split('/');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const d = parseInt(day);
+        const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
+        return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
+      } catch { return dateStr; }
+    };
 
-    // Load the background image
-    const bgImage = new Image();
-    bgImage.crossOrigin = 'anonymous';
-    
-    await new Promise((resolve, reject) => {
-      bgImage.onload = resolve;
-      bgImage.onerror = () => reject(new Error('Failed to load background image'));
-      bgImage.src = '/images/certificate-bg.png';
+    // Fetch the HTML template and replace placeholders
+    const html = await fetch('/images/certificate-participation.html').then(r => r.text());
+    let filledHtml = html
+      .replace(/\{\{FirmName\}\}/g, cert.firm || '')
+      .replace(/\{\{Title\}\}/g, cert.title || '')
+      .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
+      .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
+      .replace(/\{\{Description\}\}/g, cert.description || '')
+      .replace(/padding-bottom: 4px/, 'padding-bottom: 15px');
+
+    // Create a hidden iframe, render the certificate, then capture it
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.width = '960px';
+    iframe.style.height = '680px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    await new Promise<void>((resolve) => {
+      iframe.onload = () => resolve();
+      iframe.srcdoc = filledHtml;
     });
 
-    // Get the actual rendered dimensions of the certificate
-    const rect = certificateElement.getBoundingClientRect();
-    const displayWidth = rect.width;
-    const displayHeight = rect.height;
+    // Wait for fonts/images inside iframe to load
+    await new Promise(r => setTimeout(r, 800));
 
-    // Create canvas with high resolution
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      alert('Failed to get canvas context');
-      return;
-    }
+    const html2canvas = (await import('html2canvas')).default;
+    const iframeDoc = iframe.contentDocument;
+    if (!iframeDoc) throw new Error('Could not access iframe document');
 
-    // Set canvas dimensions to match display aspect ratio but higher resolution
-    canvas.width = 1200;
-    canvas.height = Math.round(1200 / (displayWidth / displayHeight));
+    const certElement = iframeDoc.querySelector('.certificate') as HTMLElement || iframeDoc.body;
 
-    // Draw background image
-    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-
-    // Scale factor for converting display coordinates to canvas coordinates
-    const scaleX = canvas.width / displayWidth;
-    const scaleY = canvas.height / displayHeight;
-
-    // Get all text elements and their positions
-    const textElements = certificateElement.querySelectorAll('span');
-    
-    textElements.forEach((element, index) => {
-      const textRect = element.getBoundingClientRect();
-      const text = element.textContent || '';
-      
-      // Calculate position relative to certificate container
-      let x = (textRect.left - rect.left + textRect.width / 2) * scaleX;
-      let y = (textRect.top - rect.top + textRect.height / 2) * scaleY;
-      
-      // Adjust signature and date (2nd and 3rd elements) down by 1%
-      if (index === 1 || index === 2) {
-        y += canvas.height * 0.01;
-      }
-      
-      // Get computed styles
-      const styles = window.getComputedStyle(element);
-      const fontSize = parseFloat(styles.fontSize) * scaleX;
-      const fontWeight = styles.fontWeight;
-      const color = styles.color;
-      const fontFamily = styles.fontFamily;
-      
-      // Set font
-      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-      ctx.fillStyle = color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Draw text
-      ctx.fillText(text, x, y);
+    const canvas = await html2canvas(certElement, {
+      width: 960,
+      height: 680,
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scrollY: 0,
+      scrollX: 0,
+      windowWidth: 960,
+      windowHeight: 680,
     });
 
-    // Convert canvas to blob and download
+    document.body.removeChild(iframe);
+
     canvas.toBlob((blob) => {
-      if (!blob) {
-        alert('Failed to create image blob');
-        return;
-      }
-
+      if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const fileName = certificateData.recipient ? certificateData.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
+      const fileName = cert.recipient ? cert.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
       link.download = `certificate-${fileName}.png`;
       document.body.appendChild(link);
       link.click();
@@ -130,14 +108,8 @@ const downloadCertificate = async (certificateData: {
     }, 'image/png', 1.0);
 
   } catch (error) {
-    console.error('Error generating certificate image:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    if (errorMessage.includes('Failed to load background image')) {
-      alert('Failed to load certificate background image. Please check that /images/certificate-bg.png exists.');
-    } else {
-      alert(`Failed to download certificate: ${errorMessage}`);
-    }
+    console.error('Error downloading certificate:', error);
+    alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -247,95 +219,7 @@ export default function CertificationsClient({
                         </button>
                         <button
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50 cursor-pointer"
-                          onClick={async () => {
-                            // Create a temporary hidden element for download that matches CertificatePreview structure
-                            const tempDiv = document.createElement('div');
-                            tempDiv.id = 'certificate-print';
-                            tempDiv.style.position = 'absolute';
-                            tempDiv.style.left = '-9999px';
-                            tempDiv.style.width = '1000px'; // Fixed width for consistent rendering
-                            tempDiv.style.height = '707px'; // Maintain aspect ratio (1.414:1)
-                            tempDiv.style.backgroundImage = 'url(/images/certificate-bg.png)';
-                            tempDiv.style.backgroundSize = 'cover';
-                            tempDiv.style.backgroundPosition = 'center';
-                            tempDiv.style.backgroundRepeat = 'no-repeat';
-                            tempDiv.style.position = 'relative';
-                            tempDiv.style.overflow = 'hidden';
-                            
-                            // Create recipient name element (matching CertificatePreview structure)
-                            const recipientEl = document.createElement('div');
-                            recipientEl.style.position = 'absolute';
-                            recipientEl.style.inset = '0';
-                            recipientEl.style.display = 'flex';
-                            recipientEl.style.alignItems = 'center';
-                            recipientEl.style.justifyContent = 'center';
-                            recipientEl.style.marginTop = '-13%';
-                            recipientEl.style.marginLeft = '-30%';
-                            
-                            const recipientSpan = document.createElement('span');
-                            recipientSpan.style.fontSize = '32px';
-                            recipientSpan.style.fontWeight = 'bold';
-                            recipientSpan.style.color = '#ff6b35';
-                            recipientSpan.style.fontFamily = 'Arial, sans-serif';
-                            recipientSpan.textContent = c.recipient;
-                            recipientEl.appendChild(recipientSpan);
-                            tempDiv.appendChild(recipientEl);
-                            
-                            // Create signature element
-                            const signatureEl = document.createElement('div');
-                            signatureEl.style.position = 'absolute';
-                            signatureEl.style.inset = '0';
-                            signatureEl.style.display = 'flex';
-                            signatureEl.style.alignItems = 'center';
-                            signatureEl.style.justifyContent = 'center';
-                            signatureEl.style.marginTop = '23%';
-                            signatureEl.style.marginLeft = '2%';
-                            
-                            const signatureSpan = document.createElement('span');
-                            signatureSpan.style.fontSize = '18px';
-                            signatureSpan.style.fontWeight = '600';
-                            signatureSpan.style.color = '#1e3a5f';
-                            signatureSpan.style.fontFamily = 'Arial, sans-serif';
-                            signatureSpan.textContent = c.signature || '';
-                            signatureEl.appendChild(signatureSpan);
-                            tempDiv.appendChild(signatureEl);
-                            
-                            // Create date element
-                            const dateEl = document.createElement('div');
-                            dateEl.style.position = 'absolute';
-                            dateEl.style.inset = '0';
-                            dateEl.style.display = 'flex';
-                            dateEl.style.alignItems = 'center';
-                            dateEl.style.justifyContent = 'center';
-                            dateEl.style.marginTop = '23%';
-                            dateEl.style.marginLeft = '-58%';
-                            
-                            const dateSpan = document.createElement('span');
-                            dateSpan.style.fontSize = '18px';
-                            dateSpan.style.fontWeight = '600';
-                            dateSpan.style.color = '#1e3a5f';
-                            dateSpan.style.fontFamily = 'Arial, sans-serif';
-                            dateSpan.textContent = c.issue_date || '';
-                            dateEl.appendChild(dateSpan);
-                            tempDiv.appendChild(dateEl);
-                            
-                            document.body.appendChild(tempDiv);
-                            
-                            // Wait a bit for rendering
-                            await new Promise(resolve => setTimeout(resolve, 200));
-                            
-                            // Download
-                            await downloadCertificate({
-                              recipient: c.recipient,
-                              title: c.title,
-                              firm: c.firm,
-                              date: c.issue_date,
-                              signature: c.signature,
-                            });
-                            
-                            // Clean up
-                            document.body.removeChild(tempDiv);
-                          }}
+                          onClick={() => downloadCertificate(c)}
                         >
                           <Download className="w-4 h-4" />Download
                         </button>
