@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificate of Participation</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,700&family=Lora:wght@400;500&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  .certificate {
+    width: 960px; height: 680px; background: #fefaf9; position: relative; overflow: hidden;
+    border: 6px solid #1c2a4a;
+  }
+  .inner-border {
+    position: absolute; top: 12px; left: 12px; right: 12px; bottom: 12px;
+    border: 1.5px solid #c97a3a;
+  }
+  .content {
+    position: relative; z-index: 2; padding: 40px 60px 0;
+    display: flex; flex-direction: column; align-items: center; height: 100%;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 10px;
+  }
+  .logo { width: 120px; }
+  .logo-right { width: 130px; }
+  .title-section { text-align: center; flex: 1; margin-top: -10px; }
+  .title {
+    font-family: 'Lora'; font-weight: 900; font-size: 42px; color: #0c182a;
+    letter-spacing: 6px; text-transform: uppercase;
+  }
+  .subtitle {
+    font-family: 'Lora'; font-weight: 400; font-size: 16px; color: #0c182a;
+    letter-spacing: 8px; text-transform: uppercase; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .subtitle::before, .subtitle::after {
+    content: ''; width: 60px; height: 1.5px; background: #c97a3a;
+  }
+  .presented {
+    font-family: 'Lora'; font-size: 17px; color: #333; margin-top: 24px;
+  }
+  .recipient {
+    font-family: 'Lora'; font-size: 44px; color: #df6838;
+    margin-top: 8px; font-weight: 700; letter-spacing: 3px;
+  }
+  .description {
+    font-family: 'Lora', serif; font-size: 16px; color: #333; text-align: center;
+    line-height: 1.7; margin-top: 18px; max-width: 700px;
+  }
+  .description strong { font-weight: 700; }
+  .appreciation {
+    font-family: 'Lora', serif; font-size: 13.5px; color: #333; text-align: center;
+    margin-top: 16px;
+  }
+  .signatures {
+    display: flex; justify-content: space-between; width: 100%; margin-top: 50px;
+    padding: 0 40px;
+  }
+  .sig-block { text-align: center; }
+  .sig-name-script {
+    font-family: 'Dancing Script', cursive; font-size: 28px; color: #1c2a4a;
+    border-bottom: 2px solid #f15c16; padding-bottom: 4px; display: inline-block;
+  }
+  .sig-label { font-family: 'Lora', serif; font-size: 13px; color: #000000; margin-top: 6px; font-weight: 500; }
+  .sig-title { font-family: 'Lora', serif; font-size: 12px; color: #000000; }
+  .wave {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 100px; z-index: 1;
+  }
+  .wave svg { width: 100%; height: 100%; display: block; }
+  sup { font-size: 0.65em; }
+</style>
+</head>
+<body>
+<div class="certificate">
+  <div class="inner-border"></div>
+  <div class="content">
+    <div class="header">
+      <img src="/images/logo-2.png" alt="Logo" class="logo-right" />
+      <div class="title-section">
+        <div class="title">Certificate</div>
+        <div class="subtitle">of Participation</div>
+      </div>
+      <svg class="logo-right" viewBox="0 0 140 50">
+        <path d="M25,40 Q15,25 25,10 Q35,20 30,30 Q40,15 30,5" fill="none" stroke="#1c2a4a" stroke-width="3"/>
+        <text x="50" y="32" font-size="18" font-weight="bold" fill="#1c2a4a" font-family="sans-serif">AVETIS</text>
+      </svg>
+    </div>
+    <p class="presented">This certificate is proudly presented to</p>
+    <h1 class="recipient">{{FirmName}}</h1>
+    <p class="description">
+      In recognition of participation in the <strong>{{Title}}</strong> conducted by Secure Place™
+      on <strong>{{Date}}</strong> in collaboration with {{Details}}
+    </p>
+    <p class="appreciation">We appreciate {{FirmName}} for prioritizing {{Description}}.</p>
+    <div class="signatures">
+      <div class="sig-block">
+        <span class="sig-name-script">Rishva Kharidia</span>
+        <div class="sig-label">Rishva Kharidia</div>
+        <div class="sig-title">COO, Secure Place</div>
+      </div>
+      <div class="sig-block">
+        <span class="sig-name-script">Anoop Tamhaney</span>
+        <div class="sig-label">Anoop Tamhaney</div>
+        <div class="sig-title">Director Partner Success</div>
+      </div>
+    </div>
+  </div>
+  <div class="wave">
+    <svg viewBox="0 0 960 100" preserveAspectRatio="none">
+      <path d="M0,100 L0,60 Q200,20 400,50 Q600,80 800,30 Q900,10 960,25 L960,100 Z" fill="#1c2a4a"/>
+      <path d="M0,100 L0,75 Q200,40 400,65 Q550,85 750,45 Q880,20 960,40 L960,100 Z" fill="#c97a3a" opacity="0.9"/>
+    </svg>
+  </div>
+</div>
+</body>
+</html>

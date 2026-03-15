@@ -7,6 +7,8 @@ import { useUser } from "@/hooks/useUser";
 type CertificateData = {
   recipient: string;
   title: string;
+  certificateDetails: string;
+  description: string;
   firm: string;
   date: string;
   signature: string;
@@ -18,37 +20,73 @@ interface Firm {
 }
 
 function CertificatePreview({ data }: { data: CertificateData }) {
+  const [htmlContent, setHtmlContent] = useState<string>('');
+
+  // Format date for display with ordinal suffix
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "{{date}}";
+    try {
+      const [day, month, year] = dateStr.split('/');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const d = parseInt(day);
+      const suffix = ["th", "st", "nd", "rd"][((d - 20) % 10) || d] || ["th", "st", "nd", "rd"][d] || "th";
+      return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  useEffect(() => {
+    // Fetch and update the HTML template with dynamic data
+    fetch('/images/certificate-participation.html')
+      .then(res => res.text())
+      .then(html => {
+        // Format the date
+        const formattedDate = formatDate(data.date);
+        
+        // Replace placeholders with actual data
+        let updatedHtml = html
+          .replace(/\{\{FirmName\}\}/g, data.firm || '{{firmName}}')
+          .replace(/\{\{Title\}\}/g, data.title || '{{title}}')
+          .replace(/\{\{Date\}\}/g, formattedDate)
+          .replace(/\{\{Details\}\}/g, data.certificateDetails || '{{details}}')
+          .replace(/\{\{Description\}\}/g, data.description || '{{description}}');
+        
+        setHtmlContent(updatedHtml);
+      })
+      .catch(err => console.error('Failed to load certificate template:', err));
+  }, [data.firm, data.title, data.date, data.description, data.certificateDetails]);
+
   return (
     <div
       id="certificate-print"
-      className="w-full aspect-[1.414/1] relative overflow-hidden print:shadow-none"
+      className="relative overflow-hidden"
       style={{
-        backgroundImage: 'url(/images/certificate-bg.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        width: '960px',
+        height: '680px',
+        background: '#f5f0eb',
+        border: '6px solid #1c2a4a',
+        overflow: 'hidden',
       }}
     >
-      {/* Recipient Name positioned where "Company Name" appears on the image */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '-13%', marginLeft: '-30%' }}>
-        <span className="text-2xl md:text-2xl font-bold text-[#ff6b35]">
-          {data.recipient || "{Recipient Name}"}
-        </span>
-      </div>
-      
-      {/* Signature positioned at the signature line on the image */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '23%', marginLeft: '2%' }}>
-        <span className="text-sm md:text-sm font-semibold text-[#1e3a5f]">
-          {data.signature || "{Signature}"}
-        </span>
-      </div>
-      
-      {/* Date positioned at the date placeholder on the image */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: '23%', marginLeft: '-58%' }}>
-        <span className="text-sm md:text-sm font-semibold text-[#1e3a5f]">
-          {data.date || "{DD/MM/YYYY}"}
-        </span>
-      </div>
+      {/* Background HTML Layer with dynamic content */}
+      {htmlContent && (
+        <iframe
+          srcDoc={htmlContent}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            zIndex: 1,
+          }}
+          sandbox="allow-same-origin"
+          title="Certificate Background"
+        />
+      )}
     </div>
   );
 }
@@ -76,7 +114,9 @@ export default function CertificateCreator({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CertificateData>({
     recipient: initial?.recipient ?? "",
-    title: initial?.title ?? "Certificate of Completion",
+    title: initial?.title ?? "",
+    certificateDetails: initial?.certificateDetails ?? "",
+    description: initial?.description ?? "",
     firm: initial?.firm ?? "",
     date: initial?.date ?? "",
     signature: initial?.signature ?? "",
@@ -299,6 +339,8 @@ export default function CertificateCreator({
         // Update existing certificate
         const updateData = {
           title: form.title.trim(),
+          certificate_details: form.certificateDetails.trim() || null,
+          description: form.description.trim() || null,
           recipient_name: form.recipient.trim(),
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
@@ -348,6 +390,8 @@ export default function CertificateCreator({
         const certificateData = {
           certificate_number: certNumberData.toString(),
           title: form.title.trim(),
+          certificate_details: form.certificateDetails.trim() || null,
+          description: form.description.trim() || null,
           recipient_name: form.recipient.trim(),
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
@@ -423,6 +467,14 @@ export default function CertificateCreator({
             <input name="title" value={form.title} onChange={onChange} placeholder="Certificate Title" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
           </div>
           <div>
+            <label className="block text-sm text-slate-600 mb-1">Certificate Details</label>
+            <input name="certificateDetails" value={form.certificateDetails} onChange={onChange} placeholder="Certificate Details" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Description</label>
+            <input name="description" value={form.description} onChange={onChange} placeholder="Certificate Description" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
+          <div>
             <label className="block text-sm text-slate-600 mb-1">Recipient</label>
             <input name="recipient" value={form.recipient} onChange={onChange} placeholder="e.g. Jane Doe" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
           </div>
@@ -457,10 +509,10 @@ export default function CertificateCreator({
               <label className="block text-sm text-slate-600 mb-1">Date</label>
               <input name="date" value={form.date} onChange={onChange} placeholder="DD/MM/YYYY" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
             </div>
-            <div>
+            {/* <div>
               <label className="block text-sm text-slate-600 mb-1">Signature</label>
               <input name="signature" value={form.signature} onChange={onChange} placeholder="Signer name" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-            </div>
+            </div> */}
           </div>
           <div className="pt-2 flex items-center gap-3">
             {showSave && (

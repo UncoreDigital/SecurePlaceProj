@@ -29,7 +29,9 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
         issue_date,
         recipient_name,
         firm_name,
-        signer_name
+        signer_name,
+        description,
+        certificate_details
       `)
       .order("created_at", { ascending: false });
 
@@ -52,6 +54,8 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
       firm: cert.firm_name,
       issue_date: cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : undefined,
       signature: cert.signer_name || undefined,
+      description: cert.description,
+      certificate_details: cert.certificate_details
     }));
   } catch (error) {
     console.error("Failed to fetch certificates:", error);

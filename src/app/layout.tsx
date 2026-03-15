@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cinzel, Playfair_Display, Lora, Dancing_Script } from "next/font/google";
 import { Toaster } from "sonner";
 import ReactQueryProvider from "@/providers/ReactQueryProvider";
 import "./globals.css";
@@ -19,6 +19,31 @@ const geistMono = Geist_Mono({
   preload: false, // Only preload primary font
 });
 
+// Certificate fonts
+const cinzel = Cinzel({
+  variable: "--font-cinzel",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const lora = Lora({
+  variable: "--font-lora",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const dancingScript = Dancing_Script({
+  variable: "--font-dancing",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Secure Place to Work",
   description: "Next Generation Security Solution for Employees",
@@ -32,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfair.variable} ${lora.variable} ${dancingScript.variable} antialiased`}
       >
         <ReactQueryProvider>
           {children}

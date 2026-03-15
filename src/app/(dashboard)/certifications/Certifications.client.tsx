@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 type CertItem = {
   id: string;
   title: string;
+  certificate_details?: string;
+  description?: string;
   recipient: string;
   firm?: string;
   issue_date?: string;
@@ -160,6 +162,8 @@ export default function CertificationsClient({
             ? { 
                 ...item, 
                 title: updatedData.title,
+                certificate_details: updatedData.certificateDetails,
+                description: updatedData.description,
                 recipient: updatedData.recipient,
                 firm: updatedData.firm,
                 issue_date: updatedData.date,
@@ -364,6 +368,8 @@ export default function CertificationsClient({
               <CertificateCreator
                 initial={{
                   title: selected.title,
+                  certificateDetails: selected.certificate_details,
+                  description: selected.description,
                   recipient: selected.recipient,
                   firm: selected.firm,
                   date: selected.issue_date,
@@ -401,6 +407,8 @@ export default function CertificationsClient({
                 <CertificateCreator
                   initial={{
                     title: selected.title,
+                    certificateDetails: selected.certificate_details,
+                    description: selected.description,
                     recipient: selected.recipient,
                     firm: selected.firm,
                     date: selected.issue_date,
