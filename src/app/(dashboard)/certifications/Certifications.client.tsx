@@ -302,6 +302,7 @@ export default function CertificationsClient({
                   description: selected.description,
                   recipient: selected.recipient,
                   firm: selected.firm,
+                  firmLogo: selected.firm_logo,
                   date: selected.issue_date,
                   signature: selected.signature,
                 }}
@@ -343,6 +344,7 @@ export default function CertificationsClient({
                     firm: selected.firm,
                     date: selected.issue_date,
                     signature: selected.signature,
+                    firmLogo: selected.firm_logo
                   }}
                   showSave={false}
                   showPrint={false}

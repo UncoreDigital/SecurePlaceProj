@@ -9,6 +9,7 @@ type CertItem = {
   title: string;
   recipient: string;
   firm?: string;
+  firm_logo?: string;
   issue_date?: string;
   signature?: string;
 };
@@ -31,7 +32,10 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
         firm_name,
         signer_name,
         description,
-        certificate_details
+        certificate_details,
+        firms (
+          logo_url
+        )
       `)
       .order("created_at", { ascending: false });
 
@@ -52,6 +56,7 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
       title: cert.title,
       recipient: cert.recipient_name,
       firm: cert.firm_name,
+      firm_logo: cert.firms?.logo_url || undefined,
       issue_date: cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : undefined,
       signature: cert.signer_name || undefined,
       description: cert.description,

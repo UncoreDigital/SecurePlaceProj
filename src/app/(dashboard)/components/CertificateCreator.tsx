@@ -129,7 +129,7 @@ export default function CertificateCreator({
   isEditing?: boolean;
   certificateId?: string;
 }) {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [firms, setFirms] = useState<Firm[]>([]);
   const [loadingFirms, setLoadingFirms] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,11 +144,55 @@ export default function CertificateCreator({
     signature: initial?.signature ?? "",
   });
 
-  // Fetch firms data — always runs on mount, re-runs if user role changes
+  // Sync form when initial prop changes (e.g. opening a different cert in edit dialog)
+  useEffect(() => {
+    setForm({
+      recipient: initial?.recipient ?? "",
+      title: initial?.title ?? "",
+      certificateDetails: initial?.certificateDetails ?? "",
+      description: initial?.description ?? "",
+      firm: initial?.firm ?? "",
+      firmLogo: initial?.firmLogo ?? "",
+      date: initial?.date ?? "",
+      signature: initial?.signature ?? "",
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initial?.recipient,
+    initial?.title,
+    initial?.certificateDetails,
+    initial?.description,
+    initial?.firm,
+    initial?.firmLogo,
+    initial?.date,
+    initial?.signature,
+  ]);
+
+  // Resolve firm logo when initial firm is set and firms are loaded
+  useEffect(() => {
+    if (initial?.firm && firms.length > 0) {
+      const matchedFirm = firms.find(f => f.name === initial.firm);
+      if (matchedFirm && !form.firmLogo) {
+        setForm(prev => ({ ...prev, firmLogo: matchedFirm.logo_url ?? "" }));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial?.firm, firms]);
+
+  // Fetch firms data — re-runs when user is available
   useEffect(() => {
     let cancelled = false;
 
     const fetchFirms = async () => {
+      // Don't fetch if user is still loading or not available
+      if (userLoading || !user) {
+        console.log('CertificateCreator: Waiting for user to load...', { userLoading, hasUser: !!user });
+        setLoadingFirms(true);
+        return;
+      }
+
+      console.log('CertificateCreator: Fetching firms for user:', { role: user.role, firmId: user.firmId });
+
       try {
         setLoadingFirms(true);
 
@@ -157,7 +201,9 @@ export default function CertificateCreator({
           .select("id, name, logo_url")
           .order("name", { ascending: true });
 
+        // Filter by firm for firm_admin users
         if (user?.role === "firm_admin" && user?.firmId) {
+          console.log('CertificateCreator: Filtering firms by firmId:', user.firmId);
           query = query.eq("id", user.firmId);
         }
 
@@ -165,19 +211,27 @@ export default function CertificateCreator({
         if (cancelled) return;
 
         if (error) {
-          console.error("Error fetching firms:", error);
+          console.error("CertificateCreator: Error fetching firms:", error);
           setFirms([]);
           return;
         }
 
+        console.log('CertificateCreator: Firms fetched successfully:', data?.length, 'firms');
         setFirms(data || []);
 
+        // Auto-select firm for firm_admin only when no firm is pre-selected
         if (user?.role === "firm_admin" && data && data.length === 1 && !initial?.firm) {
           setForm(prev => ({ ...prev, firm: data[0].name, firmLogo: data[0].logo_url ?? "" }));
+        } else if (initial?.firm && data) {
+          // Resolve firmLogo from loaded firms list when editing
+          const matchedFirm = data.find(f => f.name === initial.firm);
+          if (matchedFirm) {
+            setForm(prev => ({ ...prev, firmLogo: prev.firmLogo || (matchedFirm.logo_url ?? "") }));
+          }
         }
       } catch (error) {
         if (!cancelled) {
-          console.error("Failed to fetch firms:", error);
+          console.error("CertificateCreator: Failed to fetch firms:", error);
           setFirms([]);
         }
       } finally {
@@ -189,7 +243,7 @@ export default function CertificateCreator({
 
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Mount only — firms don't change based on user for super_admin
+  }, [user, userLoading]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -201,7 +255,17 @@ export default function CertificateCreator({
     }
   };
 
-  const handlePrint = () => handleDownload();
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const [day, month, year] = dateStr.split('/');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const d = parseInt(day);
+      const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
+      return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
+    } catch { return dateStr; }
+  };
 
   const handleDownload = async () => {
     try {
@@ -457,9 +521,17 @@ export default function CertificateCreator({
           </div>
           <div>
             <label className="block text-sm text-slate-600 mb-1">Firm Name</label>
-            {loadingFirms ? (
+            {userLoading ? (
+              <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
+                Loading user...
+              </div>
+            ) : loadingFirms ? (
               <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
                 Loading firms...
+              </div>
+            ) : firms.length === 0 ? (
+              <div className="w-full border rounded px-3 py-2 text-sm bg-red-50 text-red-600">
+                No firms available. Please contact administrator.
               </div>
             ) : (
               <select 
@@ -469,14 +541,11 @@ export default function CertificateCreator({
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40 bg-white"
               >
                 <option value="">Select a firm...</option>
-                {firms.map((firm) => {
-                  console.log('Rendering firm option:', firm);
-                  return (
-                    <option key={firm.id} value={firm.name}>
-                      {firm.name}
-                    </option>
-                  );
-                })}
+                {firms.map((firm) => (
+                  <option key={firm.id} value={firm.name}>
+                    {firm.name}
+                  </option>
+                ))}
               </select>
             )}
             
@@ -496,7 +565,7 @@ export default function CertificateCreator({
               <button 
                 type="button" 
                 onClick={handleSave} 
-                disabled={saving || !user}
+                disabled={saving || !user || userLoading}
                 className="px-4 py-2 rounded bg-brand-blue text-white text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
               >
                 {saving ? "Saving..." : (isEditing ? "Update" : "Save")}
