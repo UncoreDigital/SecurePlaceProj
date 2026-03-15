@@ -90,13 +90,20 @@ const SafetyClassesTable = ({ data = [] }: SafetyClassesTableProps) => {
         </TableHeader>
         <TableBody>
           {classes.map((item) => {
-            const scheduledDate = item.scheduled_date
-            ? new Date(item.scheduled_date).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-            : "";
+            // Use start_time from scheduled_classes table, with proper timezone handling
+            const getLocalDate = (dateValue: string) => {
+              if (!dateValue) return '';
+              const date = new Date(dateValue);
+              // Add the timezone offset to ensure correct local date display
+              const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+              const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
+              return adjustedDate.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              });
+            };
+            const scheduledDate = item.start_time ? getLocalDate(item.start_time) : "";
             const isCompleted = item.status?.toLowerCase() === "completed";
             const dateStatus = isCompleted ? "Completed" : "Upcoming";
             
