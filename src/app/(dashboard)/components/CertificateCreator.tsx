@@ -10,6 +10,7 @@ type CertificateData = {
   certificateDetails: string;
   description: string;
   firm: string;
+  firmLogo: string;
   date: string;
   signature: string;
 };
@@ -17,6 +18,7 @@ type CertificateData = {
 interface Firm {
   id: string;
   name: string;
+  logo_url?: string;
 }
 
 function CertificatePreview({ data }: { data: CertificateData }) {
@@ -48,6 +50,7 @@ function CertificatePreview({ data }: { data: CertificateData }) {
         // Replace placeholders with actual data
         let updatedHtml = html
           .replace(/\{\{FirmName\}\}/g, data.firm || '{{firmName}}')
+          .replace(/\{\{FirmLogo\}\}/g, data.firmLogo || '')
           .replace(/\{\{Title\}\}/g, data.title || '{{title}}')
           .replace(/\{\{Date\}\}/g, formattedDate)
           .replace(/\{\{Details\}\}/g, data.certificateDetails || '{{details}}')
@@ -56,7 +59,7 @@ function CertificatePreview({ data }: { data: CertificateData }) {
         setHtmlContent(updatedHtml);
       })
       .catch(err => console.error('Failed to load certificate template:', err));
-  }, [data.firm, data.title, data.date, data.description, data.certificateDetails]);
+  }, [data.firm, data.firmLogo, data.title, data.date, data.description, data.certificateDetails]);
 
   return (
     <div
@@ -126,7 +129,7 @@ export default function CertificateCreator({
   isEditing?: boolean;
   certificateId?: string;
 }) {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const [firms, setFirms] = useState<Firm[]>([]);
   const [loadingFirms, setLoadingFirms] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -136,158 +139,120 @@ export default function CertificateCreator({
     certificateDetails: initial?.certificateDetails ?? "",
     description: initial?.description ?? "",
     firm: initial?.firm ?? "",
+    firmLogo: initial?.firmLogo ?? "",
     date: initial?.date ?? "",
     signature: initial?.signature ?? "",
   });
 
-  // Fetch firms data
+  // Fetch firms data — always runs on mount, re-runs if user role changes
   useEffect(() => {
-    console.log('CertificateCreator useEffect - user:', user, 'userLoading:', userLoading, 'isEditing:', isEditing);
-    
+    let cancelled = false;
+
     const fetchFirms = async () => {
       try {
         setLoadingFirms(true);
-        console.log('Fetching firms...');
-        
+
         let query = supabase
           .from("firms")
-          .select("id, name")
+          .select("id, name, logo_url")
           .order("name", { ascending: true });
 
-        // If user is firm_admin, only show their firm
         if (user?.role === "firm_admin" && user?.firmId) {
-          console.log('Filtering firms for firm_admin, firmId:', user.firmId);
           query = query.eq("id", user.firmId);
         }
 
         const { data, error } = await query;
-        
+        if (cancelled) return;
+
         if (error) {
           console.error("Error fetching firms:", error);
           setFirms([]);
           return;
         }
 
-        console.log('Fetched firms:', data);
         setFirms(data || []);
-        
-        // Auto-select firm if user is firm_admin and no initial firm is set
+
         if (user?.role === "firm_admin" && data && data.length === 1 && !initial?.firm) {
-          console.log('Auto-selecting firm for firm_admin:', data[0].name);
-          setForm(prev => ({ ...prev, firm: data[0].name }));
+          setForm(prev => ({ ...prev, firm: data[0].name, firmLogo: data[0].logo_url ?? "" }));
         }
       } catch (error) {
-        console.error("Failed to fetch firms:", error);
-        setFirms([]);
+        if (!cancelled) {
+          console.error("Failed to fetch firms:", error);
+          setFirms([]);
+        }
       } finally {
-        setLoadingFirms(false);
+        if (!cancelled) setLoadingFirms(false);
       }
     };
 
-    if (!userLoading && user) {
-      console.log('User is ready, fetching firms. User role:', user.role, 'User firmId:', user.firmId);
-      fetchFirms();
-    } else if (!userLoading && !user) {
-      console.log('No user found, but still fetching all firms for super admin access');
-      // Still fetch firms even if no user (might be a super admin case)
-      fetchFirms();
-    } else {
-      console.log('User not ready yet. userLoading:', userLoading, 'user:', !!user);
-    }
-  }, [user, userLoading, isEditing]); // Removed initial?.firm from dependencies
+    fetchFirms();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mount only — firms don't change based on user for super_admin
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    if (name === "firm") {
+      const selectedFirm = firms.find(f => f.name === value);
+      setForm((f) => ({ ...f, firm: value, firmLogo: selectedFirm?.logo_url ?? "" }));
+    } else {
+      setForm((f) => ({ ...f, [name]: value }));
+    }
   };
 
-  const handlePrint = () => {
-    if (typeof window !== "undefined") window.print();
-  };
+  const handlePrint = () => handleDownload();
 
   const handleDownload = async () => {
     try {
-      // Get the certificate element to measure its actual dimensions
-      const certificateElement = document.getElementById("certificate-print");
-      if (!certificateElement) {
-        alert("Certificate element not found");
-        return;
-      }
+      const html = await fetch('/images/certificate-participation.html').then(r => r.text());
+      const filledHtml = html
+        .replace(/\{\{FirmName\}\}/g, form.firm || '')
+        .replace(/\{\{FirmLogo\}\}/g, form.firmLogo || '')
+        .replace(/\{\{Title\}\}/g, form.title || '')
+        .replace(/\{\{Date\}\}/g, formatDate(form.date))
+        .replace(/\{\{Details\}\}/g, form.certificateDetails || '')
+        .replace(/\{\{Description\}\}/g, form.description || '');
 
-      // Load the background image
-      const bgImage = new Image();
-      bgImage.crossOrigin = 'anonymous';
-      
-      await new Promise((resolve, reject) => {
-        bgImage.onload = resolve;
-        bgImage.onerror = () => reject(new Error('Failed to load background image'));
-        bgImage.src = '/images/certificate-bg.png';
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '0';
+      iframe.style.width = '960px';
+      iframe.style.height = '680px';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      await new Promise<void>((resolve) => {
+        iframe.onload = () => resolve();
+        iframe.srcdoc = filledHtml;
       });
 
-      // Get the actual rendered dimensions of the certificate
-      const rect = certificateElement.getBoundingClientRect();
-      const displayWidth = rect.width;
-      const displayHeight = rect.height;
+      await new Promise(r => setTimeout(r, 800));
 
-      // Create canvas with high resolution
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        alert('Failed to get canvas context');
-        return;
-      }
+      const html2canvas = (await import('html2canvas')).default;
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeDoc) throw new Error('Could not access iframe document');
 
-      // Set canvas dimensions to match display aspect ratio but higher resolution
-      canvas.width = 1200;
-      canvas.height = Math.round(1200 / (displayWidth / displayHeight));
-
-      // Draw background image
-      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-
-      // Scale factor for converting display coordinates to canvas coordinates
-      const scaleX = canvas.width / displayWidth;
-      const scaleY = canvas.height / displayHeight;
-
-      // Get all text elements and their positions
-      const textElements = certificateElement.querySelectorAll('span');
-      
-      textElements.forEach((element, index) => {
-        const textRect = element.getBoundingClientRect();
-        const text = element.textContent || '';
-        
-        // Calculate position relative to certificate container
-        let x = (textRect.left - rect.left + textRect.width / 2) * scaleX;
-        let y = (textRect.top - rect.top + textRect.height / 2) * scaleY;
-        
-        // Adjust signature and date (2nd and 3rd elements) down by 1%
-        if (index === 1 || index === 2) {
-          y += canvas.height * 0.01;
-        }
-        
-        // Get computed styles
-        const styles = window.getComputedStyle(element);
-        const fontSize = parseFloat(styles.fontSize) * scaleX;
-        const fontWeight = styles.fontWeight;
-        const color = styles.color;
-        const fontFamily = styles.fontFamily;
-        
-        // Set font
-        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Draw text
-        ctx.fillText(text, x, y);
+      const certElement = iframeDoc.querySelector('.certificate') as HTMLElement || iframeDoc.body;
+      const canvas = await html2canvas(certElement, {
+        width: 960,
+        height: 680,
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        scrollY: 0,
+        scrollX: 0,
+        windowWidth: 960,
+        windowHeight: 680,
       });
 
-      // Convert canvas to blob and download
+      document.body.removeChild(iframe);
+
       canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to create image blob');
-          return;
-        }
-
+        if (!blob) return;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -300,14 +265,8 @@ export default function CertificateCreator({
       }, 'image/png', 1.0);
 
     } catch (error) {
-      console.error('Error generating certificate image:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMessage.includes('Failed to load background image')) {
-        alert('Failed to load certificate background image. Please check that /images/certificate-bg.png exists.');
-      } else {
-        alert(`Failed to download certificate: ${errorMessage}`);
-      }
+      console.error('Error downloading certificate:', error);
+      alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

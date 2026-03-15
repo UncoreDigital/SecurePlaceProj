@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Pencil, Download } from "lucide-react";
+import { Eye, Plus, Pencil, Download, Printer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ type CertItem = {
   description?: string;
   recipient: string;
   firm?: string;
+  firm_logo?: string;
   issue_date?: string;
   signature?: string;
 };
@@ -48,6 +49,7 @@ const downloadCertificate = async (cert: CertItem) => {
     const html = await fetch('/images/certificate-participation.html').then(r => r.text());
     let filledHtml = html
       .replace(/\{\{FirmName\}\}/g, cert.firm || '')
+      .replace(/\{\{FirmLogo\}\}/g, cert.firm_logo || '')
       .replace(/\{\{Title\}\}/g, cert.title || '')
       .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
       .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
@@ -110,6 +112,44 @@ const downloadCertificate = async (cert: CertItem) => {
   } catch (error) {
     console.error('Error downloading certificate:', error);
     alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Print certificate using the same HTML template
+const printCertificate = async (cert: CertItem) => {
+  try {
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return '';
+      try {
+        const [day, month, year] = dateStr.split('/');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const d = parseInt(day);
+        const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
+        return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
+      } catch { return dateStr; }
+    };
+
+    const html = await fetch('/images/certificate-participation.html').then(r => r.text());
+    const filledHtml = html
+      .replace(/\{\{FirmName\}\}/g, cert.firm || '')
+      .replace(/\{\{FirmLogo\}\}/g, cert.firm_logo || '')
+      .replace(/\{\{Title\}\}/g, cert.title || '')
+      .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
+      .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
+      .replace(/\{\{Description\}\}/g, cert.description || '');
+
+    const printWindow = window.open('', '_blank', 'width=1000,height=750');
+    if (!printWindow) return;
+    printWindow.document.write(filledHtml);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+  } catch (error) {
+    console.error('Error printing certificate:', error);
   }
 };
 
@@ -222,6 +262,12 @@ export default function CertificationsClient({
                           onClick={() => downloadCertificate(c)}
                         >
                           <Download className="w-4 h-4" />Download
+                        </button>
+                        <button
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded border text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          onClick={() => printCertificate(c)}
+                        >
+                          <Printer className="w-4 h-4" />Print
                         </button>
                       </div>
                     </td>
