@@ -192,7 +192,7 @@ export const useUser = () => {
       // 2) Load profile with better error handling
       console.log('📝 Fetching user profile...');
       const { data: profile, error: profileErr } = await supabase
-        .from("profiles")
+        .from("user_profiles")
         .select("full_name, role, firm_id")
         .eq("id", authUser.id)
         .maybeSingle();
@@ -236,7 +236,7 @@ export const useUser = () => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           console.log('🔐 User signed in/refreshed, fetching profile');
           const { data: profile } = await supabase!
-            .from("profiles")
+            .from("user_profiles")
             .select("full_name, role, firm_id")
             .eq("id", session.user.id)
             .maybeSingle();
