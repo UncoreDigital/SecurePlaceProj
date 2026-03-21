@@ -17,7 +17,6 @@ type CertItem = {
   title: string;
   certificate_details?: string;
   description?: string;
-  recipient: string;
   firm?: string;
   firm_logo?: string;
   issue_date?: string;
@@ -54,6 +53,7 @@ const downloadCertificate = async (cert: CertItem) => {
       .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
       .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
       .replace(/\{\{Description\}\}/g, cert.description || '')
+      .replace(/\{\{Recipient\}\}/g, '')
       .replace(/padding-bottom: 4px/, 'padding-bottom: 15px');
 
     // Create a hidden iframe, render the certificate, then capture it
@@ -101,7 +101,7 @@ const downloadCertificate = async (cert: CertItem) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const fileName = cert.recipient ? cert.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
+      const fileName = cert.title ? cert.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
       link.download = `certificate-${fileName}.png`;
       document.body.appendChild(link);
       link.click();
@@ -137,7 +137,8 @@ const printCertificate = async (cert: CertItem) => {
       .replace(/\{\{Title\}\}/g, cert.title || '')
       .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
       .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
-      .replace(/\{\{Description\}\}/g, cert.description || '');
+      .replace(/\{\{Description\}\}/g, cert.description || '')
+      .replace(/\{\{Recipient\}\}/g, '');
 
     const printWindow = window.open('', '_blank', 'width=1000,height=750');
     if (!printWindow) return;
@@ -176,7 +177,6 @@ export default function CertificationsClient({
                 title: updatedData.title,
                 certificate_details: updatedData.certificateDetails,
                 description: updatedData.description,
-                recipient: updatedData.recipient,
                 firm: updatedData.firm,
                 issue_date: updatedData.date,
                 signature: updatedData.signature
@@ -222,7 +222,6 @@ export default function CertificationsClient({
               <thead>
                 <tr className="text-left text-sm text-slate-600 border-b">
                   <th className="py-2 pr-4">Title</th>
-                  <th className="py-2 pr-4">Recipient</th>
                   <th className="py-2 pr-4">Firm</th>
                   <th className="py-2 pr-4">Date</th>
                   <th className="py-2 pr-4">Actions</th>
@@ -232,7 +231,6 @@ export default function CertificationsClient({
                 {items.map((c) => (
                   <tr key={c.id} className="border-b text-sm">
                     <td className="py-2 pr-4">{c.title}</td>
-                    <td className="py-2 pr-4">{c.recipient}</td>
                     <td className="py-2 pr-4">{c.firm || '-'}</td>
                     <td className="py-2 pr-4">{c.issue_date || '-'}</td>
                     <td className="py-2 pr-4">
@@ -300,7 +298,6 @@ export default function CertificationsClient({
                   title: selected.title,
                   certificateDetails: selected.certificate_details,
                   description: selected.description,
-                  recipient: selected.recipient,
                   firm: selected.firm,
                   firmLogo: selected.firm_logo,
                   date: selected.issue_date,
@@ -340,7 +337,6 @@ export default function CertificationsClient({
                     title: selected.title,
                     certificateDetails: selected.certificate_details,
                     description: selected.description,
-                    recipient: selected.recipient,
                     firm: selected.firm,
                     date: selected.issue_date,
                     signature: selected.signature,

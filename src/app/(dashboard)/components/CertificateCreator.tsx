@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
 
 type CertificateData = {
-  recipient: string;
   title: string;
   certificateDetails: string;
   description: string;
@@ -134,7 +133,6 @@ export default function CertificateCreator({
   const [loadingFirms, setLoadingFirms] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CertificateData>({
-    recipient: initial?.recipient ?? "",
     title: initial?.title ?? "",
     certificateDetails: initial?.certificateDetails ?? "",
     description: initial?.description ?? "",
@@ -147,7 +145,6 @@ export default function CertificateCreator({
   // Sync form when initial prop changes (e.g. opening a different cert in edit dialog)
   useEffect(() => {
     setForm({
-      recipient: initial?.recipient ?? "",
       title: initial?.title ?? "",
       certificateDetails: initial?.certificateDetails ?? "",
       description: initial?.description ?? "",
@@ -158,7 +155,6 @@ export default function CertificateCreator({
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    initial?.recipient,
     initial?.title,
     initial?.certificateDetails,
     initial?.description,
@@ -341,11 +337,6 @@ export default function CertificateCreator({
     }
 
     // Validate required fields
-    if (!form.recipient.trim()) {
-      alert("Please enter a recipient name");
-      return;
-    }
-
     if (!form.firm.trim()) {
       alert("Please select a firm");
       return;
@@ -382,7 +373,6 @@ export default function CertificateCreator({
           title: form.title.trim(),
           certificate_details: form.certificateDetails.trim() || null,
           description: form.description.trim() || null,
-          recipient_name: form.recipient.trim(),
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
           issue_date: completionDate,
@@ -433,7 +423,6 @@ export default function CertificateCreator({
           title: form.title.trim(),
           certificate_details: form.certificateDetails.trim() || null,
           description: form.description.trim() || null,
-          recipient_name: form.recipient.trim(),
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
           issue_date: completionDate,
@@ -555,10 +544,6 @@ export default function CertificateCreator({
           <div>
             <label className="block text-sm text-slate-600 mb-1">Description</label>
             <input name="description" value={form.description} onChange={onChange} placeholder="Certificate Description" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Recipient</label>
-            <input name="recipient" value={form.recipient} onChange={onChange} placeholder="e.g. Jane Doe" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
           </div>
           <div className="pt-2 flex items-center gap-3">
             {showSave && (
