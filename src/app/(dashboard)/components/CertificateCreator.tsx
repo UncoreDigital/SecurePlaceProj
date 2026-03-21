@@ -504,22 +504,6 @@ export default function CertificateCreator({
         <h2 className="font-semibold text-slate-800 mb-3">Certificate Details</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-slate-600 mb-1">Title</label>
-            <input name="title" value={form.title} onChange={onChange} placeholder="Certificate Title" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Certificate Details</label>
-            <input name="certificateDetails" value={form.certificateDetails} onChange={onChange} placeholder="Certificate Details" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Description</label>
-            <input name="description" value={form.description} onChange={onChange} placeholder="Certificate Description" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Recipient</label>
-            <input name="recipient" value={form.recipient} onChange={onChange} placeholder="e.g. Jane Doe" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
-          </div>
-          <div>
             <label className="block text-sm text-slate-600 mb-1">Firm Name</label>
             {userLoading ? (
               <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
@@ -550,6 +534,10 @@ export default function CertificateCreator({
             )}
             
           </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Title</label>
+            <input name="title" value={form.title} onChange={onChange} placeholder="Certificate Title" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-slate-600 mb-1">Date</label>
@@ -559,6 +547,18 @@ export default function CertificateCreator({
               <label className="block text-sm text-slate-600 mb-1">Signature</label>
               <input name="signature" value={form.signature} onChange={onChange} placeholder="Signer name" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
             </div> */}
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Certificate Details</label>
+            <input name="certificateDetails" value={form.certificateDetails} onChange={onChange} placeholder="Certificate Details" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Description</label>
+            <input name="description" value={form.description} onChange={onChange} placeholder="Certificate Description" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Recipient</label>
+            <input name="recipient" value={form.recipient} onChange={onChange} placeholder="e.g. Jane Doe" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
           </div>
           <div className="pt-2 flex items-center gap-3">
             {showSave && (
