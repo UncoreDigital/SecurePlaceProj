@@ -3,6 +3,7 @@ export type FirmOption = { id: string; name: string };
 export type Firm = {
   id: string;
   name: string;
+  description?: string;
   industry?: string;
   contactEmail?: string;
   phoneNumber?: string;

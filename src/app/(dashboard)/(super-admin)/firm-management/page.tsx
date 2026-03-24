@@ -17,7 +17,7 @@ async function getFirms(q?: string): Promise<Firm[]> {
   let query = supabase
     .from("firms")
     .select(
-      "id, name, industry, contact_email, phone_number, address, created_at, logo_url"
+      "id, name, description, industry, contact_email, phone_number, address, created_at, logo_url"
     )
     .order("name") // Use name index for better performance
     .limit(100); // Add reasonable limit
@@ -45,6 +45,7 @@ async function getFirms(q?: string): Promise<Firm[]> {
   return (data ?? []).map((f: any) => ({
     id: f.id,
     name: f.name ?? "",
+    description: f.description ?? "",
     industry: f.industry ?? "",
     contactEmail: f.contact_email ?? "",
     phoneNumber: f.phone_number ?? "",
@@ -61,6 +62,7 @@ export async function createFirm(formData: FormData) {
   const supabase = await createServerSupabase();
 
   const name = String(formData.get("name") || "").trim();
+  const description = String(formData.get("description") || "").trim();
   const industry = String(formData.get("industry") || "").trim() || null;
   const contactEmail =
     String(formData.get("contactEmail") || "").trim() || null;
@@ -70,10 +72,11 @@ export async function createFirm(formData: FormData) {
   // Handle logo as base64
   const logoBase64 = String(formData.get("logo") || "").trim() || null;
 
-  if (!name) return;
+  if (!name || !description) return;
 
   const { error } = await supabase.from("firms").insert({
     name,
+    description,
     industry,
     contact_email: contactEmail,
     phone_number: phoneNumber,
@@ -91,19 +94,21 @@ export async function updateFirm(formData: FormData) {
 
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
+  const description = String(formData.get("description") || "").trim();
   const industry = String(formData.get("industry") || "").trim() || null;
   const contactEmail =
     String(formData.get("contactEmail") || "").trim() || null;
   const phoneNumber = String(formData.get("phoneNumber") || "").trim() || null;
   const address = String(formData.get("address") || "").trim() || null;
 
-  if (!id || !name) return;
+  if (!id || !name || !description) return;
 
   // Handle logo as base64
   const logoBase64 = String(formData.get("logo") || "").trim();
   
   const updateData: Record<string, unknown> = {
     name,
+    description,
     industry,
     contact_email: contactEmail,
     phone_number: phoneNumber,

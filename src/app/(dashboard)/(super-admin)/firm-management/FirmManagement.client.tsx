@@ -212,6 +212,19 @@ export default function FirmManagement({
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="description" className="text-right">
+                              Description <span className="text-red-500">*</span>
+                            </Label>
+                            <textarea
+                              id="description"
+                              name="description"
+                              defaultValue={firm.description || ""}
+                              className="col-span-3 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              required
+                              placeholder="Enter firm description..."
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="industry" className="text-right">
                               Industry
                             </Label>
@@ -322,12 +335,17 @@ export default function FirmManagement({
       submitLabel="Save Firm"
       onAction={createFirm}
       onBeforeSubmit={(fd) => {
-        if (!fd.get("logo")) {
-          throw new Error("Logo is required");
+        const logo = fd.get("logo");
+        const description = fd.get("description");
+        if (!logo) {
+          throw new Error("Logo is required. Please upload a firm logo.");
+        }
+        if (!description || String(description).trim() === "") {
+          throw new Error("Description is required. Please enter a firm description.");
         }
       }}
       successMessage="Firm created"
-      errorMessage="Logo is required. Please upload a firm logo."
+      errorMessage="Please fill in all required fields."
     >
       {/* Logo Upload */}
       <div className="grid grid-cols-4 items-center gap-4">
@@ -343,6 +361,18 @@ export default function FirmManagement({
           Name
         </Label>
         <Input id="name" name="name" className="col-span-3" required />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="description" className="text-right">
+          Description <span className="text-red-500">*</span>
+        </Label>
+        <textarea 
+          id="description" 
+          name="description" 
+          className="col-span-3 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+          required
+          placeholder="Enter firm description..."
+        />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="industry" className="text-right">
