@@ -101,7 +101,7 @@ function CertificatePreview({ data }: { data: CertificateData }) {
                 overflow: 'hidden',
               }}
               scrolling="no"
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-scripts"
               title="Certificate Background"
             />
           )}
@@ -219,10 +219,14 @@ export default function CertificateCreator({
         if (user?.role === "firm_admin" && data && data.length === 1 && !initial?.firm) {
           setForm(prev => ({ ...prev, firm: data[0].name, firmLogo: data[0].logo_url ?? "" }));
         } else if (initial?.firm && data) {
-          // Resolve firmLogo from loaded firms list when editing
+          // Re-assert firm value and resolve firmLogo once firms are loaded
           const matchedFirm = data.find(f => f.name === initial.firm);
           if (matchedFirm) {
-            setForm(prev => ({ ...prev, firmLogo: prev.firmLogo || (matchedFirm.logo_url ?? "") }));
+            setForm(prev => ({
+              ...prev,
+              firm: prev.firm || initial.firm!,
+              firmLogo: prev.firmLogo || (matchedFirm.logo_url ?? ""),
+            }));
           }
         }
       } catch (error) {
@@ -494,11 +498,7 @@ export default function CertificateCreator({
         <div className="space-y-3">
           <div>
             <label className="block text-sm text-slate-600 mb-1">Firm Name</label>
-            {userLoading ? (
-              <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
-                Loading user...
-              </div>
-            ) : loadingFirms ? (
+            {loadingFirms ? (
               <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
                 Loading firms...
               </div>
