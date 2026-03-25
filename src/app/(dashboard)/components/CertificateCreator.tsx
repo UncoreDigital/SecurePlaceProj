@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
+import { useFirms } from "@/hooks/useFirms";
 
 type CertificateData = {
   title: string;
@@ -13,12 +14,6 @@ type CertificateData = {
   date: string;
   signature: string;
 };
-
-interface Firm {
-  id: string;
-  name: string;
-  logo_url?: string;
-}
 
 function CertificatePreview({ data }: { data: CertificateData }) {
   const [htmlContent, setHtmlContent] = useState<string>('');
@@ -129,8 +124,7 @@ export default function CertificateCreator({
   certificateId?: string;
 }) {
   const { user, loading: userLoading } = useUser();
-  const [firms, setFirms] = useState<Firm[]>([]);
-  const [loadingFirms, setLoadingFirms] = useState(true);
+  const { firms, loading: loadingFirms } = useFirms();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CertificateData>({
     title: initial?.title ?? "",
@@ -164,86 +158,24 @@ export default function CertificateCreator({
     initial?.signature,
   ]);
 
-  // Resolve firm logo when initial firm is set and firms are loaded
+  // Auto-select firm once firms are loaded
   useEffect(() => {
-    if (initial?.firm && firms.length > 0) {
+    if (!firms.length) return;
+
+    if (user?.role === "firm_admin" && firms.length === 1 && !initial?.firm) {
+      setForm(prev => ({ ...prev, firm: firms[0].name, firmLogo: firms[0].logo_url ?? "" }));
+    } else if (initial?.firm) {
       const matchedFirm = firms.find(f => f.name === initial.firm);
-      if (matchedFirm && !form.firmLogo) {
-        setForm(prev => ({ ...prev, firmLogo: matchedFirm.logo_url ?? "" }));
+      if (matchedFirm) {
+        setForm(prev => ({
+          ...prev,
+          firm: prev.firm || initial.firm!,
+          firmLogo: prev.firmLogo || (matchedFirm.logo_url ?? ""),
+        }));
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial?.firm, firms]);
-
-  // Fetch firms data — re-runs when user is available
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchFirms = async () => {
-      // Don't fetch if user is still loading or not available
-      if (userLoading || !user) {
-        console.log('CertificateCreator: Waiting for user to load...', { userLoading, hasUser: !!user });
-        setLoadingFirms(true);
-        return;
-      }
-
-      console.log('CertificateCreator: Fetching firms for user:', { role: user.role, firmId: user.firmId });
-
-      try {
-        setLoadingFirms(true);
-
-        let query = supabase
-          .from("firms")
-          .select("id, name, logo_url")
-          .order("name", { ascending: true });
-
-        // Filter by firm for firm_admin users
-        if (user?.role === "firm_admin" && user?.firmId) {
-          console.log('CertificateCreator: Filtering firms by firmId:', user.firmId);
-          query = query.eq("id", user.firmId);
-        }
-
-        const { data, error } = await query;
-        if (cancelled) return;
-
-        if (error) {
-          console.error("CertificateCreator: Error fetching firms:", error);
-          setFirms([]);
-          return;
-        }
-
-        console.log('CertificateCreator: Firms fetched successfully:', data?.length, 'firms');
-        setFirms(data || []);
-
-        // Auto-select firm for firm_admin only when no firm is pre-selected
-        if (user?.role === "firm_admin" && data && data.length === 1 && !initial?.firm) {
-          setForm(prev => ({ ...prev, firm: data[0].name, firmLogo: data[0].logo_url ?? "" }));
-        } else if (initial?.firm && data) {
-          // Re-assert firm value and resolve firmLogo once firms are loaded
-          const matchedFirm = data.find(f => f.name === initial.firm);
-          if (matchedFirm) {
-            setForm(prev => ({
-              ...prev,
-              firm: prev.firm || initial.firm!,
-              firmLogo: prev.firmLogo || (matchedFirm.logo_url ?? ""),
-            }));
-          }
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("CertificateCreator: Failed to fetch firms:", error);
-          setFirms([]);
-        }
-      } finally {
-        if (!cancelled) setLoadingFirms(false);
-      }
-    };
-
-    fetchFirms();
-
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userLoading]);
+  }, [firms]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -320,7 +252,7 @@ export default function CertificateCreator({
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        const fileName = form.recipient ? form.recipient.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
+        const fileName = form.title ? form.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'certificate';
         link.download = `certificate-${fileName}.png`;
         document.body.appendChild(link);
         link.click();

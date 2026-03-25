@@ -6,18 +6,8 @@ import CertificateCreator from "../../components/CertificateCreator";
 export default function NewCertificationPage() {
   const router = useRouter();
 
-  const handleSave = (data: {
-    title: string;
-    recipient: string;
-    firm?: string;
-    date?: string;
-    signature?: string;
-  }) => {
-    try {
-      router.push("/certifications");
-    } catch (e) {
-      console.error("Failed to save certificate:", e);
-    }
+  const handleSave = () => {
+    router.push("/certifications");
   };
 
   return (
