@@ -64,7 +64,7 @@ export function redirectToDashboard(user: any) {
   
   if (role === 'super_admin') {
     window.location.href = '/super-admin-dashboard';
-  } else if (role === 'firm_admin') {
+  } else if (role === 'firm_admin' || role === 'location_admin') {
     window.location.href = '/firm-admin-dashboard';
   } else {
     window.location.href = '/employees'; // Default dashboard

@@ -1,6 +1,7 @@
 // app/dashboard/locations/page.tsx
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import { AdminGuard } from "@/components/AuthGuard";
 import type { Location } from "./columns";
 import LocationsClient from "./Locations.client";
@@ -55,13 +56,49 @@ export async function createLocation(formData: FormData) {
   const address = String(formData.get("address") || "").trim();
   const description = String(formData.get("contact") || "").trim();
   const firmId = String(formData.get("firmId") || "");
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "").trim();
   const latitude = parseFloat(String(formData.get("latitude") || "0"));
   const longitude = parseFloat(String(formData.get("longitude") || "0"));
 
-  if (!name || !address || !firmId) return;
+  if (!name || !address || !firmId || !email || !password) return;
 
   const supabase = await createServerSupabase();
+  const adminSupabase = createAdminSupabase();
 
+  // 1) Create Supabase auth user for this location
+  const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (authError) {
+    console.error("create location auth user error:", authError.message);
+    throw new Error(authError.message);
+  }
+
+  const authUserId = authData.user.id;
+
+  // 2) Insert user_profiles row with location_admin role
+  const { error: profileError } = await adminSupabase.from("user_profiles").insert({
+    id: authUserId,
+    email,
+    first_name: name,
+    last_name: "",
+    role: "location_admin",
+    firm_id: firmId,
+    is_active: true,
+  });
+
+  if (profileError) {
+    console.error("create location profile error:", profileError.message);
+    // Rollback: delete the auth user we just created
+    await adminSupabase.auth.admin.deleteUser(authUserId);
+    throw new Error(profileError.message);
+  }
+
+  // 3) Insert the location row, linking to the auth user
   const { error } = await supabase.from("locations").insert({
     name,
     address,
@@ -69,10 +106,16 @@ export async function createLocation(formData: FormData) {
     firm_id: firmId,
     latitude,
     longitude,
+    email,
+    password,
+    auth_user_id: authUserId,
     is_active: true,
   });
 
-  if (error) console.error("create location error:", error.message);
+  if (error) {
+    console.error("create location error:", error.message);
+    throw new Error(error.message);
+  }
 
   revalidatePath(REVALIDATE_PATH);
 }

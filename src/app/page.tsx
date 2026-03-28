@@ -160,7 +160,7 @@ export default function LoginPage() {
         window.location.assign("/super-admin-dashboard");
         return;
       }
-      if (profile.role === "firm_admin") {
+      if (profile.role === "firm_admin" || profile.role === "location_admin") {
         window.location.assign("/firm-admin-dashboard");
         return;
       }

@@ -39,14 +39,21 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
 
     try {
       const formData = new FormData(event.currentTarget);
-      
+
+      // Auto-generate a secure password
+      const autoPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map((b) => b.toString(36))
+        .join("")
+        .slice(0, 12);
+      formData.append("password", autoPassword);
+
       // Add firm_id for firm_admin (automatically use their firm)
       if (user.firmId) {
         formData.append("firmId", user.firmId);
       }
+      alert(autoPassword);
 
       await createLocation(formData);
-      
       setIsOpen(false);
       onLocationAdded();
       
@@ -80,6 +87,18 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
               Name
             </Label>
             <Input id="name" name="name" className="col-span-3" required />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="email" className="text-right">
+              Email
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              className="col-span-3"
+              required
+            />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="address" className="text-right">
