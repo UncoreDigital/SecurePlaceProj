@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Headphones, Menu, X, Mail, Phone } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Bell, Headphones, Menu, X, Mail, Phone, MapPin, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/hooks/useUser"; // ⬅️ uses Supabase (no Appwrite)
+import { useUser } from "@/hooks/useUser";
+
+interface Location {
+  id: string;
+  name: string;
+}
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -13,6 +18,34 @@ interface HeaderProps {
 const Header = ({ toggleSidebar }: HeaderProps) => {
   const { user, loading } = useUser();
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [loadingLocations, setLoadingLocations] = useState(false);
+
+  const isFirmAdmin = user?.role === "firm_admin";
+
+  useEffect(() => {
+    if (!user || !isFirmAdmin || !user.firmId) return;
+
+    let cancelled = false;
+    setLoadingLocations(true);
+
+    fetch(`/api/locations?firm_id=${user.firmId}`)
+      .then((res) => res.json())
+      .then((data: Location[]) => {
+        if (cancelled) return;
+        const list = Array.isArray(data) ? data : [];
+        setLocations(list);
+        if (list.length > 0) setSelectedLocation(list[0].id);
+        setLoadingLocations(false);
+      })
+      .catch((err) => {
+        console.error("Header locations fetch error:", err);
+        if (!cancelled) setLoadingLocations(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [user, isFirmAdmin]);
 
   let displayName = user?.fullName || user?.email?.split("@")[0] || "Admin";
   displayName = displayName?.toLowerCase()?.trim()?.split(' ')?.map((word, index) =>
@@ -41,6 +74,33 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
 
       {/* Right side */}
       <div className="flex items-center space-x-6">
+        {/* Location Dropdown — firm admin only */}
+        {isFirmAdmin && (
+          <div className="relative flex items-center">
+            <MapPin className="absolute left-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              disabled={loadingLocations}
+              aria-label="Select location"
+              className="pl-8 pr-7 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 cursor-pointer"
+            >
+              {loadingLocations ? (
+                <option>Loading...</option>
+              ) : locations.length === 0 ? (
+                <option value="">No locations</option>
+              ) : (
+                locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))
+              )}
+            </select>
+            <ChevronDown className="absolute right-2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          </div>
+        )}
+
         <button
           className="text-slate-500 hover:text-brand-orange transition-colors cursor-pointer"
           aria-label="Notifications"
