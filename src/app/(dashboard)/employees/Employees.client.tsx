@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Search, X, Plus, Pencil, Trash2 } from "lucide-react";
+import { useUser } from "@/hooks/useUser";
+import { useLocation } from "@/context/LocationContext";
 
 import { FormDialog } from "../components/admin/FormDialog";
 import { FirmFilter } from "../components/admin/Filters";
@@ -64,12 +66,30 @@ export default function EmployeesClient({
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const { user } = useUser();
+  const { selectedLocationId } = useLocation();
+
+  const [employeeList, setEmployeeList] = useState<EmployeeRow[]>(employees);
+  const [fetchingEmployees, setFetchingEmployees] = useState(false);
 
   const q = sp.get("q") ?? initialQuery ?? "";
   const [inputQ, setInputQ] = useState(q);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeRow | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<EmployeeRow | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Re-fetch employees when location changes (firm admin only)
+  useEffect(() => {
+    if (!user?.firmId || user?.role !== "firm_admin") return;
+    setFetchingEmployees(true);
+    const params = new URLSearchParams({ firm_id: user.firmId });
+    if (selectedLocationId) params.set("location_id", selectedLocationId);
+    if (inputQ.trim()) params.set("q", inputQ);
+    fetch(`/api/employees?${params}`)
+      .then(r => r.json())
+      .then(data => { setEmployeeList(Array.isArray(data) ? data : []); setFetchingEmployees(false); })
+      .catch(() => setFetchingEmployees(false));
+  }, [selectedLocationId, user?.firmId, user?.role]);
 
   useEffect(() => setInputQ(q), [q]);
   useEffect(() => {
@@ -87,7 +107,7 @@ export default function EmployeesClient({
 
   // Filter employees based on search query and firm
   const filteredEmployees = useMemo(() => {
-    let filtered = employees;
+    let filtered = employeeList;
     
     // Apply search filter
     if (inputQ.trim()) {
@@ -163,7 +183,7 @@ export default function EmployeesClient({
   };
 
   return (
-    <div>
+    <div className={fetchingEmployees ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
       <div className="flex flex-col gap-4 mb-6">
         {/* Header with count and actions */}
         <div className="flex justify-between items-center">

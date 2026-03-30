@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/app/(dashboard)/components/Sidebar";
 import Header from "@/app/(dashboard)/components/Header";
 import { validateSession, setupSessionMonitoring, redirectToLogin } from "@/lib/session-utils";
+import { LocationProvider } from "@/context/LocationContext";
 
 // Loading component for session check
 function SessionCheckLoader() {
@@ -73,12 +74,14 @@ export default function DashboardLayout({
 
   // Render dashboard only if session is valid
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+    <LocationProvider>
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header toggleSidebar={toggleSidebar} />
+          <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        </div>
       </div>
-    </div>
+    </LocationProvider>
   );
 }

@@ -26,11 +26,13 @@ async function getEmployees({
   firmFilter,
   userRole,
   userFirmId,
+  locationId,
 }: {
   q?: string;
   firmFilter?: string | null;
   userRole?: string;
   userFirmId?: string | null;
+  locationId?: string | null;
 }): Promise<EmployeeRow[]> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,11 +61,14 @@ async function getEmployees({
   
   // Apply firm filtering based on user role
   if (userRole === "firm_admin" && userFirmId) {
-    // Firm admins can only see employees from their firm
     query = query.eq("firm_id", userFirmId);
   } else if (userRole === "super_admin" && firmFilter) {
-    // Super admins can filter by any firm
     query = query.eq("firm_id", firmFilter);
+  }
+
+  // Filter by location if provided
+  if (locationId) {
+    query = (query as any).eq("location_id", locationId);
   }
 
   const { data, error } = await query;
@@ -345,12 +350,13 @@ function LoadingSpinner() {
 async function EmployeesContent({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; firm?: string }>;
+  searchParams: Promise<{ q?: string; firm?: string; location_id?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp?.q ?? "";
   const firmParam = sp?.firm ?? "__ALL__";
   const firmFilter = firmParam && firmParam !== "__ALL__" ? firmParam : null;
+  const locationId = sp?.location_id ?? null;
 
   // Get current user context
   const supabase = await createServerSupabase();
@@ -375,7 +381,7 @@ async function EmployeesContent({
   }
 
   const [employees, firms] = await Promise.all([
-    getEmployees({ q, firmFilter, userRole, userFirmId }),
+    getEmployees({ q, firmFilter, userRole, userFirmId, locationId }),
     getFirms(),
   ]);
 

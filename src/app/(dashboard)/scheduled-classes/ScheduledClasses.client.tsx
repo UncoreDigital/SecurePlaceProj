@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUser } from "@/hooks/useUser"; // ✅ Import useUser hook
+import { useLocation } from "@/context/LocationContext";
 // import AddSafetyClassForm from "./AddSafetyClassForm";
 // import { SafetyClass } from "./types";
 
@@ -116,7 +117,7 @@ function ApprovalModal({
 }
 
 export default function ScheduledClassesClient({
-  scheduledClasses,
+  scheduledClasses: initialClasses,
   initialCategory,
   initialType,
   isSuperAdmin,
@@ -136,8 +137,23 @@ export default function ScheduledClassesClient({
   const pathname = usePathname();
   const sp = useSearchParams();
   
-  // ✅ Get user from localStorage using useUser hook
   const { user, loading: userLoading } = useUser();
+  const { selectedLocationId } = useLocation();
+
+  const [scheduledClasses, setScheduledClasses] = useState<any[]>(initialClasses);
+  const [fetchingClasses, setFetchingClasses] = useState(false);
+
+  // Re-fetch when location changes
+  useEffect(() => {
+    if (!user?.firmId || user?.role !== "firm_admin") return;
+    setFetchingClasses(true);
+    const params = new URLSearchParams({ firm_id: user.firmId });
+    if (selectedLocationId) params.set("location_id", selectedLocationId);
+    fetch(`/api/scheduled-classes?${params}`)
+      .then(r => r.json())
+      .then(data => { setScheduledClasses(Array.isArray(data) ? data : []); setFetchingClasses(false); })
+      .catch(() => setFetchingClasses(false));
+  }, [selectedLocationId, user?.firmId, user?.role]);
   
   const category = sp.get("category") ?? initialCategory ?? "all";
   const type = sp.get("type") ?? initialType ?? "in-person";
@@ -291,21 +307,15 @@ export default function ScheduledClassesClient({
   let filteredScheduledClasses = scheduledClasses;
 
   if (user?.role === "super_admin") {
-    // Super admin sees all data - no additional filtering
-    console.log('🔑 Super admin access: showing all scheduled classes');
     filteredScheduledClasses = scheduledClasses;
   } else if (user?.role === "firm_admin" && user?.firmId) {
-    // Firm admin sees only their firm's data
-    console.log('🏢 Firm admin access: filtering by firm_id:', user.firmId);
     filteredScheduledClasses = scheduledClasses.filter(cls => cls.firmId === user.firmId);
   } else {
-    // Default: no data for unauthorized users
-    console.log('❌ Unauthorized access: returning empty data');
     filteredScheduledClasses = [];
   }
 
   return (
-    <div className="">
+    <div className={fetchingClasses ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
       {/* Filters and Toggle Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
