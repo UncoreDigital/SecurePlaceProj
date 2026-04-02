@@ -151,6 +151,23 @@ export default function FirmAdminsClient({
                               ))}
                             </select>
                           </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="isAllLocationAdmin" className="text-right">
+                              Firm Admin
+                            </Label>
+                            <div className="col-span-3">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id="isAllLocationAdmin"
+                                  name="isAllLocationAdmin"
+                                  className="h-4 w-4"
+                                  defaultChecked={admin.isAllLocationAdmin}
+                                />
+                                <span className="text-xs">(Access to the All location)</span>
+                              </div>
+                            </div>
+                          </div>
                         </FormDialog>
                         <Button
                           size="sm"
@@ -273,13 +290,18 @@ export default function FirmAdminsClient({
         </select>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="isFirmAdmin" className="text-right">Firm Admin</Label>
-        <input
-          type="checkbox"
-          id="isFirmAdmin"
-          name="isFirmAdmin"
-          className="h-4 w-4"
-        />
+        <Label htmlFor="isAllLocationAdmin" className="text-right">Firm Admin</Label>
+        <div className="col-span-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isAllLocationAdmin"
+              name="isAllLocationAdmin"
+              className="h-4 w-4"
+            />
+            <span className="text-xs">(Access to the All location)</span>
+          </div>
+        </div>
       </div>
     </FormDialog>
   );

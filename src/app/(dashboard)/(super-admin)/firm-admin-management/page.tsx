@@ -26,6 +26,7 @@ async function getFirmAdmins(
       official_email,
       role,
       firm_id,
+      is_all_location_admin,
       firms:firm_id ( name )
     `
     )
@@ -51,6 +52,7 @@ async function getFirmAdmins(
     email: row.official_email ?? "",
     firmId: row.firm_id || null,
     firmName: row.firms?.name ?? "N/A",
+    isAllLocationAdmin: row.is_all_location_admin ?? false,
   }));
 }
 
@@ -80,6 +82,7 @@ export async function createFirmAdmin(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get("password") || "");
   const firmId = String(formData.get("firmId") || "");
+  const isAllLocationAdmin = String(formData.get("isAllLocationAdmin") || "") === "on";
 
   if (!name || !email || !password || !firmId) return;
 
@@ -111,6 +114,7 @@ export async function createFirmAdmin(formData: FormData) {
     official_email: email,
     role: "firm_admin",
     firm_id: firmId,
+    is_all_location_admin: isAllLocationAdmin,
     is_active: true,
   });
   if (profileErr) console.error("profile upsert error:", profileErr.message);
@@ -127,6 +131,7 @@ export async function updateFirmAdmin(formData: FormData) {
     .trim()
     .toLowerCase();
   const firmId = String(formData.get("firmId") || "") || null;
+  const isAllLocationAdmin = String(formData.get("isAllLocationAdmin") || "") === "on";
 
   if (!id || !name || !email) return;
 
@@ -149,6 +154,7 @@ export async function updateFirmAdmin(formData: FormData) {
       last_name: name.split(' ').slice(1).join(' ') || '',
       official_email: email,
       firm_id: firmId,
+      is_all_location_admin: isAllLocationAdmin,
     })
     .eq("id", id);
   if (profileErr) console.error("profile update error:", profileErr.message);

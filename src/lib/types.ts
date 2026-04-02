@@ -18,4 +18,5 @@ export type FirmAdminRow = {
   email: string;
   firmId: string | null;
   firmName: string;
+  isAllLocationAdmin?: boolean;
 };
