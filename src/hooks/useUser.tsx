@@ -14,6 +14,7 @@ export interface UserSession {
   fullName?: string;
   role?: string; // 'super_admin' | 'firm_admin' | 'employee'
   firmId?: string | null;
+  isAllLocationAdmin?: boolean;
 }
 
 // Small helper to avoid crashing if env is missing
@@ -128,6 +129,7 @@ export const useUser = () => {
       full_name?: string;
       role?: string;
       firm_id?: string | null;
+      is_all_location_admin?: boolean;
     } | null
   ): UserSession | null => {
     if (!u) return null;
@@ -137,6 +139,7 @@ export const useUser = () => {
       fullName: profile?.full_name ?? undefined,
       role: profile?.role ?? undefined,
       firmId: profile?.firm_id ?? null,
+      isAllLocationAdmin: profile?.is_all_location_admin ?? false,
     };
   };
   
@@ -148,9 +151,11 @@ export const useUser = () => {
       const cachedUser = loadUserFromStorage();
       if (cachedUser) {
         console.log('⚡ Using cached user from localStorage');
-        return cachedUser;
-      }
-      
+        return {
+          ...cachedUser,
+          isAllLocationAdmin: cachedUser.isAllLocationAdmin ?? false,
+        };
+      }      
       if (!supabase) {
         const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
         console.error(errorMsg);
@@ -193,7 +198,7 @@ export const useUser = () => {
       console.log('📝 Fetching user profile...');
       const { data: profile, error: profileErr } = await supabase
         .from("user_profiles")
-        .select("full_name, role, firm_id")
+        .select("full_name, role, firm_id, is_all_location_admin")
         .eq("id", authUser.id)
         .maybeSingle();
 
@@ -203,7 +208,7 @@ export const useUser = () => {
         return buildSession(authUser, null);
       }
 
-      console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name}` : 'No profile data');
+      console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name} - is_all_location_admin: ${profile.is_all_location_admin}` : 'No profile data');
       
       // Build session and save to localStorage
       const sessionData = buildSession(authUser, profile);
@@ -235,11 +240,15 @@ export const useUser = () => {
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           console.log('🔐 User signed in/refreshed, fetching profile');
-          const { data: profile } = await supabase!
+          const { data: profile, error: profileErr } = await supabase!
             .from("user_profiles")
-            .select("full_name, role, firm_id")
+            .select("full_name, role, firm_id, is_all_location_admin")
             .eq("id", session.user.id)
             .maybeSingle();
+
+          if (profileErr) {
+            console.error('🚨 Profile fetch error in auth listener:', profileErr);
+          }
 
           const sessionData = buildSession(session.user, profile ?? null);
           if (sessionData) {

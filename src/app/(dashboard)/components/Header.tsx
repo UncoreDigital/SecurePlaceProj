@@ -19,7 +19,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [loadingLocations, setLoadingLocations] = useState(false);
 
-  const isFirmAdmin = user?.role === "firm_admin";
+  const isFirmAdmin = user?.role === "firm_admin" && user.isAllLocationAdmin;
 
   // Fetch locations for this firm
   useEffect(() => {

@@ -95,7 +95,7 @@ export default function LoginPage() {
       // 3) Read role from user_profiles (RLS allows user to read their own profile)
       let { data: profile, error: profileErr } = await supabase
         .from("user_profiles")
-        .select("role, firm_id")
+        .select("role, firm_id, is_all_location_admin")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -118,7 +118,7 @@ export default function LoginPage() {
         // Re-fetch the profile
         const { data: newProfile, error: newProfileErr } = await supabase
           .from("user_profiles")
-          .select("role, firm_id")
+          .select("role, firm_id, is_all_location_admin")
           .eq("id", user.id)
           .single();
         
@@ -135,7 +135,8 @@ export default function LoginPage() {
           email: user.email,
           fullName: user.user_metadata?.full_name || `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim(),
           role: profile.role,
-          firmId: profile.firm_id || null // Include firm_id from profile
+          firmId: profile.firm_id || null,
+          isAllLocationAdmin: profile.is_all_location_admin ?? false,
         },
         timestamp: Date.now(),
         expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
