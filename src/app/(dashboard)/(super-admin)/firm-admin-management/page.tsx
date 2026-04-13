@@ -130,6 +130,7 @@ export async function updateFirmAdmin(formData: FormData) {
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
+  const password = String(formData.get("password") || "");
   const firmId = String(formData.get("firmId") || "") || null;
   const isAllLocationAdmin = String(formData.get("isAllLocationAdmin") || "") === "on";
 
@@ -141,10 +142,15 @@ export async function updateFirmAdmin(formData: FormData) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { error: authErr } = await admin.auth.admin.updateUserById(id, {
+  const updatePayload: any = {
     email,
     user_metadata: { full_name: name },
-  });
+  };
+  if (password) {
+    updatePayload.password = password;
+  }
+
+  const { error: authErr } = await admin.auth.admin.updateUserById(id, updatePayload);
   if (authErr) console.error("updateUserById error:", authErr.message);
 
   const { error: profileErr } = await admin

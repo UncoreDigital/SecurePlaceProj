@@ -107,7 +107,9 @@ export default function FirmAdminsClient({
                           description="Update admin details and firm assignment."
                           submitLabel="Save Changes"
                           onAction={updateFirmAdmin}
-                          onBeforeSubmit={(fd) => fd.set("id", admin.id)}
+                          onBeforeSubmit={(fd) => {
+                            fd.set("id", admin.id);
+                          }}
                           successMessage="Firm admin updated"
                           errorMessage="Failed to update admin."
                         >
@@ -135,6 +137,19 @@ export default function FirmAdminsClient({
                               defaultValue={admin.email}
                               className="col-span-3"
                               required
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="password" className="text-right">
+                              New Password
+                            </Label>
+                            <Input
+                              id="password"
+                              name="password"
+                              type="password"
+                              autoComplete="new-password"
+                              className="col-span-3"
+                              placeholder="Leave blank to keep existing password"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
