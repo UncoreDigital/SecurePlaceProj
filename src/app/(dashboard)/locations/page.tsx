@@ -63,7 +63,6 @@ export async function createLocation(formData: FormData) {
 
   if (!name || !address || !firmId || !email || !password) return;
 
-  const supabase = await createServerSupabase();
   const adminSupabase = createAdminSupabase();
 
   // 1) Create Supabase auth user for this location
@@ -75,10 +74,13 @@ export async function createLocation(formData: FormData) {
 
   if (authError) {
     console.error("create location auth user error:", authError.message);
-    throw new Error(authError.message);
+    throw new Error(authError.message || "Failed to create location auth user.");
   }
 
-  const authUserId = authData.user.id;
+  const authUserId = authData?.user?.id;
+  if (!authUserId) {
+    throw new Error("Unable to create auth user for location.");
+  }
 
   // 2) Insert user_profiles row with location_admin role
   const { error: profileError } = await adminSupabase.from("user_profiles").insert({
@@ -93,14 +95,12 @@ export async function createLocation(formData: FormData) {
 
   if (profileError) {
     console.error("create location profile error:", profileError.message);
-    // Rollback: delete the auth user we just created
     await adminSupabase.auth.admin.deleteUser(authUserId);
-    throw new Error(profileError.message);
+    throw new Error(profileError.message || "Failed to create location profile.");
   }
 
-  // 3) Insert the location row, linking to the auth user
-  console.log("Auth user Id TESSSSTTT", authUserId);
-  const { error } = await supabase.from("locations").insert({
+  // 3) Insert the location row using service-role client to bypass RLS
+  const { error } = await adminSupabase.from("locations").insert({
     name,
     address,
     description,
@@ -115,7 +115,7 @@ export async function createLocation(formData: FormData) {
 
   if (error) {
     console.error("create location error:", error.message);
-    throw new Error(error.message);
+    throw new Error(error.message || "Failed to create location record.");
   }
 
   revalidatePath(REVALIDATE_PATH);
