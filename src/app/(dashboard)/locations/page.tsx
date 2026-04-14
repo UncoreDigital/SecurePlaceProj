@@ -98,7 +98,7 @@ export async function createLocation(formData: FormData) {
     throw new Error(profileError.message);
   }
 
-  // 3) Insert the location row, linking to the auth user
+  // 3) Insert the location row
   const { error } = await supabase.from("locations").insert({
     name,
     address,
@@ -106,9 +106,6 @@ export async function createLocation(formData: FormData) {
     firm_id: firmId,
     latitude,
     longitude,
-    email,
-    password,
-    auth_user_id: authUserId,
     is_active: true,
   });
 
