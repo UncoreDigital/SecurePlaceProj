@@ -112,7 +112,7 @@ export async function createLocation(formData: FormData) {
     auth_user_id: authUserId,
     is_active: true,
   });
-
+  console.log("create location error:", error);
   if (error) {
     console.error("create location error:", error.message);
     throw new Error(error.message || "Failed to create location record.");
