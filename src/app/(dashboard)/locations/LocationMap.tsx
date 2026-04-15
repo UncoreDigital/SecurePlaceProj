@@ -6,12 +6,26 @@ import "leaflet/dist/leaflet.css";
 import "@/lib/leaflet-fix";
 
 interface LocationMapProps {
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   name: string;
 }
 
 const LocationMap = ({ latitude, longitude, name }: LocationMapProps) => {
+  const hasValidCoordinates =
+    typeof latitude === "number" &&
+    !Number.isNaN(latitude) &&
+    typeof longitude === "number" &&
+    !Number.isNaN(longitude);
+
+  if (!hasValidCoordinates) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500">
+        Coordinates unavailable
+      </div>
+    );
+  }
+
   return (
     <MapContainer
       center={[latitude, longitude]}

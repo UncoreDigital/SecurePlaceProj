@@ -34,8 +34,6 @@ export default function LocationsClient({
     name: "",
     address: "",
     description: "",
-    latitude: 0,
-    longitude: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,8 +62,6 @@ export default function LocationsClient({
       name: location.name,
       address: location.address,
       description: location.description || "",
-      latitude: location.latitude,
-      longitude: location.longitude,
     });
   };
 
@@ -75,8 +71,6 @@ export default function LocationsClient({
       name: "",
       address: "",
       description: "",
-      latitude: 0,
-      longitude: 0,
     });
   };
 
@@ -88,9 +82,7 @@ export default function LocationsClient({
     formData.append("id", editingLocation.id);
     formData.append("name", editForm.name);
     formData.append("address", editForm.address);
-    formData.append("description", editForm.description);
-    formData.append("latitude", editForm.latitude.toString());
-    formData.append("longitude", editForm.longitude.toString());
+    formData.append("contact", editForm.description);
 
     try {
       await updateLocation(formData);
@@ -294,6 +286,7 @@ export default function LocationsClient({
                 location={location}
                 onActionComplete={() => handleRefresh()}
                 deleteLocation={deleteLocation}
+                updateLocation={updateLocation}
               />
             ))}
           </div>
@@ -376,32 +369,6 @@ export default function LocationsClient({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-latitude">Latitude</Label>
-                  <Input
-                    id="edit-latitude"
-                    type="number"
-                    step="any"
-                    value={editForm.latitude}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))}
-                    placeholder="0.0"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-longitude">Longitude</Label>
-                  <Input
-                    id="edit-longitude"
-                    type="number"
-                    step="any"
-                    value={editForm.longitude}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))}
-                    placeholder="0.0"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="flex gap-3 mt-6">

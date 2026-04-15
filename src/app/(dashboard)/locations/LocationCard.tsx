@@ -36,9 +36,10 @@ interface LocationCardProps {
   location: Location;
   onActionComplete: () => void; // Function to trigger a refetch
   deleteLocation: (formData: FormData) => Promise<void>; // Add server action prop
+  updateLocation: (formData: FormData) => Promise<void>;
 }
 
-const LocationCard = ({ location, onActionComplete, deleteLocation }: LocationCardProps) => {
+const LocationCard = ({ location, onActionComplete, deleteLocation, updateLocation }: LocationCardProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -149,6 +150,7 @@ const LocationCard = ({ location, onActionComplete, deleteLocation }: LocationCa
         isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onLocationUpdated={onActionComplete}
+        updateLocation={updateLocation}
       />
     </Card>
   );

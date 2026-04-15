@@ -6,8 +6,8 @@ export interface Location {
   firm_id: string;
   name: string;
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string;
   is_active: boolean;
   created_at: string;

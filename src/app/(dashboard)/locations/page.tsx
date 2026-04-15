@@ -58,8 +58,6 @@ export async function createLocation(formData: FormData) {
   const firmId = String(formData.get("firmId") || "");
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "").trim();
-  const latitude = parseFloat(String(formData.get("latitude") || "0"));
-  const longitude = parseFloat(String(formData.get("longitude") || "0"));
 
   if (!name || !address || !firmId || !email || !password) return;
 
@@ -105,8 +103,6 @@ export async function createLocation(formData: FormData) {
     address,
     description,
     firm_id: firmId,
-    latitude,
-    longitude,
     email,
     password,
     auth_user_id: authUserId,
@@ -127,9 +123,9 @@ export async function updateLocation(formData: FormData) {
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
   const address = String(formData.get("address") || "").trim();
-  const description = String(formData.get("contact") || "").trim();
-  const latitude = parseFloat(String(formData.get("latitude") || "0"));
-  const longitude = parseFloat(String(formData.get("longitude") || "0"));
+  const description = String(
+    formData.get("contact") || formData.get("description") || ""
+  ).trim();
 
   if (!id || !name || !address) return;
 
@@ -141,8 +137,6 @@ export async function updateLocation(formData: FormData) {
       name,
       address,
       description,
-      latitude,
-      longitude,
     })
     .eq("id", id);
 

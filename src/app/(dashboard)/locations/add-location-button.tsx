@@ -112,32 +112,6 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="latitude" className="text-right">
-              Latitude
-            </Label>
-            <Input
-              id="latitude"
-              name="latitude"
-              type="number"
-              step="any"
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="longitude" className="text-right">
-              Longitude
-            </Label>
-            <Input
-              id="longitude"
-              name="longitude"
-              type="number"
-              step="any"
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="contact" className="text-right">
               Contact
             </Label>

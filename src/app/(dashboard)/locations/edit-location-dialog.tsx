@@ -12,13 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Location } from "./columns";
-import { supabase } from "@/lib/supabaseClient";
 
 interface EditLocationDialogProps {
   location: Location;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onLocationUpdated: () => void;
+  updateLocation: (formData: FormData) => Promise<void>;
 }
 
 export function EditLocationDialog({
@@ -26,6 +26,7 @@ export function EditLocationDialog({
   isOpen,
   onOpenChange,
   onLocationUpdated,
+  updateLocation,
 }: EditLocationDialogProps) {
   const [error, setError] = useState<string | null>(null);
 
@@ -34,28 +35,14 @@ export function EditLocationDialog({
     setError(null);
 
     const formData = new FormData(event.currentTarget);
-    const data = {
-      name: formData.get("name") as string,
-      address: formData.get("address") as string,
-      latitude: parseFloat(formData.get("latitude") as string),
-      longitude: parseFloat(formData.get("longitude") as string),
-      description: formData.get("contact") as string, // Using description field for contact
-    };
+    formData.append("id", location.id);
 
     try {
-      const { error } = await supabase
-        .from('locations')
-        .update(data)
-        .eq('id', location.id);
-
-      if (error) {
-        throw error;
-      }
-
+      await updateLocation(formData);
       onOpenChange(false); // Close dialog
       onLocationUpdated(); // Refresh list
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || "Failed to update location.");
     }
   };
 
@@ -90,34 +77,6 @@ export function EditLocationDialog({
               id="address"
               name="address"
               defaultValue={location.address}
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="latitude" className="text-right">
-              Latitude
-            </Label>
-            <Input
-              id="latitude"
-              name="latitude"
-              type="number"
-              step="any"
-              defaultValue={location.latitude}
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="longitude" className="text-right">
-              Longitude
-            </Label>
-            <Input
-              id="longitude"
-              name="longitude"
-              type="number"
-              step="any"
-              defaultValue={location.longitude}
               className="col-span-3"
               required
             />
