@@ -6,6 +6,7 @@ export interface Location {
   firm_id: string;
   name: string;
   address: string;
+  email: string;
   latitude?: number | null;
   longitude?: number | null;
   description?: string;

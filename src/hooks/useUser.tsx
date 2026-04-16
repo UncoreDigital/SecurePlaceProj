@@ -133,9 +133,10 @@ export const useUser = () => {
     } | null
   ): UserSession | null => {
     if (!u) return null;
+    const metadataEmail = (u as any).user_metadata?.email as string | undefined;
     return {
       id: u.id,
-      email: u.email ?? undefined,
+      email: u.email ?? metadataEmail ?? undefined,
       fullName: profile?.full_name ?? undefined,
       role: profile?.role ?? undefined,
       firmId: profile?.firm_id ?? null,

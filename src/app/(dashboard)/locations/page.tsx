@@ -6,6 +6,7 @@ import { AdminGuard } from "@/components/AuthGuard";
 import type { Location } from "./columns";
 import LocationsClient from "./Locations.client";
 import { Suspense } from "react";
+import { de } from "zod/v4/locales";
 
 const REVALIDATE_PATH = "/dashboard/locations";
 
@@ -20,6 +21,7 @@ async function getLocations(): Promise<Location[]> {
       firm_id,
       name,
       address,
+      email,
       latitude,
       longitude,
       description,
@@ -51,7 +53,7 @@ async function getLocations(): Promise<Location[]> {
 
 export async function createLocation(formData: FormData) {
   "use server";
-
+  console.log("createLocation formData:", Object.fromEntries(formData.entries()));
   const name = String(formData.get("name") || "").trim();
   const address = String(formData.get("address") || "").trim();
   const description = String(formData.get("contact") || "").trim();
@@ -59,55 +61,115 @@ export async function createLocation(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "").trim();
 
-  if (!name || !address || !firmId || !email || !password) return;
+  const serverSupabase = await createServerSupabase();
+  const {
+    data: { user: currentUser },
+    error: sessionError,
+  } = await serverSupabase.auth.getUser();
+
+  if (sessionError) {
+    console.error("create location session error:", sessionError.message);
+    throw new Error("Unable to verify current user session.");
+  }
+
+  if (!currentUser?.email) {
+    throw new Error("Unable to verify the current logged-in user.");
+  }
+
+  const currentUserEmail = currentUser.email.toLowerCase();
+  const isOwnEmail = currentUserEmail === email.toLowerCase();
+
+  if (!name || !address || !firmId || !email) return;
 
   const adminSupabase = createAdminSupabase();
-
-  // 1) Create Supabase auth user for this location
-  const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-
-  if (authError) {
-    console.error("create location auth user error:", authError.message);
-    throw new Error(authError.message || "Failed to create location auth user.");
-  }
-
-  const authUserId = authData?.user?.id;
-  if (!authUserId) {
-    throw new Error("Unable to create auth user for location.");
-  }
-
-  // 2) Insert user_profiles row with location_admin role
-  const { error: profileError } = await adminSupabase.from("user_profiles").insert({
-    id: authUserId,
-    email,
-    first_name: name,
-    last_name: "",
-    role: "location_admin",
-    firm_id: firmId,
-    is_active: true,
-  });
-
-  if (profileError) {
-    console.error("create location profile error:", profileError.message);
-    await adminSupabase.auth.admin.deleteUser(authUserId);
-    throw new Error(profileError.message || "Failed to create location profile.");
-  }
-
-  // 3) Insert the location row using service-role client to bypass RLS
-  const { error } = await adminSupabase.from("locations").insert({
+  let authUserId: string;
+  const locationPayload: any = {
     name,
     address,
     description,
     firm_id: firmId,
     email,
-    password,
-    auth_user_id: authUserId,
     is_active: true,
-  });
+  };
+
+  if (isOwnEmail) {
+    authUserId = currentUser.id;
+
+    let existingLocation: { password?: string } | null = null;
+    let existingLocationError: any = null;
+
+    const authUserQuery = await adminSupabase
+      .from("locations")
+      .select("password")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+
+    existingLocation = authUserQuery.data;
+    existingLocationError = authUserQuery.error;
+
+    if (!existingLocation && !existingLocationError) {
+      const emailQuery = await adminSupabase
+        .from("locations")
+        .select("password")
+        .eq("email", email)
+        .maybeSingle();
+      existingLocation = emailQuery.data;
+      existingLocationError = emailQuery.error;
+    }
+
+    if (existingLocationError) {
+      console.error("fetch existing location password error:", existingLocationError.message);
+      throw new Error("Unable to fetch the existing password for this account.");
+    }
+
+    if (existingLocation?.password) {
+      locationPayload.password = existingLocation.password;
+    }
+
+    locationPayload.auth_user_id = authUserId;
+  } else {
+    if (!password) return;
+
+    // 1) Create Supabase auth user for this location
+    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      console.error("create location auth user error:", authError.message);
+      throw new Error(authError.message || "Failed to create location auth user.");
+    }
+
+    authUserId = authData?.user?.id || "";
+    if (!authUserId) {
+      throw new Error("Unable to create auth user for location.");
+    }
+
+    locationPayload.auth_user_id = authUserId;
+    locationPayload.password = password;
+
+    // 2) Insert user_profiles row with location_admin role
+    const { error: profileError } = await adminSupabase.from("user_profiles").insert({
+      id: authUserId,
+      email,
+      first_name: name,
+      last_name: "",
+      role: "location_admin",
+      firm_id: firmId,
+      is_active: true,
+    });
+
+    if (profileError) {
+      console.error("create location profile error:", profileError.message);
+      await adminSupabase.auth.admin.deleteUser(authUserId);
+      throw new Error(profileError.message || "Failed to create location profile.");
+    }
+  }
+
+  // 3) Insert the location row using service-role client to bypass RLS
+  const { error } = await adminSupabase.from("locations").insert(locationPayload);
   console.log("create location error:", error);
   if (error) {
     console.error("create location error:", error.message);

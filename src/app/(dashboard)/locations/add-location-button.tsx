@@ -39,20 +39,37 @@ export function AddLocationButton({ onLocationAdded, createLocation }: AddLocati
 
     try {
       const formData = new FormData(event.currentTarget);
+      const email = String(formData.get("email") || "").trim();
+      const currentEmail = user.email?.toLowerCase() || "";
 
-      // Auto-generate a secure password
-      const autoPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
-        .map((b) => b.toString(36))
-        .join("")
-        .slice(0, 12);
-      formData.append("password", autoPassword);
+      if (!email) {
+        setError("Email is required.");
+        return;
+      }
+
+      if (!currentEmail) {
+        setError("Unable to verify your account email. Please refresh and try again.");
+        return;
+      }
+
+      if (currentEmail === email.toLowerCase()) {
+        // setError("You cannot create a location with your own email address.");
+        // return;
+      } else {
+         // Auto-generate a secure password
+        const autoPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+          .map((b) => b.toString(36))
+          .join("")
+          .slice(0, 12);
+        formData.append("password", autoPassword);
+        alert(autoPassword);
+      }     
 
       // Add firm_id for firm_admin (automatically use their firm)
       if (user.firmId) {
         formData.append("firmId", user.firmId);
       }
-      alert(autoPassword);
-
+      console.log("createLocation formData:", Object.fromEntries(formData.entries()));
       await createLocation(formData);
       setIsOpen(false);
       onLocationAdded();

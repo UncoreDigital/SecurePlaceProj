@@ -1,0 +1,5 @@
+ALTER TABLE locations
+  ALTER COLUMN password DROP NOT NULL;
+
+ALTER TABLE locations
+  ALTER COLUMN password DROP DEFAULT;

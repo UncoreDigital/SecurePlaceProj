@@ -33,6 +33,7 @@ export default function LocationsClient({
   const [editForm, setEditForm] = useState({
     name: "",
     address: "",
+    email: "",
     description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +62,7 @@ export default function LocationsClient({
     setEditForm({
       name: location.name,
       address: location.address,
+      email: location.email,
       description: location.description || "",
     });
   };
@@ -70,6 +72,7 @@ export default function LocationsClient({
     setEditForm({
       name: "",
       address: "",
+      email: "",
       description: "",
     });
   };
@@ -354,6 +357,16 @@ export default function LocationsClient({
                   placeholder="Enter location address"
                   rows={3}
                   disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  value={editForm.email}
+                  disabled={true}
+                  className="bg-slate-100"
                 />
               </div>
 
