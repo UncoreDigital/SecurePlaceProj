@@ -18,21 +18,29 @@ interface ChartState {
   compliance: { data: ChartDataPoint[]; totalValue: number; doneValue: number };
 }
 interface DashboardStats { employees: number; volunteers: number; emergencies: number; }
-interface DashboardData { stats: DashboardStats; chartData: ChartState; safetyClasses: any[]; userFullName: string; }
+interface DashboardData { stats: DashboardStats; chartData: ChartState; safetyClasses: any[]; userFullName: string; locationId?: string | null; locationName?: string; }
 interface FirmAdminDashboardClientProps { initialDashboardData: DashboardData; }
 
 export default function FirmAdminDashboardClient({ initialDashboardData }: FirmAdminDashboardClientProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData>(initialDashboardData);
   const [fetching, setFetching] = useState(false);
-  const { selectedLocationId } = useLocation();
+  const { selectedLocationId, setSelectedLocation } = useLocation();
   const { user } = useUser();
+
+  useEffect(() => {
+    if (user?.role === "location_admin" && dashboardData.locationId) {
+      setSelectedLocation(dashboardData.locationId, dashboardData.locationName || "");
+    }
+  }, [user?.role, dashboardData.locationId, dashboardData.locationName, setSelectedLocation]);
 
   useEffect(() => {
     if (!user?.firmId) return;
 
+    const effectiveLocationId = selectedLocationId || (user?.role === "location_admin" ? dashboardData.locationId : undefined);
+
     setFetching(true);
     const params = new URLSearchParams({ firm_id: user.firmId });
-    if (selectedLocationId) params.set("location_id", selectedLocationId);
+    if (effectiveLocationId) params.set("location_id", effectiveLocationId);
 
     fetch(`/api/dashboard/firm-admin?${params}`)
       .then(r => r.json())
@@ -41,7 +49,7 @@ export default function FirmAdminDashboardClient({ initialDashboardData }: FirmA
         setFetching(false);
       })
       .catch(() => setFetching(false));
-  }, [selectedLocationId, user?.firmId]);
+  }, [selectedLocationId, user?.firmId, user?.role, dashboardData.locationId]);
 
   return (
     <div className={fetching ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>

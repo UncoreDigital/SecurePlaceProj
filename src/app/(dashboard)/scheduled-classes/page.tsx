@@ -345,7 +345,7 @@ export default function ScheduledClassesPage({
   searchParams: { category?: string; type?: string };
 }) {
   return (
-    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+    <AdminGuard requiredRole={["super_admin", "firm_admin", "location_admin"]}>
       <Suspense fallback={<LoadingSpinner />}>
         <ScheduledClassesContent searchParams={searchParams} />
       </Suspense>

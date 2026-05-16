@@ -21,8 +21,11 @@ type EmployeeRow = {
   isVolunteer: boolean;
   firmId: string | null;
   firmName: string;
+  locationId: string | null;
+  locationName: string;
 };
 type FirmOption = { id: string; name: string };
+type LocationOption = { id: string; name: string };
 
 type Actions = {
   createEmployee: (formData: FormData) => void | Promise<void>;
@@ -47,21 +50,27 @@ function setParams(
 export default function EmployeesClient({
   employees,
   firms,
+  locations,
   isSuperAdmin,
   initialQuery,
   initialFirm,
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  dashboardLocationId,
+  dashboardLocationName,
 }: {
   employees: EmployeeRow[];
   firms: FirmOption[];
+  locations: LocationOption[];
   isSuperAdmin: boolean;
   initialQuery: string;
   initialFirm: string;
   createEmployee: Actions["createEmployee"];
   updateEmployee: Actions["updateEmployee"];
   deleteEmployee: Actions["deleteEmployee"];
+  dashboardLocationId?: string | null;
+  dashboardLocationName?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -70,7 +79,11 @@ export default function EmployeesClient({
   const { selectedLocationId } = useLocation();
 
   const [employeeList, setEmployeeList] = useState<EmployeeRow[]>(employees);
-  const [fetchingEmployees, setFetchingEmployees] = useState(false);
+
+  // Sync local state whenever the server re-fetches and passes fresh props
+  useEffect(() => {
+    setEmployeeList(employees);
+  }, [employees]);
 
   const q = sp.get("q") ?? initialQuery ?? "";
   const [inputQ, setInputQ] = useState(q);
@@ -78,18 +91,14 @@ export default function EmployeesClient({
   const [deletingEmployee, setDeletingEmployee] = useState<EmployeeRow | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Re-fetch employees when location changes (firm admin only)
+  // When firm admin changes location in the header, update URL so server re-fetches
   useEffect(() => {
-    if (!user?.firmId || user?.role !== "firm_admin") return;
-    setFetchingEmployees(true);
-    const params = new URLSearchParams({ firm_id: user.firmId });
-    if (selectedLocationId) params.set("location_id", selectedLocationId);
-    if (inputQ.trim()) params.set("q", inputQ);
-    fetch(`/api/employees?${params}`)
-      .then(r => r.json())
-      .then(data => { setEmployeeList(Array.isArray(data) ? data : []); setFetchingEmployees(false); })
-      .catch(() => setFetchingEmployees(false));
-  }, [selectedLocationId, user?.firmId, user?.role]);
+    if (user?.role !== "firm_admin") return;
+    setParams(router, pathname, sp, {
+      location_id: selectedLocationId || null,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLocationId, user?.role]);
 
   useEffect(() => setInputQ(q), [q]);
   useEffect(() => {
@@ -127,7 +136,7 @@ export default function EmployeesClient({
     }
     
     return filtered;
-  }, [employees, inputQ, isSuperAdmin, firmValue]);
+  }, [employeeList, inputQ, isSuperAdmin, firmValue]);
 
   const handleEdit = (employee: EmployeeRow) => {
     setEditingEmployee(employee);
@@ -146,8 +155,7 @@ export default function EmployeesClient({
     try {
       await updateEmployee(formData);
       handleCancelEdit();
-      // Refresh page to get updated data
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       console.error("Failed to update employee:", error);
     } finally {
@@ -169,8 +177,7 @@ export default function EmployeesClient({
     try {
       await deleteEmployee(formData);
       setDeletingEmployee(null);
-      // Refresh page to get updated data
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       console.error("Failed to delete employee:", error);
     } finally {
@@ -183,21 +190,21 @@ export default function EmployeesClient({
   };
 
   return (
-    <div className={fetchingEmployees ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
+    <div className="transition-opacity">
       <div className="flex flex-col gap-4 mb-6">
         {/* Header with count and actions */}
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
             {inputQ ? (
               <>
-                {filteredEmployees.length} of {employees.length} employee{employees.length !== 1 ? 's' : ''}
-                {filteredEmployees.length !== employees.length && (
+                {filteredEmployees.length} of {employeeList.length} employee{employeeList.length !== 1 ? 's' : ''}
+                {filteredEmployees.length !== employeeList.length && (
                   <span className="text-blue-600 ml-1">(filtered)</span>
                 )}
               </>
             ) : (
               <>
-                {employees.length} employee{employees.length !== 1 ? 's' : ''} found
+                {employeeList.length} employee{employeeList.length !== 1 ? 's' : ''} found
               </>
             )}
           </div>
@@ -274,6 +281,35 @@ export default function EmployeesClient({
                   </select>
                 </div>
               ) : null}
+              {(user?.role === "firm_admin" || user?.role === "location_admin") && locations.length > 0 ? (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Location</Label>
+                  {user?.role === "location_admin" ? (
+                    <select
+                      name="locationId"
+                      value={dashboardLocationId ?? ""}
+                      className="col-span-3 h-10 px-3 rounded-md border border-input bg-gray-100 text-sm"
+                      disabled
+                      onChange={() => {}}
+                    >
+                      <option value={dashboardLocationId ?? ""}>{dashboardLocationName}</option>
+                    </select>
+                  ) : (
+                    <select
+                      name="locationId"
+                      defaultValue=""
+                      className="col-span-3 h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="">Select a location</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ) : null}
             </FormDialog>
           </div>
         </div>
@@ -323,6 +359,7 @@ export default function EmployeesClient({
                     <th className="px-4 py-2 text-left font-semibold">Contact</th>
                     <th className="px-4 py-2 text-left font-semibold">Volunteer</th>
                     <th className="px-4 py-2 text-left font-semibold">Firm</th>
+                    <th className="px-4 py-2 text-left font-semibold">Location</th>
                     <th className="px-4 py-2 text-center font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -346,6 +383,7 @@ export default function EmployeesClient({
                         </span>
                       </td>
                       <td className="px-4 py-2">{employee.firmName || "—"}</td>
+                      <td className="px-4 py-2">{employee.locationName || "—"}</td>
                       <td className="px-4 py-2">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -377,7 +415,7 @@ export default function EmployeesClient({
             {/* Pagination placeholder */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4">
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                Showing {filteredEmployees.length} of {employees.length} employees
+                Showing {filteredEmployees.length} of {employeeList.length} employees
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 text-sm">Page 1 of 1</span>
@@ -387,7 +425,7 @@ export default function EmployeesClient({
         </div>
       ) : (
         <div className="text-center py-16 border-dashed border-2 rounded-lg">
-          {employees.length === 0 ? (
+          {employeeList.length === 0 ? (
             <>
               <h2 className="text-xl font-semibold">No employees found.</h2>
               <p className="text-slate-500 mt-2">

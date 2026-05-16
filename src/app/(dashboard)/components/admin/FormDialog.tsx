@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,12 +18,12 @@ export function FormDialog({
   title,
   description,
   submitLabel,
-  onAction, // server action (FormData) => Promise<void>
-  onBeforeSubmit, // optional (fd) => void
+  onAction,
+  onBeforeSubmit,
   successMessage,
   errorMessage,
-  children, // your <input name="..." /> etc.
-  openExternally, // allow parent to control open if needed
+  children,
+  openExternally,
 }: {
   triggerLabel: string | React.ReactNode;
   title: string;
@@ -36,14 +37,34 @@ export function FormDialog({
   openExternally?: { open: boolean; setOpen: (v: boolean) => void } | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const controlled = !!openExternally;
   const isOpen = controlled ? openExternally!.open : open;
   const setIsOpen = controlled ? openExternally!.setOpen : setOpen;
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    onBeforeSubmit?.(fd);
+
+    startTransition(async () => {
+      try {
+        await onAction(fd);
+        if (successMessage) toast.success(successMessage);
+        setIsOpen(false);
+        formRef.current?.reset();
+        router.refresh();
+      } catch {
+        if (errorMessage) toast.error(errorMessage);
+      }
+    });
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(v) => !pending && setIsOpen(v)}>
+    <Dialog open={isOpen} onOpenChange={(v) => !isPending && setIsOpen(v)}>
       <DialogTrigger asChild>
         {typeof triggerLabel === "string" ? (
           <Button onClick={() => setIsOpen(true)}>{triggerLabel}</Button>
@@ -62,27 +83,34 @@ export function FormDialog({
           ) : null}
         </DialogHeader>
 
-        <form
-          action={async (fd) => {
-            setPending(true);
-            try {
-              onBeforeSubmit?.(fd);
-              await onAction(fd);
-              if (successMessage) toast.success(successMessage);
-              setIsOpen(false);
-            } catch {
-              if (errorMessage) toast.error(errorMessage);
-            } finally {
-              setPending(false);
-            }
-          }}
-          className="grid gap-4 py-4"
-        >
+        <form ref={formRef} onSubmit={handleSubmit} className="grid gap-4 py-4">
           {children}
 
           <div className="flex justify-end mt-2">
-            <Button type="submit" disabled={pending}>
-              {pending ? "Working…" : submitLabel}
+            <Button type="submit" disabled={isPending} className="min-w-[160px]">
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <svg
+                    className="animate-spin h-4 w-4 shrink-0"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12" cy="12" r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  {submitLabel}…
+                </span>
+              ) : submitLabel}
             </Button>
           </div>
         </form>

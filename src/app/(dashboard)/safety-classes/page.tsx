@@ -5,9 +5,8 @@ import { SafetyClass } from "./types";
 import { Suspense } from "react";
 import { AdminGuard } from "@/components/AuthGuard";
 
-// Use ISR with a reasonable revalidation time for better performance
-export const dynamic = 'force-static';
-export const revalidate = 300; // Revalidate every 5 minutes
+// Use dynamic rendering so user context is available
+export const dynamic = 'force-dynamic';
 
 // Simple function to get safety classes (NO CACHE)
 async function getSafetyClasses(): Promise<SafetyClass[]> {
@@ -191,7 +190,7 @@ export default function SafetyClassesPage({
   searchParams: { category?: string; type?: string };
 }) {
   return (
-    <AdminGuard requiredRole={["super_admin", "firm_admin"]}>
+    <AdminGuard requiredRole={["super_admin", "firm_admin", "location_admin"]}>
       <Suspense fallback={<LoadingSpinner />}>
         <SafetyClassesContent searchParams={searchParams} />
       </Suspense>

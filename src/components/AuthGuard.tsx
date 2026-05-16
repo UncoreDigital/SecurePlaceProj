@@ -86,7 +86,7 @@ export function SuperAdminGuard({ children, ...props }: Omit<AuthGuardProps, 're
 
 export function FirmAdminGuard({ children, ...props }: Omit<AuthGuardProps, 'requiredRole'>) {
   return (
-    <AuthGuard requiredRole="firm_admin" {...props}>
+    <AuthGuard requiredRole={["firm_admin", "location_admin"]} {...props}>
       {children}
     </AuthGuard>
   );
@@ -94,7 +94,7 @@ export function FirmAdminGuard({ children, ...props }: Omit<AuthGuardProps, 'req
 
 export function AdminGuard({ children, ...props }: Omit<AuthGuardProps, 'requiredRole'>) {
   return (
-    <AuthGuard requiredRole={["super_admin", "firm_admin"]} {...props}>
+    <AuthGuard requiredRole={["super_admin", "firm_admin", "location_admin"]} {...props}>
       {children}
     </AuthGuard>
   );

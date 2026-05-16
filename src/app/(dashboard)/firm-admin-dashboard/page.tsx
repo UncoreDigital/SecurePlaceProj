@@ -39,9 +39,11 @@ interface DashboardData {
   chartData: ChartState;
   safetyClasses: any[];
   userFullName: string;
+  locationId?: string | null;
+  locationName?: string;
 }
 
-async function getDashboardData(userFirmId: string): Promise<DashboardData> {
+async function getDashboardData(userFirmId: string, locationId: string | null = null): Promise<DashboardData> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -50,18 +52,23 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
 
   try {
     // --- Fetch Stat Card Data ---
-    const employeeRes = await supabase
+    let employeeRes = await supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("role", "employee")
       .eq("firm_id", userFirmId);
 
-    const volunteerRes = await supabase
+    let volunteerRes = await supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("role", "employee")
       .eq("firm_id", userFirmId)
       .eq("is_volunteer", true);
+
+    if (locationId) {
+      employeeRes = employeeRes.eq("location_id", locationId) as any;
+      volunteerRes = volunteerRes.eq("location_id", locationId) as any;
+    }
 
     const emergencyRes = { count: 0 };
     // await supabase
@@ -88,7 +95,7 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
     //   .select("*").eq("firm_id", userFirmId);
 
     // --- Fetch Safety Classes Data ---
-    const { data: classesData, error: classesError } = await supabase
+    let classesQuery = supabase
       .from("scheduled_classes")
       .select(`
         *, 
@@ -98,6 +105,12 @@ async function getDashboardData(userFirmId: string): Promise<DashboardData> {
       `)
       .eq("firm_id", userFirmId)
       .order("start_time", { ascending: false });
+
+    if (locationId) {
+      classesQuery = classesQuery.eq("location_id", locationId);
+    }
+
+    const { data: classesData, error: classesError } = await classesQuery;
 
     const completedDrillsRes = classesData?.filter((x: any) => x.status === "completed" && x?.safety_class?.type?.toLocaleLowerCase() == "drill") || [];
     const workshopTypes = classesData?.filter((x: any) => x.status === "completed" && x?.safety_class?.type?.toLocaleLowerCase() == "safety class") || [];
@@ -235,11 +248,31 @@ async function FirmAdminDashboardContent() {
       userRole = profile.role;
       userFirmId = profile.firm_id;
       userFullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || user.email || 'User';
+
+      let locationId: string | null = null;
+      let locationName = "";
+
+      if (userRole === "location_admin") {
+        const { data: location, error: locationError } = await supabase
+          .from("locations")
+          .select("id, name")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+
+        if (locationError) {
+          console.error("Failed to resolve location for location admin:", locationError.message);
+        } else if (location) {
+          locationId = location.id;
+          locationName = location.name;
+        }
+      }
       
       // Fetch dashboard data if user has a firm
       if (userFirmId) {
-        dashboardData = await getDashboardData(userFirmId);
+        dashboardData = await getDashboardData(userFirmId, locationId);
         dashboardData.userFullName = userFullName;
+        dashboardData.locationId = locationId;
+        dashboardData.locationName = locationName;
       }
     }
   }

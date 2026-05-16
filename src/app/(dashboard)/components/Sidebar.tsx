@@ -52,6 +52,14 @@ const FIRM_ADMIN_ITEMS: NavItem[] = [
   { href: "/certifications", label: "Certification", icon: BookOpen },
 ];
 
+const LOCATION_ADMIN_ITEMS: NavItem[] = [
+  { href: "/firm-admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/employees", label: "Employees", icon: Users },
+  { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
+  { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
+  { href: "/certifications", label: "Certification", icon: BookOpen },
+];
+
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const pathname = usePathname();
@@ -84,6 +92,7 @@ const Sidebar = () => {
   // Choose nav items - always returns items for instant display
   const navItems = useMemo<NavItem[]>(() => {
     if (userRole === "firm_admin") return FIRM_ADMIN_ITEMS;
+    if (userRole === "location_admin") return LOCATION_ADMIN_ITEMS;
     return SUPER_ADMIN_ITEMS; // Default to super admin for instant display
   }, [userRole]);
 

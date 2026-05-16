@@ -126,7 +126,8 @@ export const useUser = () => {
   const buildSession = (
     u: User | null,
     profile?: {
-      full_name?: string;
+      first_name?: string;
+      last_name?: string;
       role?: string;
       firm_id?: string | null;
       is_all_location_admin?: boolean;
@@ -134,10 +135,11 @@ export const useUser = () => {
   ): UserSession | null => {
     if (!u) return null;
     const metadataEmail = (u as any).user_metadata?.email as string | undefined;
+    const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || undefined;
     return {
       id: u.id,
       email: u.email ?? metadataEmail ?? undefined,
-      fullName: profile?.full_name ?? undefined,
+      fullName,
       role: profile?.role ?? undefined,
       firmId: profile?.firm_id ?? null,
       isAllLocationAdmin: profile?.is_all_location_admin ?? false,
@@ -199,7 +201,7 @@ export const useUser = () => {
       console.log('📝 Fetching user profile...');
       const { data: profile, error: profileErr } = await supabase
         .from("user_profiles")
-        .select("full_name, role, firm_id, is_all_location_admin")
+        .select("first_name, last_name, role, firm_id, is_all_location_admin")
         .eq("id", authUser.id)
         .maybeSingle();
 
@@ -243,7 +245,7 @@ export const useUser = () => {
           console.log('🔐 User signed in/refreshed, fetching profile');
           const { data: profile, error: profileErr } = await supabase!
             .from("user_profiles")
-            .select("full_name, role, firm_id, is_all_location_admin")
+            .select("first_name, last_name, role, firm_id, is_all_location_admin")
             .eq("id", session.user.id)
             .maybeSingle();
 
