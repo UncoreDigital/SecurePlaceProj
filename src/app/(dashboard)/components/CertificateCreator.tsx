@@ -9,6 +9,7 @@ type CertificateData = {
   title: string;
   certificateDetails: string;
   description: string;
+  locationId: string;   // UUID of the selected location
   firm: string;
   firmLogo: string;
   date: string;
@@ -106,6 +107,8 @@ function CertificatePreview({ data }: { data: CertificateData }) {
   );
 }
 
+type LocationOption = { id: string; name: string };
+
 export default function CertificateCreator({
   initial,
   onSave,
@@ -126,10 +129,13 @@ export default function CertificateCreator({
   const { user, loading: userLoading } = useUser();
   const { firms, loading: loadingFirms } = useFirms();
   const [saving, setSaving] = useState(false);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
   const [form, setForm] = useState<CertificateData>({
     title: initial?.title ?? "",
     certificateDetails: initial?.certificateDetails ?? "",
     description: initial?.description ?? "",
+    locationId: initial?.locationId ?? "",
     firm: initial?.firm ?? "",
     firmLogo: initial?.firmLogo ?? "",
     date: initial?.date ?? "",
@@ -142,6 +148,7 @@ export default function CertificateCreator({
       title: initial?.title ?? "",
       certificateDetails: initial?.certificateDetails ?? "",
       description: initial?.description ?? "",
+      locationId: initial?.locationId ?? "",
       firm: initial?.firm ?? "",
       firmLogo: initial?.firmLogo ?? "",
       date: initial?.date ?? "",
@@ -152,6 +159,7 @@ export default function CertificateCreator({
     initial?.title,
     initial?.certificateDetails,
     initial?.description,
+    initial?.locationId,
     initial?.firm,
     initial?.firmLogo,
     initial?.date,
@@ -177,11 +185,27 @@ export default function CertificateCreator({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firms]);
 
+  // Fetch locations whenever the selected firm changes
+  useEffect(() => {
+    const selectedFirm = firms.find(f => f.name === form.firm);
+    if (!selectedFirm) {
+      setLocations([]);
+      return;
+    }
+    setLoadingLocations(true);
+    fetch(`/api/locations?firm_id=${selectedFirm.id}`)
+      .then(res => res.json())
+      .then((data: LocationOption[]) => setLocations(Array.isArray(data) ? data : []))
+      .catch(() => setLocations([]))
+      .finally(() => setLoadingLocations(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.firm, firms]);
+
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === "firm") {
       const selectedFirm = firms.find(f => f.name === value);
-      setForm((f) => ({ ...f, firm: value, firmLogo: selectedFirm?.logo_url ?? "" }));
+      setForm((f) => ({ ...f, firm: value, firmLogo: selectedFirm?.logo_url ?? "", locationId: "" }));
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
@@ -309,6 +333,7 @@ export default function CertificateCreator({
           title: form.title.trim(),
           certificate_details: form.certificateDetails.trim() || null,
           description: form.description.trim() || null,
+          location_id: form.locationId || null,
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
           issue_date: completionDate,
@@ -359,6 +384,7 @@ export default function CertificateCreator({
           title: form.title.trim(),
           certificate_details: form.certificateDetails.trim() || null,
           description: form.description.trim() || null,
+          location_id: form.locationId || null,
           firm_id: selectedFirm.id,
           firm_name: form.firm.trim(),
           issue_date: completionDate,
@@ -476,6 +502,36 @@ export default function CertificateCreator({
           <div>
             <label className="block text-sm text-slate-600 mb-1">Description</label>
             <input name="description" value={form.description} onChange={onChange} placeholder="Certificate Description" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Location</label>
+            {loadingLocations ? (
+              <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
+                Loading locations...
+              </div>
+            ) : !form.firm ? (
+              <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-400">
+                Select a firm first
+              </div>
+            ) : locations.length === 0 ? (
+              <div className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-400">
+                No locations available for this firm
+              </div>
+            ) : (
+              <select
+                name="locationId"
+                value={form.locationId}
+                onChange={onChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40 bg-white"
+              >
+                <option value="">Select a location...</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="pt-2 flex items-center gap-3">
             {showSave && (

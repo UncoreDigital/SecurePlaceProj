@@ -17,6 +17,8 @@ type CertItem = {
   title: string;
   certificate_details?: string;
   description?: string;
+  location_id?: string;    // UUID stored in DB
+  location_name?: string;  // resolved name for display
   firm?: string;
   firm_logo?: string;
   issue_date?: string;
@@ -177,6 +179,7 @@ export default function CertificationsClient({
                 title: updatedData.title,
                 certificate_details: updatedData.certificateDetails,
                 description: updatedData.description,
+                location_id: updatedData.locationId,
                 firm: updatedData.firm,
                 issue_date: updatedData.date,
                 signature: updatedData.signature
@@ -223,6 +226,7 @@ export default function CertificationsClient({
                 <tr className="text-left text-sm text-slate-600 border-b">
                   <th className="py-2 pr-4">Title</th>
                   <th className="py-2 pr-4">Firm</th>
+                  <th className="py-2 pr-4">Location</th>
                   <th className="py-2 pr-4">Date</th>
                   <th className="py-2 pr-4">Actions</th>
                 </tr>
@@ -232,6 +236,7 @@ export default function CertificationsClient({
                   <tr key={c.id} className="border-b text-sm">
                     <td className="py-2 pr-4">{c.title}</td>
                     <td className="py-2 pr-4">{c.firm || '-'}</td>
+                    <td className="py-2 pr-4">{c.location_name || '-'}</td>
                     <td className="py-2 pr-4">{c.issue_date || '-'}</td>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
@@ -298,6 +303,7 @@ export default function CertificationsClient({
                   title: selected.title,
                   certificateDetails: selected.certificate_details,
                   description: selected.description,
+                  locationId: selected.location_id,
                   firm: selected.firm,
                   firmLogo: selected.firm_logo,
                   date: selected.issue_date,
@@ -337,6 +343,7 @@ export default function CertificationsClient({
                     title: selected.title,
                     certificateDetails: selected.certificate_details,
                     description: selected.description,
+                    locationId: selected.location_id,
                     firm: selected.firm,
                     date: selected.issue_date,
                     signature: selected.signature,

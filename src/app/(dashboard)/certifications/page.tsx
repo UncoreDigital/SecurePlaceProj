@@ -12,9 +12,17 @@ type CertItem = {
   firm_logo?: string;
   issue_date?: string;
   signature?: string;
+  location_id?: string;
+  location_name?: string;
+  description?: string;
+  certificate_details?: string;
 };
 
-async function getCertificates(userRole: string, userFirmId?: string | null): Promise<CertItem[]> {
+async function getCertificates(
+  userRole: string,
+  userFirmId?: string | null,
+  userLocationId?: string | null,
+): Promise<CertItem[]> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -32,16 +40,27 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
         firm_name,
         signer_name,
         description,
+        location_id,
         certificate_details,
         firms (
           logo_url
+        ),
+        locations (
+          name
         )
       `)
       .order("created_at", { ascending: false });
 
-    // Filter by firm for firm admins
+    // super_admin → no filter, sees everything
+    // firm_admin  → scoped to their firm
+    // location_admin → scoped to their firm AND their location
     if (userRole === "firm_admin" && userFirmId) {
       query = query.eq("firm_id", userFirmId);
+    } else if (userRole === "location_admin" && userFirmId && userLocationId) {
+      query = query.eq("firm_id", userFirmId).eq("location_id", userLocationId);
+    } else if (userRole !== "super_admin") {
+      // any other role (employee etc.) sees nothing
+      return [];
     }
 
     const { data, error } = await query;
@@ -50,7 +69,6 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
       return [];
     }
 
-    // Transform database data to match existing UI structure
     return (data || []).map((cert: any) => ({
       id: cert.id,
       title: cert.title,
@@ -60,7 +78,9 @@ async function getCertificates(userRole: string, userFirmId?: string | null): Pr
       issue_date: cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : undefined,
       signature: cert.signer_name || undefined,
       description: cert.description,
-      certificate_details: cert.certificate_details
+      location_id: cert.location_id || undefined,
+      location_name: cert.locations?.name || undefined,
+      certificate_details: cert.certificate_details,
     }));
   } catch (error) {
     console.error("Failed to fetch certificates:", error);
@@ -90,31 +110,9 @@ function LoadingSpinner() {
 }
 
 async function CertificationsContent() {
-  // Get current user context server-side (same pattern as employees page)
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
-  
-  let userRole = "employee";
-  let userFirmId = null;
-  let certificates: CertItem[] = [];
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("role, firm_id")
-      .eq("id", user.id)
-      .single();
-    
-    if (profile) {
-      userRole = profile.role;
-      userFirmId = profile.firm_id;
-      
-      // Fetch certificates data
-      certificates = await getCertificates(userRole, userFirmId);
-    }
-  }
-
-  // Handle different states
   if (!user) {
     return (
       <div className="space-y-4">
@@ -135,8 +133,31 @@ async function CertificationsContent() {
     );
   }
 
+  // Resolve role, firm, and location for the logged-in user
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("role, firm_id")
+    .eq("id", user.id)
+    .single();
+
+  const userRole = profile?.role ?? "employee";
+  const userFirmId = profile?.firm_id ?? null;
+
+  // For location_admin: resolve their location via auth_user_id
+  let userLocationId: string | null = null;
+  if (userRole === "location_admin") {
+    const { data: loc } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    userLocationId = loc?.id ?? null;
+  }
+
+  const certificates = await getCertificates(userRole, userFirmId, userLocationId);
+
   return (
-    <CertificationsClient 
+    <CertificationsClient
       initialCertificates={certificates}
       userRole={userRole}
     />
