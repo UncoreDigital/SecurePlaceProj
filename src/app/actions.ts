@@ -43,13 +43,13 @@ export async function login(email: string, password: string) {
     const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
     const collectionId = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!;
 
-    const profileResponse = await databases.listDocuments(
+    const profileResponse = await databases?.listDocuments(
       databaseId,
       collectionId,
       [Query.equal("userId", session.userId)]
     );
 
-    if (profileResponse.documents.length === 0) {
+    if (!profileResponse || profileResponse.documents.length === 0) {
       throw new Error("User profile not found.");
     }
 

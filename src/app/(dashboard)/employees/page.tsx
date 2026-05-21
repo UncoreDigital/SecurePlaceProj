@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { AdminGuard } from "@/components/AuthGuard";
 import { generateSecurePassword, sendEmployeeWelcomeEmail } from "@/lib/email-service";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { databases as appwriteDatabases, users as appwriteUsers, appwriteConfigured } from "@/lib/appwrite-server";
+import { Query } from "node-appwrite";
 
 const REVALIDATE_PATH = "/employees";
 
@@ -438,6 +440,14 @@ export async function deleteEmployee(formData: FormData) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
+  // Fetch the employee's email before deleting (needed to clean up Appwrite)
+  const { data: employeeProfile } = await admin
+    .from("user_profiles")
+    .select("email")
+    .eq("id", id)
+    .single();
+  const employeeEmail = employeeProfile?.email ?? null;
+
   // Delete from user_profiles (cascades via FK, no need to touch the view)
   const { error: profileErr } = await admin
     .from("user_profiles")
@@ -445,8 +455,43 @@ export async function deleteEmployee(formData: FormData) {
     .eq("id", id);
   if (profileErr) console.error("profile delete error:", profileErr.message);
 
+  // Delete from Supabase auth
   const { error: delErr } = await admin.auth.admin.deleteUser(id);
   if (delErr) console.error("deleteUser error:", delErr.message);
+
+  // --- Clean up Appwrite user_profile document and auth user ---
+  if (employeeEmail && appwriteConfigured && appwriteDatabases && appwriteUsers) {
+    const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
+    const collectionId = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID;
+
+    if (databaseId && collectionId) {
+      try {
+        // Find and delete the Appwrite user_profile document by officialEmail
+        const docs = await appwriteDatabases.listDocuments(databaseId, collectionId, [
+          Query.equal("officialEmail", employeeEmail),
+        ]);
+        for (const doc of docs.documents) {
+          await appwriteDatabases.deleteDocument(databaseId, collectionId, doc.$id);
+          console.log("Deleted Appwrite user_profile document:", doc.$id);
+        }
+      } catch (e: any) {
+        // Non-fatal: log but don't block the delete
+        console.warn("Appwrite user_profile document delete skipped:", e.message);
+      }
+
+      try {
+        // Find and delete the Appwrite auth user by email
+        const userList = await appwriteUsers.list([Query.equal("email", employeeEmail)]);
+        for (const appwriteUser of userList.users) {
+          await appwriteUsers.delete(appwriteUser.$id);
+          console.log("Deleted Appwrite auth user:", appwriteUser.$id);
+        }
+      } catch (e: any) {
+        // Non-fatal: log but don't block the delete
+        console.warn("Appwrite auth user delete skipped:", e.message);
+      }
+    }
+  }
 
   revalidatePath(REVALIDATE_PATH);
 }
