@@ -20,6 +20,7 @@ import {
   UserCog,
   Calendar,
   GraduationCap,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +28,10 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
+  /** Extra path substrings that also make this item active */
+  matchPaths?: string[];
+  /** Path substrings that prevent this item from being active */
+  excludePaths?: string[];
 }
 
 const SUPER_ADMIN_ITEMS: NavItem[] = [
@@ -35,7 +40,8 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
   { href: "/firm-admin-management", label: "Firm Admins", icon: UserCog },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/employees", label: "Employees", icon: Users },
-  { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap },
+  { href: "/safety-classes", label: "Safety Classes", icon: GraduationCap, excludePaths: ["/form-builder", "/analytics"] },
+  { href: "/form-management", label: "Forms", icon: FileText, matchPaths: ["/form-builder", "/analytics"] },
   { href: "/scheduled-classes", label: "Requested Classes", icon: Calendar },
   { href: "/emergencies", label: "Emergencies", icon: Siren },
   { href: "/drills", label: "Drills", icon: Target },
@@ -138,9 +144,13 @@ const Sidebar = () => {
       <nav className="flex-1 px-4 py-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const excluded = item.excludePaths?.some((p) => pathname.includes(p)) ?? false;
           const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+            !excluded && (
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href)) ||
+              (item.matchPaths?.some((p) => pathname.includes(p)) ?? false)
+            );
 
           return (
             <Link

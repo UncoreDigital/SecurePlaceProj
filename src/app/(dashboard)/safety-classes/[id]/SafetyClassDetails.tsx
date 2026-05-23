@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw, Clock, Users, Calendar, MapPin, Check } from "lucide-react";
+import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw, Clock, Users, Calendar, MapPin, Check, FileText, ChartNoAxesColumn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,10 @@ interface SafetyClassDetailsProps {
   isSuperAdmin: boolean;
   currentFirmId: string;
   locations: Location[];
+  hasForm?: boolean;
 }
 
-export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentFirmId, locations }: SafetyClassDetailsProps) {
+export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentFirmId, locations, hasForm = false }: SafetyClassDetailsProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -340,6 +341,32 @@ export default function SafetyClassDetails({ safetyClass, isSuperAdmin, currentF
                     >
                       Schedule
                     </Button>
+                  )}
+
+                  {isSuperAdmin && (
+                    <div className="flex flex-wrap gap-3 mt-6 items-center">
+                      <Button
+                        onClick={() => router.push(`/safety-classes/${safetyClass.id}/form-builder`)}
+                        className="bg-brand-blue hover:bg-brand-blue/90 text-white"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        {hasForm ? "Edit MCQ Form" : "Create MCQ Form"}
+                      </Button>
+                      {hasForm ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => router.push(`/safety-classes/${safetyClass.id}/analytics`)}
+                          className="border-brand-blue text-brand-blue hover:bg-brand-blue/10"
+                        >
+                          <ChartNoAxesColumn className="h-4 w-4 mr-2" />
+                          View Form Analytics
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">
+                          No form created yet — create one to share with companies
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

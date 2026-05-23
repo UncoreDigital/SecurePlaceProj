@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AddLocationButton } from "./add-location-button";
-import { Edit3, Trash2, X, Save, Search } from "lucide-react";
+import { PenLine, Trash2, X, Save, Search } from "lucide-react";
 
 interface LocationsClientProps {
   locations: Location[];
@@ -246,7 +246,7 @@ export default function LocationsClient({
                                   className="h-8 w-8 p-0"
                                   title="Edit Location"
                                 >
-                                  <Edit3 className="h-4 w-4" />
+                                  <PenLine className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"

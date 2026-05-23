@@ -37,8 +37,8 @@ export default function SafetyClassesClient({
   initialCategory: string;
   initialType: string;
   isSuperAdmin: boolean;
-  createSafetyClass: (formData: FormData) => Promise<void>;
-  updateSafetyClass: (formData: FormData) => Promise<void>;
+  createSafetyClass: (formData: FormData) => Promise<{ id: string }>;
+  updateSafetyClass: (formData: FormData) => Promise<{ id: string }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -51,7 +51,6 @@ export default function SafetyClassesClient({
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [editingSafetyClass, setEditingSafetyClass] = useState<SafetyClass | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingWorkshopId, setLoadingWorkshopId] = useState<string | null>(null);
   const [isTypeChanging, setIsTypeChanging] = useState(false);
@@ -110,64 +109,31 @@ export default function SafetyClassesClient({
     router.push(`/safety-classes/${safetyClass.id}`);
   };
 
-  const handleAddSafetyClass = async (data: any) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      const formData = new FormData();
-      formData.append("title", data.title);
-      formData.append("description", data.description);
-      formData.append("duration", data.duration.toString());
-      formData.append("videoUrl", data.videoUrl);
-      formData.append("isRequired", data.isRequired ? "on" : "");
-      formData.append("type", data.type);
-      formData.append("mode", data.mode);
-
-      // // ✅ Add firm_id for firm admins (automatically use their firm)
-      // if (user?.role === 'firm_admin' && userPermissions.firmId) {
-      //   formData.append("firmId", userPermissions.firmId);
-      // }
-
-      if (data.thumbnailUrl) {
-        formData.append("thumbnailUrl", data.thumbnailUrl);
-      }
-      await createSafetyClass(formData);
-      setIsAddFormOpen(false);
-    } catch (error) {
-      console.error("Error creating safety class:", error);
-      setError(error instanceof Error ? error.message : "Failed to create safety class");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleAddSafetyClass = async (data: any): Promise<void> => {
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("description", data.description);
+    formData.append("duration", data.duration.toString());
+    formData.append("videoUrl", data.videoUrl);
+    formData.append("isRequired", data.isRequired ? "on" : "");
+    formData.append("type", data.type);
+    formData.append("mode", data.mode);
+    if (data.thumbnailUrl) formData.append("thumbnailUrl", data.thumbnailUrl);
+    await createSafetyClass(formData);
   };
 
-  const handleEditSafetyClass = async (data: any) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      const formData = new FormData();
-      formData.append("id", editingSafetyClass!.id);
-      formData.append("title", data.title);
-      formData.append("description", data.description);
-      formData.append("duration", data.duration.toString());
-      formData.append("videoUrl", data.videoUrl);
-      formData.append("isRequired", data.isRequired ? "on" : "");
-      formData.append("type", data.type);
-      formData.append("mode", data.mode);
-
-      if (data.thumbnailUrl) {
-        formData.append("thumbnailUrl", data.thumbnailUrl);
-      }      
-      await updateSafetyClass(formData);
-      setEditingSafetyClass(null);
-    } catch (error) {
-      console.error("Error updating safety class:", error);
-      setError(error instanceof Error ? error.message : "Failed to update safety class");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEditSafetyClass = async (data: any): Promise<void> => {
+    const formData = new FormData();
+    formData.append("id", editingSafetyClass!.id);
+    formData.append("title", data.title);
+    formData.append("description", data.description);
+    formData.append("duration", data.duration.toString());
+    formData.append("videoUrl", data.videoUrl);
+    formData.append("isRequired", data.isRequired ? "on" : "");
+    formData.append("type", data.type);
+    formData.append("mode", data.mode);
+    if (data.thumbnailUrl) formData.append("thumbnailUrl", data.thumbnailUrl);
+    await updateSafetyClass(formData);
   };
 
   return (
@@ -349,27 +315,19 @@ export default function SafetyClassesClient({
         </div>
       )}
 
-      {/* Add Safety Class Form */}
+      {/* Add Safety Class — 2-step stepper */}
       <AddSafetyClassForm
         isOpen={isAddFormOpen}
-        onClose={() => {
-          setIsAddFormOpen(false);
-          setError(null);
-        }}
+        onClose={() => { setIsAddFormOpen(false); setError(null); }}
         onSubmit={handleAddSafetyClass}
-        isSubmitting={isSubmitting}
       />
 
-      {/* Edit Safety Class Form */}
+      {/* Edit Safety Class — 2-step stepper */}
       {editingSafetyClass && (
         <AddSafetyClassForm
           isOpen={!!editingSafetyClass}
-          onClose={() => {
-            setEditingSafetyClass(null);
-            setError(null);
-          }}
+          onClose={() => { setEditingSafetyClass(null); setError(null); }}
           onSubmit={handleEditSafetyClass}
-          isSubmitting={isSubmitting}
           editingSafetyClass={editingSafetyClass}
         />
       )}

@@ -15,6 +15,8 @@ export interface UserSession {
   role?: string; // 'super_admin' | 'firm_admin' | 'employee'
   firmId?: string | null;
   isAllLocationAdmin?: boolean;
+  /** For role=location_admin: the location they manage (resolved from locations.auth_user_id). */
+  locationId?: string | null;
 }
 
 // Small helper to avoid crashing if env is missing
@@ -131,7 +133,8 @@ export const useUser = () => {
       role?: string;
       firm_id?: string | null;
       is_all_location_admin?: boolean;
-    } | null
+    } | null,
+    locationId?: string | null
   ): UserSession | null => {
     if (!u) return null;
     const metadataEmail = (u as any).user_metadata?.email as string | undefined;
@@ -143,7 +146,25 @@ export const useUser = () => {
       role: profile?.role ?? undefined,
       firmId: profile?.firm_id ?? null,
       isAllLocationAdmin: profile?.is_all_location_admin ?? false,
+      locationId: locationId ?? null,
     };
+  };
+
+  // For a location_admin who is NOT an all-location admin, resolve their
+  // single assigned location from the locations table (locations.auth_user_id).
+  const resolveLocationId = async (
+    sb: NonNullable<ReturnType<typeof makeSupabase>>,
+    userId: string,
+    profile: { role?: string; is_all_location_admin?: boolean } | null
+  ): Promise<string | null> => {
+    if (profile?.role !== "location_admin") return null;
+    if (profile?.is_all_location_admin) return null;
+    const { data: loc } = await sb
+      .from("locations")
+      .select("id")
+      .eq("auth_user_id", userId)
+      .maybeSingle();
+    return loc?.id ?? null;
   };
   
   // React Query hook for user data with caching
@@ -153,12 +174,34 @@ export const useUser = () => {
       // Check localStorage first for faster loading
       const cachedUser = loadUserFromStorage();
       if (cachedUser) {
+        // If the cache pre-dates the locationId field but the user is a
+        // location_admin, resolve it lazily (one-time) and refresh storage.
+        if (
+          cachedUser.role === "location_admin" &&
+          !cachedUser.isAllLocationAdmin &&
+          (cachedUser.locationId === undefined || cachedUser.locationId === null) &&
+          supabase
+        ) {
+          const { data: loc } = await supabase
+            .from("locations")
+            .select("id")
+            .eq("auth_user_id", cachedUser.id)
+            .maybeSingle();
+          const refreshed: UserSession = {
+            ...cachedUser,
+            isAllLocationAdmin: cachedUser.isAllLocationAdmin ?? false,
+            locationId: loc?.id ?? null,
+          };
+          saveUserToStorage(refreshed);
+          return refreshed;
+        }
         console.log('⚡ Using cached user from localStorage');
         return {
           ...cachedUser,
           isAllLocationAdmin: cachedUser.isAllLocationAdmin ?? false,
+          locationId: cachedUser.locationId ?? null,
         };
-      }      
+      }
       if (!supabase) {
         const errorMsg = "Supabase URL/Anon key missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.";
         console.error(errorMsg);
@@ -208,13 +251,15 @@ export const useUser = () => {
       if (profileErr) {
         console.warn('⚠️ Profile fetch warning:', profileErr.message);
         // Still try to set user with auth info only
-        return buildSession(authUser, null);
+        return buildSession(authUser, null, null);
       }
 
       console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name} - is_all_location_admin: ${profile.is_all_location_admin}` : 'No profile data');
-      
+
+      const locationId = await resolveLocationId(supabase, authUser.id, profile);
+
       // Build session and save to localStorage
-      const sessionData = buildSession(authUser, profile);
+      const sessionData = buildSession(authUser, profile, locationId);
       if (sessionData) {
         saveUserToStorage(sessionData); // Save to localStorage
       }
@@ -253,7 +298,8 @@ export const useUser = () => {
             console.error('🚨 Profile fetch error in auth listener:', profileErr);
           }
 
-          const sessionData = buildSession(session.user, profile ?? null);
+          const locationId = await resolveLocationId(supabase!, session.user.id, profile ?? null);
+          const sessionData = buildSession(session.user, profile ?? null, locationId);
           if (sessionData) {
             saveUserToStorage(sessionData);
             queryClient.setQueryData(['user'], sessionData);

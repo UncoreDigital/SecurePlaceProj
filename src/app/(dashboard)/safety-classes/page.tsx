@@ -15,10 +15,10 @@ async function getSafetyClasses(): Promise<SafetyClass[]> {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  
+
   try {
     const startTime = Date.now();
-    
+
     let query = supabase
       .from("safety_classes")
       .select(`
@@ -42,18 +42,18 @@ async function getSafetyClasses(): Promise<SafetyClass[]> {
 
     const { data: safetyClasses, error } = await query;
     const queryTime = Date.now() - startTime;
-    
+
     if (error) {
       console.error("Error fetching safety classes:", error);
       throw new Error(`Failed to fetch safety classes: ${error.message}`);
     }
 
     console.log(`✅ Fetched ${safetyClasses?.length || 0} safety classes in ${queryTime}ms`);
-    
+
     if (queryTime > 1000) {
       console.warn(`⚠️ Slow query detected: ${queryTime}ms for safety classes`);
     }
-    
+
     return safetyClasses || [];
   } catch (error) {
     console.error("Unexpected error in getSafetyClasses:", error);
@@ -61,8 +61,8 @@ async function getSafetyClasses(): Promise<SafetyClass[]> {
   }
 }
 
-// Server action to create a new safety class
-export async function createSafetyClass(formData: FormData) {
+// Server action to create a new safety class — returns the new class ID
+export async function createSafetyClass(formData: FormData): Promise<{ id: string }> {
   "use server";
 
   const title = String(formData.get("title") || "").trim();
@@ -83,29 +83,34 @@ export async function createSafetyClass(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  
-  const { error } = await admin.from("safety_classes").insert({
-    firm_id: null, // For now, allow all admins to create classes
-    title,
-    description,
-    video_url: videoUrl,
-    duration_minutes: duration,
-    is_required: isRequired,
-    thumbnail_url: thumbnailUrl || null,
-    type: type as "Safety Class" | "Drill",
-    mode: mode as "Remote" | "InPerson",
-  });
-  
-  if (error) {
+
+  const { data: newClass, error } = await admin
+    .from("safety_classes")
+    .insert({
+      firm_id: null,
+      title,
+      description,
+      video_url: videoUrl,
+      duration_minutes: duration,
+      is_required: isRequired,
+      thumbnail_url: thumbnailUrl || null,
+      type: type as "Safety Class" | "Drill",
+      mode: mode as "Remote" | "InPerson",
+    })
+    .select("id")
+    .single();
+
+  if (error || !newClass) {
     console.error("Error creating safety class:", error);
     throw new Error("Failed to create safety class");
   }
 
   revalidatePath("/safety-classes");
+  return { id: newClass.id };
 }
 
-// Server action to update an existing safety class
-export async function updateSafetyClass(formData: FormData) {
+// Server action to update an existing safety class — returns the class ID
+export async function updateSafetyClass(formData: FormData): Promise<{ id: string }> {
   "use server";
 
   const id = String(formData.get("id") || "").trim();
@@ -127,7 +132,7 @@ export async function updateSafetyClass(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  
+
   const { error } = await admin.from("safety_classes").update({
     title,
     description,
@@ -138,13 +143,14 @@ export async function updateSafetyClass(formData: FormData) {
     type: type as "Safety Class" | "Drill",
     mode: mode as "Remote" | "InPerson",
   }).eq("id", id);
-  
+
   if (error) {
     console.error("Error updating safety class:", error);
     throw new Error("Failed to update safety class");
   }
 
   revalidatePath("/safety-classes");
+  return { id };
 }
 
 // Loading spinner component
@@ -167,7 +173,7 @@ async function SafetyClassesContent({
 }) {
   const category = searchParams?.category ?? "all";
   const type = searchParams?.type ?? "remote";
-  
+
   const safetyClasses = await getSafetyClasses();
 
   return (

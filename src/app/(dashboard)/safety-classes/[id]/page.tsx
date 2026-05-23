@@ -1,7 +1,16 @@
 import { redirect } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import { createServerSupabase } from "@/lib/supabase/server";
 import SafetyClassDetails from "./SafetyClassDetails";
 import { SafetyClass } from "../types";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 async function requireAdmin() {
   const supabase = await createServerSupabase();
@@ -71,6 +80,17 @@ async function getFirmLocations(id: string, firmId: string | null): Promise<any[
   return locations;
 }
 
+async function getFormStatus(safetyClassId: string): Promise<{ id: string } | null> {
+  const supabase = adminClient();
+  const { data } = await supabase
+    .from("class_forms")
+    .select("id")
+    .eq("safety_class_id", safetyClassId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return data ?? null;
+}
+
 export default async function SafetyClassPage({
   params,
 }: {
@@ -79,10 +99,12 @@ export default async function SafetyClassPage({
   const me = await requireAdmin();
   const { id } = await params;
 
-  const safetyClass = await getSafetyClass(id, me.firmId);
-  const locations = await getFirmLocations(id, me.firmId);
-  console.log("locations", locations)
-  // console.log("Fetched safety class:", safetyClass);
+  const [safetyClass, locations, existingForm] = await Promise.all([
+    getSafetyClass(id, me.firmId),
+    getFirmLocations(id, me.firmId),
+    me.role === "super_admin" ? getFormStatus(id) : Promise.resolve(null),
+  ]);
+
   if (!safetyClass) {
     redirect("/safety-classes");
   }
@@ -94,6 +116,7 @@ export default async function SafetyClassPage({
         isSuperAdmin={me.role === "super_admin"}
         currentFirmId={me.firmId || ""}
         locations={locations ?? []}
+        hasForm={!!existingForm}
       />
     </div>
   );

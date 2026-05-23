@@ -21,9 +21,9 @@ async function getScheduledClasses(): Promise<any[]> {
     let query = supabase
       .from("scheduled_classes")
       .select(`
-        *, 
-        safety_class: safety_class_id(title, id), 
-        firms:firm_id ( name ), 
+        *,
+        safety_class: safety_class_id(title, id),
+        firms:firm_id ( name ),
         locations:location_id ( id, name )
       `)
       .order("start_time", { ascending: false });
@@ -78,6 +78,22 @@ async function getScheduledClasses(): Promise<any[]> {
       }
     }
     
+    // Fetch form IDs for all safety classes in these scheduled classes
+    const safetyClassIds = [...new Set(
+      (classesWithCreators || [])
+        .map((cls: any) => cls.safety_class?.id)
+        .filter(Boolean)
+    )];
+    const formMap = new Map<string, string>();
+    if (safetyClassIds.length > 0) {
+      const { data: forms } = await supabase
+        .from("class_forms")
+        .select("id, safety_class_id")
+        .in("safety_class_id", safetyClassIds)
+        .eq("is_active", true);
+      (forms ?? []).forEach((f: any) => formMap.set(f.safety_class_id, f.id));
+    }
+
     // Helper: format stored ISO/timestamptz into Asia/Kolkata local time (matches what user selected)
     const formatToIST = (iso?: string) => {
       if (!iso || typeof iso !== "string") return "";
@@ -135,6 +151,8 @@ async function getScheduledClasses(): Promise<any[]> {
       } : null,
       currentUserRole: cls.creator ? cls.creator.role : "", // Will be controlled by AdminGuard
       safetyClassId: cls?.safety_class?.id || null,
+      hasForm: cls?.safety_class?.id ? formMap.has(cls.safety_class.id) : false,
+      formId: cls?.safety_class?.id ? (formMap.get(cls.safety_class.id) ?? null) : null,
     }));
     if (error) {
       console.error("Error fetching Scheduled classes:", error);

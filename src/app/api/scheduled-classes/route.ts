@@ -24,6 +24,18 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Fetch form IDs for all safety classes
+  const safetyClassIds = [...new Set((data ?? []).map((cls: any) => cls.safety_class?.id).filter(Boolean))];
+  const formMap = new Map<string, string>();
+  if (safetyClassIds.length > 0) {
+    const { data: forms } = await supabase
+      .from("class_forms")
+      .select("id, safety_class_id")
+      .in("safety_class_id", safetyClassIds)
+      .eq("is_active", true);
+    (forms ?? []).forEach((f: any) => formMap.set(f.safety_class_id, f.id));
+  }
+
   const formatToIST = (iso?: string) => {
     if (!iso) return "";
     try {
@@ -40,9 +52,13 @@ export async function GET(req: NextRequest) {
     firm: cls.firms?.name || "-",
     firmId: cls.firm_id || "",
     location: cls.locations?.name || "Remote",
+    // Both casings emitted so callers reading either shape work
     location_id: cls.location_id || null,
+    locationId: cls.location_id || null,
     created_at: cls.created_at ? new Date(cls.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "",
     safetyClassId: cls.safety_class?.id || null,
+    hasForm: cls.safety_class?.id ? formMap.has(cls.safety_class.id) : false,
+    formId: cls.safety_class?.id ? (formMap.get(cls.safety_class.id) ?? null) : null,
   }));
 
   return NextResponse.json(formatted);

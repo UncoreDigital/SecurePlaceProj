@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Filter, Calendar, Pencil, X, Check, Eye, Trash2, ChevronDown } from "lucide-react";
+import { Play, Clock, Users, Funnel, Calendar, Pencil, X, Check, Eye, Trash2, ChevronDown, ChartNoAxesColumn, Link2, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -145,15 +145,22 @@ export default function ScheduledClassesClient({
 
   // Re-fetch when location changes
   useEffect(() => {
-    if (!user?.firmId || user?.role !== "firm_admin") return;
+    if (!user?.firmId) return;
+    if (user.role !== "firm_admin" && user.role !== "location_admin") return;
     setFetchingClasses(true);
     const params = new URLSearchParams({ firm_id: user.firmId });
-    if (selectedLocationId) params.set("location_id", selectedLocationId);
+    // location_admin (non all-location): force their own location_id;
+    // firm_admin: use the location dropdown selection.
+    const effectiveLocationId =
+      user.role === "location_admin" && !user.isAllLocationAdmin
+        ? user.locationId ?? ""
+        : selectedLocationId;
+    if (effectiveLocationId) params.set("location_id", effectiveLocationId);
     fetch(`/api/scheduled-classes?${params}`)
       .then(r => r.json())
       .then(data => { setScheduledClasses(Array.isArray(data) ? data : []); setFetchingClasses(false); })
       .catch(() => setFetchingClasses(false));
-  }, [selectedLocationId, user?.firmId, user?.role]);
+  }, [selectedLocationId, user?.firmId, user?.role, user?.locationId, user?.isAllLocationAdmin]);
   
   const category = sp.get("category") ?? initialCategory ?? "all";
   const type = sp.get("type") ?? initialType ?? "in-person";
@@ -169,6 +176,9 @@ export default function ScheduledClassesClient({
   // ✅ Add state for inline status editing
   const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Tracks which row's analytics button is currently navigating — shows spinner
+  const [navAnalyticsId, setNavAnalyticsId] = useState<string | null>(null);
   
   const handleCancel = (id: string) => setCancelId(id);
   const handleClose = () => setCancelId(null);
@@ -252,6 +262,19 @@ export default function ScheduledClassesClient({
     }
   };
 
+  const handleCopyFormLink = (cls: any) => {
+    const params = new URLSearchParams({ firmId: cls.firmId });
+    // Server-render uses `locationId`; API refetch (legacy) used `location_id`.
+    // Read either so the copy works in both code paths.
+    const locId = cls.locationId ?? cls.location_id;
+    if (locId) params.set("locationId", locId);
+    const url = `${window.location.origin}/form/${cls.formId}?${params.toString()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(cls.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
   const handleCategoryChange = (newCategory: string) => {
     setParams(router, pathname, sp, { category: newCategory });
   };
@@ -310,17 +333,31 @@ export default function ScheduledClassesClient({
     filteredScheduledClasses = scheduledClasses;
   } else if (user?.role === "firm_admin" && user?.firmId) {
     filteredScheduledClasses = scheduledClasses.filter(cls => cls.firmId === user.firmId);
+  } else if (user?.role === "location_admin" && user?.firmId) {
+    // is_all_location_admin sees the entire firm; a regular location_admin
+    // is scoped to their single assigned location.
+    if (user.isAllLocationAdmin) {
+      filteredScheduledClasses = scheduledClasses.filter(cls => cls.firmId === user.firmId);
+    } else if (user.locationId) {
+      filteredScheduledClasses = scheduledClasses.filter(
+        cls =>
+          cls.firmId === user.firmId &&
+          (cls.locationId ?? cls.location_id) === user.locationId
+      );
+    } else {
+      filteredScheduledClasses = [];
+    }
   } else {
     filteredScheduledClasses = [];
   }
 
   return (
     <div className={fetchingClasses ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
-      {/* Filters and Toggle Buttons */}
+      {/* Funnels and Toggle Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           {/* <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
+            <Funnel className="h-4 w-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Category:</span>
           </div>
           <Select value={category} onValueChange={handleCategoryChange}>
@@ -494,6 +531,51 @@ export default function ScheduledClassesClient({
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
+
+                              {/* Super admin: copy public form link for all completed classes */}
+                              {user?.role === "super_admin" && cls.status === "completed" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => cls.formId && cls.firmId ? handleCopyFormLink(cls) : undefined}
+                                  disabled={!cls.formId || !cls.firmId}
+                                  className={`h-8 px-2 text-xs gap-1 transition-colors ${
+                                    !cls.formId || !cls.firmId
+                                      ? "opacity-40 cursor-not-allowed"
+                                      : copiedId === cls.id
+                                        ? "border-green-400 text-green-600 bg-green-50 cursor-pointer"
+                                        : "text-gray-600 hover:text-brand-blue hover:border-brand-blue cursor-pointer"
+                                  }`}
+                                  title={!cls.formId ? "No form created for this class" : "Copy public form link for this firm"}
+                                >
+                                  {copiedId === cls.id ? (
+                                    <><ClipboardCheck className="h-3.5 w-3.5" /> Copied!</>
+                                  ) : (
+                                    <><Link2 className="h-3.5 w-3.5" /> Copy Link</>
+                                  )}
+                                </Button>
+                              )}
+
+                              {/* Firm admin / location admin: view analytics for completed classes */}
+                              {(user?.role === "firm_admin" || user?.role === "location_admin") && cls.status === "completed" && cls.safetyClassId && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setNavAnalyticsId(cls.id);
+                                    router.push(`/safety-classes/${cls.safetyClassId}/analytics`);
+                                  }}
+                                  disabled={navAnalyticsId === cls.id}
+                                  className="h-8 w-8 p-0 text-brand-blue hover:text-brand-blue hover:bg-blue-50 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                                  title="View Form Analytics"
+                                >
+                                  {navAnalyticsId === cls.id ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-brand-blue border-t-transparent rounded-full" />
+                                  ) : (
+                                    <ChartNoAxesColumn className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
 
                               {cls.currentUserRole === "super_admin" && cls.status === "pending" ? (
                                 <>
