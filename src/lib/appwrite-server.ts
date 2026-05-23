@@ -1,16 +1,22 @@
 import { Client, Databases, Users } from "node-appwrite";
 
-console.log(
-  "SERVER-SIDE KEY CHECK:",
-  process.env.APPWRITE_API_KEY
-    ? "API Key is LOADED"
-    : "API Key is MISSING or UNDEFINED"
-);
+const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+const apiKey = process.env.APPWRITE_API_KEY;
 
-const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-  .setKey(process.env.APPWRITE_API_KEY!); // Uses the server-side API Key
+const isConfigured = Boolean(endpoint && projectId && apiKey);
 
-export const databases = new Databases(client);
-export const users = new Users(client);
+if (!isConfigured) {
+  console.warn(
+    "[appwrite-server] Appwrite env vars are not set — Appwrite features will be skipped."
+  );
+}
+
+// Only build the client when all three vars are present
+const client = isConfigured
+  ? new Client().setEndpoint(endpoint!).setProject(projectId!).setKey(apiKey!)
+  : null;
+
+export const databases: Databases | null = client ? new Databases(client) : null;
+export const users: Users | null = client ? new Users(client) : null;
+export const appwriteConfigured = isConfigured;

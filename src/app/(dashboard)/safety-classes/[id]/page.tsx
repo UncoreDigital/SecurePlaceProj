@@ -25,9 +25,14 @@ async function requireAdmin() {
     .eq("id", user.id)
     .single();
 
-  if (me?.role !== "super_admin" && me?.role !== "firm_admin") redirect("/");
+  if (
+    me?.role !== "super_admin" &&
+    me?.role !== "firm_admin" &&
+    me?.role !== "location_admin"
+  )
+    redirect("/");
   return {
-    role: me!.role as "super_admin" | "firm_admin",
+    role: me!.role as "super_admin" | "firm_admin" | "location_admin",
     firmId: me!.firm_id as string | null,
   };
 }

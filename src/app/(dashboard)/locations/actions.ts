@@ -30,7 +30,7 @@ export async function createLocation(data: LocationData) {
     const collectionId =
       process.env.NEXT_PUBLIC_APPWRITE_LOCATIONS_COLLECTION_ID!;
 
-    await databases.createDocument(databaseId, collectionId, ID.unique(), {
+    await databases?.createDocument(databaseId, collectionId, ID.unique(), {
       ...data,
       firmId: userProfile.firmId, // Automatically add the firmId from the session
     });
@@ -50,16 +50,16 @@ export async function updateLocation(id: string, data: LocationData) {
     }
 
     // Security check: Verify the location belongs to the admin's firm
-    const currentLocation = await databases.getDocument(
+    const currentLocation = await databases?.getDocument(
       databaseId,
       collectionId,
       id
     );
-    if (currentLocation.firmId !== userProfile.firmId) {
+    if (currentLocation?.firmId !== userProfile.firmId) {
       throw new Error("Forbidden: You cannot modify this location.");
     }
 
-    await databases.updateDocument(databaseId, collectionId, id, data);
+    await databases?.updateDocument(databaseId, collectionId, id, data);
     revalidatePath("/dashboard/locations");
     return { success: "Location updated." };
   } catch (e: any) {
@@ -76,16 +76,16 @@ export async function deleteLocation(id: string) {
     }
 
     // Security check: Verify the location belongs to the admin's firm
-    const currentLocation = await databases.getDocument(
+    const currentLocation = await databases?.getDocument(
       databaseId,
       collectionId,
       id
     );
-    if (currentLocation.firmId !== userProfile.firmId) {
+    if (currentLocation?.firmId !== userProfile.firmId) {
       throw new Error("Forbidden: You cannot delete this location.");
     }
 
-    await databases.deleteDocument(databaseId, collectionId, id);
+    await databases?.deleteDocument(databaseId, collectionId, id);
     revalidatePath("/dashboard/locations");
     return { success: "Location deleted." };
   } catch (e: any) {
