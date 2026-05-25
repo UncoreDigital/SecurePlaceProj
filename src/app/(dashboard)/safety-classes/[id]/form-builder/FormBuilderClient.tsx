@@ -13,7 +13,6 @@ interface Location {
   id: string;
   name: string;
 }
-
 interface Firm {
   id: string;
   name: string;
@@ -338,9 +337,8 @@ export default function FormBuilderClient({
                   <button
                     type="button"
                     onClick={() => setCorrectOption(qi, oi)}
-                    className={`h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                      opt.is_correct ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-green-400"
-                    }`}
+                    className={`h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${opt.is_correct ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-green-400"
+                      }`}
                   >
                     {opt.is_correct && <Check className="h-3 w-3 text-white" />}
                   </button>
