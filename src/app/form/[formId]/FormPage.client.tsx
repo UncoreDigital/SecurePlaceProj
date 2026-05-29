@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RichTextContent } from "@/components/ui/RichTextContent";
 
 interface Option {
   id: string;
@@ -200,13 +201,15 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
               }`}
             >
               <CardContent className="pt-5 pb-5">
-                <p className="font-medium text-gray-800 mb-3">
-                  <span className="text-brand-blue font-bold mr-2">{qi + 1}.</span>
-                  {q.question_text}
-                  <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-normal">
+                <div className="font-medium text-gray-800 mb-3 flex items-start gap-2">
+                  <span className="text-brand-blue font-bold flex-shrink-0">{qi + 1}.</span>
+                  <div className="flex-1 min-w-0">
+                    <RichTextContent html={q.question_text} />
+                  </div>
+                  <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-normal flex-shrink-0">
                     {q.marks ?? 1} {(q.marks ?? 1) === 1 ? "mark" : "marks"}
                   </span>
-                </p>
+                </div>
                 <div className="space-y-2">
                   {[...(q.form_question_options ?? [])]
                     .sort((a, b) => a.order_index - b.order_index)

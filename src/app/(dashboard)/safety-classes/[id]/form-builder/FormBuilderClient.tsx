@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 interface Location {
   id: string;
@@ -140,13 +141,25 @@ export default function FormBuilderClient({
     );
 
   // ---- Validation ----
+  // question_text is now HTML from the rich-text editor — strip tags + nbsp
+  // before checking emptiness (an "empty" editor still emits "<p></p>").
+  const isRichTextEmpty = (html: string): boolean => {
+    if (!html) return true;
+    if (typeof document === "undefined") return false; // SSR fallback — let server validate
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    const text = (tmp.textContent ?? "").replace(/ /g, " ").trim();
+    const hasMedia = tmp.querySelector("img, video, iframe");
+    return text.length === 0 && !hasMedia;
+  };
+
   const validate = (): string | null => {
     if (!title.trim()) return "Form title is required";
     if (passScore < 1 || passScore > 100) return "Pass score must be between 1 and 100";
     if (questions.length === 0) return "Add at least one question";
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      if (!q.question_text.trim()) return `Question ${i + 1} text is required`;
+      if (isRichTextEmpty(q.question_text)) return `Question ${i + 1} text is required`;
       if (q.options.length < 2) return `Question ${i + 1} needs at least 2 options`;
       for (let j = 0; j < q.options.length; j++) {
         if (!q.options[j].option_text.trim())
@@ -325,11 +338,12 @@ export default function FormBuilderClient({
               </div>
             </CardHeader>
             <CardContent className="space-y-2 px-4 pb-3">
-              <Textarea
-                value={q.question_text}
-                onChange={(e) => updateQuestion(qi, e.target.value)}
+              <RichTextEditor
+                content={q.question_text}
+                onChange={(html) => updateQuestion(qi, html)}
                 placeholder="Enter your question..."
-                rows={2}
+                minHeight="120px"
+                maxHeight="40vh"
               />
               <p className="text-xs text-gray-400">Click the circle to mark the correct answer</p>
               {q.options.map((opt, oi) => (
