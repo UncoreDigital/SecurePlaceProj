@@ -52,6 +52,7 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [detailsStarted, setDetailsStarted] = useState(false);
 
   const questions = [...(form.form_questions ?? [])].sort(
@@ -67,6 +68,10 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
 
     if (!employeeName.trim()) {
       setError("Please enter your name.");
+      return;
+    }
+    if (!employeeEmail.trim()) {
+      setError("Please enter your email.");
       return;
     }
     if (!allAnswered) {
@@ -89,6 +94,10 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
       });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 409) {
+          setAlreadySubmitted(true);
+          return;
+        }
         setError(data.error ?? "Submission failed. Please try again.");
         return;
       }
@@ -99,6 +108,27 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
       setSubmitting(false);
     }
   };
+
+  // ---- Already Submitted Screen ----
+  if (alreadySubmitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center shadow-lg">
+          <CardContent className="pt-8 pb-8 space-y-4">
+            <CircleAlert className="h-16 w-16 text-amber-500 mx-auto" />
+            <h1 className="text-2xl font-bold text-gray-800">Already Submitted</h1>
+            <p className="text-gray-600">
+              A response for {form.title} has already been submitted using this email
+              address ({employeeEmail.trim()}). Each email may only submit this form once.
+            </p>
+            <p className="text-xs text-gray-400">
+              If you believe this is a mistake, please contact your HR.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // ---- Result Screen ----
   if (result) {
@@ -180,13 +210,14 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="emp-email">Email (optional)</Label>
+                <Label htmlFor="emp-email">Email *</Label>
                 <Input
                   id="emp-email"
                   type="email"
                   value={employeeEmail}
                   onChange={(e) => setEmployeeEmail(e.target.value)}
                   placeholder="Enter your email"
+                  required
                 />
               </div>
             </CardContent>
@@ -263,14 +294,15 @@ export default function FormPageClient({ form, firmId, firmName, locationId }: F
 
           <Button
             type="submit"
-            disabled={submitting || !allAnswered || !employeeName.trim()}
+            disabled={submitting || !allAnswered || !employeeName.trim() || !employeeEmail.trim()}
             className="w-full bg-brand-blue hover:bg-brand-blue/90 text-white py-3 text-base"
           >
             {submitting ? "Submitting..." : "Submit Assessment"}
           </Button>
 
           <p className="text-center text-xs text-gray-400">
-            By submitting, your answers will be recorded and shared with your company.
+            By submitting, your answers will be recorded and shared with your company. Each
+            email may only submit this form once.
           </p>
         </form>
       </div>

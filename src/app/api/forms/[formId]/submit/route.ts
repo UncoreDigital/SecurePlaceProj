@@ -26,14 +26,40 @@ export async function POST(
 
   const { firmId, locationId, employeeName, employeeEmail, answers } = body;
 
-  if (!firmId || !employeeName?.trim() || !answers || typeof answers !== "object") {
+  if (
+    !firmId ||
+    !employeeName?.trim() ||
+    !employeeEmail?.trim() ||
+    !answers ||
+    typeof answers !== "object"
+  ) {
     return NextResponse.json(
-      { error: "firmId, employeeName, and answers are required" },
+      { error: "firmId, employeeName, employeeEmail, and answers are required" },
       { status: 400 }
     );
   }
 
+  const normalizedEmail = employeeEmail.trim().toLowerCase();
+
   const supabase = adminClient();
+
+  // Prevent duplicate submissions: one response per email per form
+  const { data: existingResponse, error: existingErr } = await supabase
+    .from("form_responses")
+    .select("id")
+    .eq("form_id", formId)
+    .ilike("employee_email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingErr) {
+    return NextResponse.json({ error: existingErr.message }, { status: 500 });
+  }
+  if (existingResponse) {
+    return NextResponse.json(
+      { error: "This form has already been submitted with this email address." },
+      { status: 409 }
+    );
+  }
 
   // Fetch the form with questions and correct answers
   const { data: form, error: formErr } = await supabase
@@ -93,7 +119,7 @@ export async function POST(
       firm_id: firmId,
       location_id: locationId || null,
       employee_name: employeeName.trim(),
-      employee_email: employeeEmail?.trim() || null,
+      employee_email: normalizedEmail,
       score: scorePercent,
       passed,
       marks_obtained: marksObtained,
@@ -103,6 +129,12 @@ export async function POST(
     .single();
 
   if (responseErr || !response) {
+    if (responseErr?.code === "23505") {
+      return NextResponse.json(
+        { error: "This form has already been submitted with this email address." },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { error: responseErr?.message ?? "Failed to save response" },
       { status: 500 }
