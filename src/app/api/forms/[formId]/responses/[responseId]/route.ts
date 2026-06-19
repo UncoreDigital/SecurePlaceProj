@@ -17,12 +17,13 @@ export async function GET(
   const { formId, responseId } = await params;
   const supabase = adminClient();
 
-  // Fetch the response with answers
+  // Fetch the response with answers and the immutable snapshot
   const { data: response, error: respErr } = await supabase
     .from("form_responses")
     .select(`
       id, employee_name, employee_email, score, passed,
       marks_obtained, total_marks, submitted_at, firm_id,
+      questions_snapshot,
       firms:firm_id(name),
       form_response_answers (
         question_id,
@@ -37,53 +38,63 @@ export async function GET(
     return NextResponse.json({ error: "Response not found" }, { status: 404 });
   }
 
-  // Fetch form questions with options
-  const { data: form, error: formErr } = await supabase
-    .from("class_forms")
-    .select(`
-      form_questions (
-        id, question_text, order_index, marks,
-        form_question_options (
-          id, option_text, is_correct, order_index
+  let questions: any[];
+
+  if (Array.isArray(response.questions_snapshot) && response.questions_snapshot.length > 0) {
+    // Preferred: render exactly what the employee saw/answered at submission time.
+    // Immune to any later edits of the form.
+    questions = response.questions_snapshot;
+  } else {
+    // Fallback for responses created before snapshots existed: reconstruct by
+    // joining the current form questions with the stored answer rows. Note this
+    // can be lossy if the form was edited after submission.
+    const { data: form, error: formErr } = await supabase
+      .from("class_forms")
+      .select(`
+        form_questions (
+          id, question_text, order_index, marks,
+          form_question_options (
+            id, option_text, is_correct, order_index
+          )
         )
-      )
-    `)
-    .eq("id", formId)
-    .maybeSingle();
+      `)
+      .eq("id", formId)
+      .maybeSingle();
 
-  if (formErr || !form) {
-    return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    if (formErr || !form) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
+    const answerMap = new Map<string, string | null>(
+      (response.form_response_answers ?? []).map((a: any) => [a.question_id, a.selected_option_id])
+    );
+
+    questions = [...(form.form_questions ?? [])]
+      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .map((q: any) => {
+        const options = [...(q.form_question_options ?? [])]
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((o: any) => ({
+            id: o.id,
+            text: o.option_text,
+            isCorrect: o.is_correct,
+            isSelected: answerMap.get(q.id) === o.id,
+          }));
+
+        const selectedOptionId = answerMap.get(q.id) ?? null;
+        const correctOption = options.find((o) => o.isCorrect);
+        const isCorrectAnswer = !!selectedOptionId && selectedOptionId === correctOption?.id;
+
+        return {
+          questionId: q.id,
+          questionText: q.question_text,
+          marks: q.marks ?? 1,
+          selectedOptionId,
+          isCorrectAnswer,
+          options,
+        };
+      });
   }
-
-  const answerMap = new Map<string, string | null>(
-    (response.form_response_answers ?? []).map((a: any) => [a.question_id, a.selected_option_id])
-  );
-
-  const questions = [...(form.form_questions ?? [])]
-    .sort((a: any, b: any) => a.order_index - b.order_index)
-    .map((q: any) => {
-      const options = [...(q.form_question_options ?? [])]
-        .sort((a: any, b: any) => a.order_index - b.order_index)
-        .map((o: any) => ({
-          id: o.id,
-          text: o.option_text,
-          isCorrect: o.is_correct,
-          isSelected: answerMap.get(q.id) === o.id,
-        }));
-
-      const selectedOptionId = answerMap.get(q.id) ?? null;
-      const correctOption = options.find((o) => o.isCorrect);
-      const isCorrectAnswer = !!selectedOptionId && selectedOptionId === correctOption?.id;
-
-      return {
-        questionId: q.id,
-        questionText: q.question_text,
-        marks: q.marks ?? 1,
-        selectedOptionId,
-        isCorrectAnswer,
-        options,
-      };
-    });
 
   return NextResponse.json({
     id: response.id,

@@ -61,15 +61,16 @@ export async function POST(
     );
   }
 
-  // Fetch the form with questions and correct answers
+  // Fetch the form with full question/option data (needed for scoring AND for
+  // building the immutable per-response snapshot).
   const { data: form, error: formErr } = await supabase
     .from("class_forms")
     .select(`
       id, pass_score,
       form_questions (
-        id, marks,
+        id, question_text, order_index, marks,
         form_question_options (
-          id, is_correct
+          id, option_text, is_correct, order_index
         )
       )
     `)
@@ -81,7 +82,9 @@ export async function POST(
     return NextResponse.json({ error: "Form not found or inactive" }, { status: 404 });
   }
 
-  const questions: any[] = form.form_questions ?? [];
+  const questions: any[] = [...(form.form_questions ?? [])].sort(
+    (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)
+  );
 
   if (questions.length === 0) {
     return NextResponse.json({ error: "Form has no questions" }, { status: 400 });
@@ -111,6 +114,30 @@ export async function POST(
   const scorePercent = Math.round((marksObtained / totalMarks) * 100);
   const passed = scorePercent >= (form.pass_score ?? 70);
 
+  // Build an immutable snapshot of exactly what this employee saw and selected.
+  // Shape matches what the response-detail endpoint returns, so the detail view
+  // can render it directly and stays correct even after the form is edited.
+  const questionsSnapshot = questions.map((q: any) => {
+    const selectedOptionId = answers[q.id] ?? null;
+    const options = [...(q.form_question_options ?? [])]
+      .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .map((o: any) => ({
+        id: o.id,
+        text: o.option_text,
+        isCorrect: !!o.is_correct,
+        isSelected: selectedOptionId === o.id,
+      }));
+    const correctOption = options.find((o) => o.isCorrect);
+    return {
+      questionId: q.id,
+      questionText: q.question_text,
+      marks: q.marks ?? 1,
+      selectedOptionId,
+      isCorrectAnswer: !!selectedOptionId && selectedOptionId === correctOption?.id,
+      options,
+    };
+  });
+
   // Insert response record
   const { data: response, error: responseErr } = await supabase
     .from("form_responses")
@@ -124,6 +151,7 @@ export async function POST(
       passed,
       marks_obtained: marksObtained,
       total_marks: totalMarks,
+      questions_snapshot: questionsSnapshot,
     })
     .select("id")
     .single();
