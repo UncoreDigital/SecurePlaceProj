@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft, ChevronRight, Eye, CircleCheckBig, CircleX, X,
-  RefreshCw, Check, Search, Download,
+  RefreshCw, Check, Search, Download, FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -157,6 +157,48 @@ export default function ResponsesClient({
 
   const pdfRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (exportingExcel) return;
+    setExportingExcel(true);
+    setError(null);
+    try {
+      const url = new URL(`/api/forms/${formId}/export`, window.location.origin);
+      // Only meaningful for super_admin; the server derives scope from the
+      // session for firm_admin / location_admin and ignores this param.
+      if (isSuperAdmin && firmId !== "all") url.searchParams.set("firmId", firmId);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        let msg = "Failed to export responses.";
+        try {
+          const data = await res.json();
+          msg = data.error ?? msg;
+        } catch { /* non-JSON error body */ }
+        setError(msg);
+        return;
+      }
+
+      const blob = await res.blob();
+      // Use the server-provided filename when available
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      const filename = match?.[1] ?? `responses-${safetyClassTitle.replace(/\s+/g, "-")}.xlsx`;
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      setError("Network error while exporting. Please try again.");
+    } finally {
+      setExportingExcel(false);
+    }
+  };
 
   const handleExportPDF = async () => {
     if (exporting || submissions.length === 0) return;
@@ -301,6 +343,15 @@ export default function ResponsesClient({
           >
             <Download className="h-4 w-4 mr-1.5" />
             {exporting ? "Exporting..." : "Export PDF"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || submissions.length === 0}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+            {exportingExcel ? "Exporting..." : "Export Excel"}
           </Button>
         </div>
       </div>
