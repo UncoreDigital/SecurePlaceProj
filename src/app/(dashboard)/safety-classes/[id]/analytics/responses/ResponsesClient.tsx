@@ -431,7 +431,9 @@ export default function ResponsesClient({
                   <tbody>
                     {displayedSubmissions.map((sub, i) => (
                       <tr key={sub.id} className={i % 2 === 0 ? "" : "bg-gray-50/50"}>
-                        <td className="p-3 text-gray-400 text-xs">{(safePage - 1) * PAGE_SIZE + i + 1}</td>
+                        <td className="p-3 text-gray-400 text-xs">
+                          {isPrinting ? i + 1 : (safePage - 1) * PAGE_SIZE + i + 1}
+                        </td>
                         <td className="p-3 font-medium text-gray-800">{sub.employeeName}</td>
                         <td className="p-3 text-gray-500">{sub.employeeEmail || "—"}</td>
                         {isSuperAdmin && (
