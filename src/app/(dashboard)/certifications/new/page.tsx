@@ -7,6 +7,9 @@ export default function NewCertificationPage() {
   const router = useRouter();
 
   const handleSave = () => {
+    // refresh() first: without it the list can render from the router cache
+    // and the just-saved certificate looks like it was never created.
+    router.refresh();
     router.push("/certifications");
   };
 

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import CertificateCreator from "../components/CertificateCreator";
 import { Button } from "@/components/ui/button";
+import { formatDateForCertificate, formatDateForDisplay } from "@/lib/certificate-date";
 
 type CertItem = {
   id: string;
@@ -21,7 +22,7 @@ type CertItem = {
   location_name?: string;  // resolved name for display
   firm?: string;
   firm_logo?: string;
-  issue_date?: string;
+  issue_date?: string;     // ISO "YYYY-MM-DD"
   signature?: string;
 };
 
@@ -33,26 +34,13 @@ interface CertificationsClientProps {
 // Download certificate by rendering the actual HTML template (same as view mode)
 const downloadCertificate = async (cert: CertItem) => {
   try {
-    // Format date with ordinal suffix
-    const formatDate = (dateStr?: string) => {
-      if (!dateStr) return '';
-      try {
-        const [day, month, year] = dateStr.split('/');
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-        const d = parseInt(day);
-        const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
-        return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
-      } catch { return dateStr; }
-    };
-
     // Fetch the HTML template and replace placeholders
     const html = await fetch('/images/certificate-participation.html').then(r => r.text());
     let filledHtml = html
       .replace(/\{\{FirmName\}\}/g, cert.firm || '')
       .replace(/\{\{FirmLogo\}\}/g, cert.firm_logo || '')
       .replace(/\{\{Title\}\}/g, cert.title || '')
-      .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
+      .replace(/\{\{Date\}\}/g, formatDateForCertificate(cert.issue_date))
       .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
       .replace(/\{\{Description\}\}/g, cert.description || '')
       .replace(/\{\{Recipient\}\}/g, '')
@@ -120,24 +108,12 @@ const downloadCertificate = async (cert: CertItem) => {
 // Print certificate using the same HTML template
 const printCertificate = async (cert: CertItem) => {
   try {
-    const formatDate = (dateStr?: string) => {
-      if (!dateStr) return '';
-      try {
-        const [day, month, year] = dateStr.split('/');
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-        const d = parseInt(day);
-        const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
-        return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
-      } catch { return dateStr; }
-    };
-
     const html = await fetch('/images/certificate-participation.html').then(r => r.text());
     const filledHtml = html
       .replace(/\{\{FirmName\}\}/g, cert.firm || '')
       .replace(/\{\{FirmLogo\}\}/g, cert.firm_logo || '')
       .replace(/\{\{Title\}\}/g, cert.title || '')
-      .replace(/\{\{Date\}\}/g, formatDate(cert.issue_date))
+      .replace(/\{\{Date\}\}/g, formatDateForCertificate(cert.issue_date))
       .replace(/\{\{Details\}\}/g, cert.certificate_details || '')
       .replace(/\{\{Description\}\}/g, cert.description || '')
       .replace(/\{\{Recipient\}\}/g, '');
@@ -237,7 +213,7 @@ export default function CertificationsClient({
                     <td className="py-2 pr-4">{c.title}</td>
                     <td className="py-2 pr-4">{c.firm || '-'}</td>
                     <td className="py-2 pr-4">{c.location_name || '-'}</td>
-                    <td className="py-2 pr-4">{c.issue_date || '-'}</td>
+                    <td className="py-2 pr-4">{formatDateForDisplay(c.issue_date) || '-'}</td>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
                         {userRole === "super_admin" && (

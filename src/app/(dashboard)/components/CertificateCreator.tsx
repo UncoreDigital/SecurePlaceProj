@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/hooks/useUser";
 import { useFirms } from "@/hooks/useFirms";
+import { formatDateForCertificate, isValidIsoDate } from "@/lib/certificate-date";
 
 type CertificateData = {
   title: string;
@@ -12,36 +13,20 @@ type CertificateData = {
   locationId: string;   // UUID of the selected location
   firm: string;
   firmLogo: string;
-  date: string;
+  date: string;         // ISO "YYYY-MM-DD", matching <input type="date">
   signature: string;
 };
 
 function CertificatePreview({ data }: { data: CertificateData }) {
   const [htmlContent, setHtmlContent] = useState<string>('');
 
-  // Format date for display with ordinal suffix
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "{{date}}";
-    try {
-      const [day, month, year] = dateStr.split('/');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      const d = parseInt(day);
-      const suffix = ["th", "st", "nd", "rd"][((d - 20) % 10) || d] || ["th", "st", "nd", "rd"][d] || "th";
-      return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
-    } catch {
-      return dateStr;
-    }
-  };
-
   useEffect(() => {
     // Fetch and update the HTML template with dynamic data
     fetch('/images/certificate-participation.html')
       .then(res => res.text())
       .then(html => {
-        // Format the date
-        const formattedDate = formatDate(data.date);
-        
+        const formattedDate = formatDateForCertificate(data.date) || '{{date}}';
+
         // Replace placeholders with actual data
         let updatedHtml = html
           .replace(/\{\{FirmName\}\}/g, data.firm || '{{firmName}}')
@@ -211,18 +196,6 @@ export default function CertificateCreator({
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const [day, month, year] = dateStr.split('/');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-      const d = parseInt(day);
-      const suffix = ["th","st","nd","rd"][((d-20)%10)||d] || ["th","st","nd","rd"][d] || "th";
-      return `${d}${suffix} of ${months[date.getMonth()]} ${year}`;
-    } catch { return dateStr; }
-  };
-
   const handleDownload = async () => {
     try {
       const html = await fetch('/images/certificate-participation.html').then(r => r.text());
@@ -230,7 +203,7 @@ export default function CertificateCreator({
         .replace(/\{\{FirmName\}\}/g, form.firm || '')
         .replace(/\{\{FirmLogo\}\}/g, form.firmLogo || '')
         .replace(/\{\{Title\}\}/g, form.title || '')
-        .replace(/\{\{Date\}\}/g, formatDate(form.date))
+        .replace(/\{\{Date\}\}/g, formatDateForCertificate(form.date))
         .replace(/\{\{Details\}\}/g, form.certificateDetails || '')
         .replace(/\{\{Description\}\}/g, form.description || '');
 
@@ -302,8 +275,8 @@ export default function CertificateCreator({
       return;
     }
 
-    if (!form.date.trim()) {
-      alert("Please enter a date");
+    if (!isValidIsoDate(form.date)) {
+      alert("Please select a valid date");
       return;
     }
 
@@ -317,15 +290,8 @@ export default function CertificateCreator({
         return;
       }
 
-      // Parse the date (assuming DD/MM/YYYY format)
-      let completionDate: string;
-      try {
-        const [day, month, year] = form.date.split('/');
-        completionDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      } catch {
-        alert("Please enter date in DD/MM/YYYY format");
-        return;
-      }
+      // Already ISO "YYYY-MM-DD" — the format issue_date expects.
+      const completionDate = form.date;
 
       if (isEditing && certificateId) {
         // Update existing certificate
@@ -488,7 +454,7 @@ export default function CertificateCreator({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-slate-600 mb-1">Date</label>
-              <input name="date" value={form.date} onChange={onChange} placeholder="DD/MM/YYYY" className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
+              <input type="date" name="date" value={form.date} onChange={onChange} className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40" />
             </div>
             {/* <div>
               <label className="block text-sm text-slate-600 mb-1">Signature</label>

@@ -75,7 +75,8 @@ async function getCertificates(
       recipient: cert.recipient_name,
       firm: cert.firm_name,
       firm_logo: cert.firms?.logo_url || undefined,
-      issue_date: cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : undefined,
+      // Kept as the DB's ISO "YYYY-MM-DD"; formatted for display at render.
+      issue_date: cert.issue_date || undefined,
       signature: cert.signer_name || undefined,
       description: cert.description,
       location_id: cert.location_id || undefined,
