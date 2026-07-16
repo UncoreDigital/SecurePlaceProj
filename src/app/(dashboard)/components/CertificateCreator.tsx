@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useFirms } from "@/hooks/useFirms";
 import { formatDateForCertificate, isValidIsoDate } from "@/lib/certificate-date";
@@ -94,6 +93,10 @@ function CertificatePreview({ data }: { data: CertificateData }) {
 
 type LocationOption = { id: string; name: string };
 
+// Stable empty reference, so clearing locations twice is a no-op re-render
+// rather than a new array that always compares unequal.
+const NO_LOCATIONS: LocationOption[] = [];
+
 export default function CertificateCreator({
   initial,
   onSave,
@@ -170,21 +173,37 @@ export default function CertificateCreator({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firms]);
 
+  // Depend on the firm's id, not the firms array: a primitive can't change
+  // identity between renders, so the effect below can't re-run in a loop.
+  const selectedFirmId = useMemo(
+    () => firms.find(f => f.name === form.firm)?.id,
+    [firms, form.firm]
+  );
+
   // Fetch locations whenever the selected firm changes
   useEffect(() => {
-    const selectedFirm = firms.find(f => f.name === form.firm);
-    if (!selectedFirm) {
-      setLocations([]);
+    if (!selectedFirmId) {
+      setLocations(NO_LOCATIONS);
       return;
     }
+
+    let cancelled = false;
     setLoadingLocations(true);
-    fetch(`/api/locations?firm_id=${selectedFirm.id}`)
+    fetch(`/api/locations?firm_id=${selectedFirmId}`)
       .then(res => res.json())
-      .then((data: LocationOption[]) => setLocations(Array.isArray(data) ? data : []))
-      .catch(() => setLocations([]))
-      .finally(() => setLoadingLocations(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.firm, firms]);
+      .then((data: LocationOption[]) => {
+        if (!cancelled) setLocations(Array.isArray(data) ? data : NO_LOCATIONS);
+      })
+      .catch(() => {
+        if (!cancelled) setLocations(NO_LOCATIONS);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLocations(false);
+      });
+
+    // Ignore a response that lands after the firm changed again.
+    return () => { cancelled = true; };
+  }, [selectedFirmId]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -280,116 +299,49 @@ export default function CertificateCreator({
       return;
     }
 
+    // Never let the button spin forever: if the request stalls, abort and say so.
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 30_000);
+
     try {
       setSaving(true);
 
-      // Find the firm ID from the selected firm name
-      const selectedFirm = firms.find(f => f.name === form.firm);
-      if (!selectedFirm) {
-        alert("Invalid firm selected");
+      const res = await fetch("/api/certificates", {
+        method: isEditing && certificateId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: abort.signal,
+        body: JSON.stringify({
+          id: isEditing ? certificateId : undefined,
+          title: form.title,
+          certificateDetails: form.certificateDetails,
+          description: form.description,
+          locationId: form.locationId,
+          firm: form.firm,
+          date: form.date,
+          signature: form.signature,
+        }),
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: res.statusText }));
+        alert(error ?? "Failed to save certificate");
         return;
       }
 
-      // Already ISO "YYYY-MM-DD" — the format issue_date expects.
-      const completionDate = form.date;
-
-      if (isEditing && certificateId) {
-        // Update existing certificate
-        const updateData = {
-          title: form.title.trim(),
-          certificate_details: form.certificateDetails.trim() || null,
-          description: form.description.trim() || null,
-          location_id: form.locationId || null,
-          firm_id: selectedFirm.id,
-          firm_name: form.firm.trim(),
-          issue_date: completionDate,
-          signer_name: form.signature.trim() || null,
-          updated_by: user.id,
-          updated_at: new Date().toISOString(),
-        };
-
-        console.log("Updating certificate:", updateData);
-
-        const { data, error } = await supabase
-          .from("certificates")
-          .update(updateData)
-          .eq("id", certificateId)
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Error updating certificate:", error);
-          alert(`Failed to update certificate: ${error.message}`);
-          return;
-        }
-
-        console.log("Certificate updated successfully:", data);
-        
-        // Call the onSave callback if provided
-        if (onSave) {
-          onSave(form);
-        } else {
-          alert("Certificate updated successfully!");
-        }
-
+      if (onSave) {
+        onSave(form);
       } else {
-        // Create new certificate
-        // Get next certificate number from sequence
-        const { data: certNumberData, error: certNumberError } = await supabase
-          .rpc('get_next_certificate_number');
-
-        if (certNumberError) {
-          console.error("Error getting certificate number:", certNumberError);
-          alert("Failed to generate certificate number");
-          return;
-        }
-
-        // Prepare certificate data
-        const certificateData = {
-          certificate_number: certNumberData.toString(),
-          title: form.title.trim(),
-          certificate_details: form.certificateDetails.trim() || null,
-          description: form.description.trim() || null,
-          location_id: form.locationId || null,
-          firm_id: selectedFirm.id,
-          firm_name: form.firm.trim(),
-          issue_date: completionDate,
-          signer_name: form.signature.trim() || null,
-          status: 'issued' as const,
-          created_by: user.id,
-          updated_by: user.id,
-        };
-
-        console.log("Saving certificate:", certificateData);
-
-        const { data, error } = await supabase
-          .from("certificates")
-          .insert([certificateData])
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Error saving certificate:", error);
-          alert(`Failed to save certificate: ${error.message}`);
-          return;
-        }
-
-        console.log("Certificate saved successfully:", data);
-        
-        // Call the onSave callback if provided
-        if (onSave) {
-          onSave(form);
-        } else {
-          alert("Certificate saved successfully!");
-          // Optionally redirect or reset form
-          // window.location.href = "/dashboard/certifications";
-        }
+        alert(isEditing ? "Certificate updated successfully!" : "Certificate saved successfully!");
       }
-
     } catch (error) {
-      console.error("Failed to save certificate:", error);
-      alert("An unexpected error occurred while saving the certificate");
+      if (error instanceof DOMException && error.name === "AbortError") {
+        alert("Saving timed out. Please check your connection and try again.");
+      } else {
+        console.error("Failed to save certificate:", error);
+        alert("An unexpected error occurred while saving the certificate");
+      }
     } finally {
+      clearTimeout(timeout);
       setSaving(false);
     }
   };

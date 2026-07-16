@@ -8,10 +8,15 @@ export interface Firm {
   logo_url?: string;
 }
 
+// Stable identity for the empty case. A `= []` default in the destructuring
+// below would allocate a fresh array on every render while data is undefined,
+// so any effect depending on `firms` would re-run forever.
+const NO_FIRMS: Firm[] = [];
+
 export function useFirms() {
   const { user, loading: userLoading } = useUser();
 
-  const { data: firms = [], isLoading, error } = useQuery<Firm[]>({
+  const { data, isLoading, error } = useQuery<Firm[]>({
     queryKey: ["firms", user?.id, user?.role, user?.firmId],
     queryFn: async () => {
       let query = supabase
@@ -33,5 +38,5 @@ export function useFirms() {
     gcTime: 10 * 60 * 1000,     // keep in cache for 10 min
   });
 
-  return { firms, loading: userLoading || isLoading, error };
+  return { firms: data ?? NO_FIRMS, loading: userLoading || isLoading, error };
 }

@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Pencil, Download, Printer } from "lucide-react";
+import { Eye, Plus, Pencil, Download, Printer, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import CertificateCreator from "../components/CertificateCreator";
 import { Button } from "@/components/ui/button";
 import { formatDateForCertificate, formatDateForDisplay } from "@/lib/certificate-date";
@@ -140,9 +151,39 @@ export default function CertificationsClient({
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<CertItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CertItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   const hasItems = items.length > 0;
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+
+    try {
+      setDeleting(true);
+      const res = await fetch(`/api/certificates?id=${encodeURIComponent(target.id)}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: res.statusText }));
+        toast.error(error ?? "Failed to delete certificate");
+        return;
+      }
+
+      setItems(prev => prev.filter(item => item.id !== target.id));
+      setPendingDelete(null);
+      toast.success("Certificate deleted");
+      // Keep the server component's list in step with the local removal.
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete certificate. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleEditSave = (updatedData: any) => {
     if (selected) {
@@ -248,6 +289,14 @@ export default function CertificationsClient({
                         >
                           <Printer className="w-4 h-4" />Print
                         </button>
+                        {userRole === "super_admin" && (
+                          <button
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
+                            onClick={() => setPendingDelete(c)}
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -258,6 +307,34 @@ export default function CertificationsClient({
         )}
       </div>
       
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(o) => { if (!o && !deleting) setPendingDelete(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this certificate?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.title
+                ? `"${pendingDelete.title}" will be permanently deleted. This cannot be undone.`
+                : "This certificate will be permanently deleted. This cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleting}
+              // Delete by hand so a failure keeps the dialog open to show the error.
+              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit Dialog */}
       <Dialog
         open={editOpen}
