@@ -52,13 +52,19 @@ async function getDashboardData(userFirmId: string, locationId: string | null = 
 
   try {
     // --- Fetch Stat Card Data ---
-    let employeeRes = await supabase
+    // Build the queries, apply the optional filter, then await.
+    //
+    // These were awaited first and .eq() called on the resolved response, which
+    // has no such method — so filtering the dashboard by location threw
+    // "employeeRes.eq is not a function". The `as any` hid it from the compiler
+    // but not from the browser.
+    let employeeQuery = supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("role", "employee")
       .eq("firm_id", userFirmId);
 
-    let volunteerRes = await supabase
+    let volunteerQuery = supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("role", "employee")
@@ -66,9 +72,12 @@ async function getDashboardData(userFirmId: string, locationId: string | null = 
       .eq("is_volunteer", true);
 
     if (locationId) {
-      employeeRes = employeeRes.eq("location_id", locationId) as any;
-      volunteerRes = volunteerRes.eq("location_id", locationId) as any;
+      employeeQuery = employeeQuery.eq("location_id", locationId);
+      volunteerQuery = volunteerQuery.eq("location_id", locationId);
     }
+
+    const employeeRes = await employeeQuery;
+    const volunteerRes = await volunteerQuery;
 
     const emergencyRes = { count: 0 };
     // await supabase

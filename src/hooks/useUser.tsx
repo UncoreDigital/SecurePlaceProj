@@ -254,7 +254,7 @@ export const useUser = () => {
         return buildSession(authUser, null, null);
       }
 
-      console.log('✅ Profile loaded:', profile ? `${profile.role} - ${profile.full_name} - is_all_location_admin: ${profile.is_all_location_admin}` : 'No profile data');
+      console.log('✅ Profile loaded:', profile ? `${profile.role} - ${[profile.first_name, profile.last_name].filter(Boolean).join(" ")} - is_all_location_admin: ${profile.is_all_location_admin}` : 'No profile data');
 
       const locationId = await resolveLocationId(supabase, authUser.id, profile);
 
@@ -275,9 +275,20 @@ export const useUser = () => {
   useEffect(() => {
     if (!supabase) return;
     
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
-      
+    // Everything this listener does is deferred out of the callback below.
+    //
+    // onAuthStateChange runs its callback while GoTrue is holding its auth
+    // lock. Any Supabase call needs an access token, and asking for one
+    // re-enters that lock — so awaiting supabase.from(...) in here deadlocks
+    // the client permanently. TOKEN_REFRESHED is the case that bites: the token
+    // lapses, a refresh fires this event while holding the lock, the callback
+    // awaits a profile query, and that query waits on the refresh that is
+    // waiting on the callback. From that point every getSession(), and so every
+    // storage upload, hangs for the life of the page.
+    const handleAuthChange = async (
+      event: string,
+      session: { user: User } | null,
+    ) => {
       try {
         if (event === 'SIGNED_OUT' || !session?.user) {
           console.log('👋 User signed out, clearing storage');
@@ -285,7 +296,7 @@ export const useUser = () => {
           queryClient.setQueryData(['user'], null);
           return;
         }
-        
+
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           console.log('🔐 User signed in/refreshed, fetching profile');
           const { data: profile, error: profileErr } = await supabase!
@@ -310,6 +321,15 @@ export const useUser = () => {
         clearUserFromStorage();
         queryClient.setQueryData(['user'], null);
       }
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      // setTimeout, not await: this hands the work to a later task, after the
+      // lock has been released. The callback itself must stay synchronous.
+      setTimeout(() => {
+        void handleAuthChange(event, session as { user: User } | null);
+      }, 0);
     });
 
     return () => {

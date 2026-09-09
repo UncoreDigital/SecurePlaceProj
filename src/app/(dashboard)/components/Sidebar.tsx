@@ -21,6 +21,7 @@ import {
   Calendar,
   GraduationCap,
   FileText,
+  Images,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -46,6 +47,22 @@ const SUPER_ADMIN_ITEMS: NavItem[] = [
   { href: "/emergencies", label: "Emergencies", icon: Siren },
   { href: "/drills", label: "Drills", icon: Target },
   { href: "/certifications", label: "Certification", icon: BookOpen },
+  // Website CMS. Super admin only — firm and location admins never author
+  // content for the public marketing site. matchPaths keeps this item active
+  // across every screen in the section, not just the overview.
+  {
+    href: "/website",
+    label: "Website",
+    icon: Images,
+    matchPaths: [
+      "/website/blogs",
+      "/website/podcasts",
+      "/website/workshops",
+      "/website/gallery",
+      "/website/leads",
+      "/website/assessments",
+    ],
+  },
 ];
 
 const FIRM_ADMIN_ITEMS: NavItem[] = [

@@ -10,7 +10,9 @@ interface UserProfile extends Models.Document {
 
 export async function getSession() {
   try {
-    const sessionCookies = cookies().get("my-session");
+    // cookies() is async in Next 15; calling .get() on the Promise threw
+    // "cookies(...).get is not a function" and broke every locations action.
+    const sessionCookies = (await cookies()).get("my-session");
     if (!sessionCookies) throw new Error("No session found");
 
     account.client.setSession(sessionCookies.value);

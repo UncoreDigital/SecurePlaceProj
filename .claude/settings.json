@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('jspdf'\\); console.log\\('jspdf ok'\\)\")",
+      "Bash(npm run *)",
+      "Bash(npx vercel *)",
+      "Bash(gh api *)",
+      "Bash(where gh *)",
+      "Read(//c/Program Files/**)",
+      "Bash(npx pnpm *)",
+      "Read(//d/work-uncore/Anchorbvfs/**)",
+      "Bash(npx pnpm@9 install --lockfile-only)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "Bash(npx tsx *)",
+      "Bash(grep -n \"_acquireLock\\\\|this.lockAcquired\\\\|pendingInLock\\\\|lock\\(\\\\`lock:\" node_modules/@supabase/auth-js/dist/main/GoTrueClient.js)",
+      "Bash(grep -o \"_getAccessToken[^;]\\\\{0,120\\\\}\" node_modules/@supabase/supabase-js/dist/umd/supabase.js)",
+      "Read(//tmp/**)",
+      "Bash(sleep 20; echo \"--- dev log ---\"; cat /tmp/dev987.log 2>/dev/null | head -20)",
+      "Bash(cd /tmp)",
+      "Bash(time curl -s -o body.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" -X POST http://localhost:3987/api/certificates -H \"Content-Type: application/json\" -d '{\"firm\":\"Knowcraft Analytics\",\"title\":\"POSH\",\"date\":\"2026-06-30\"}')",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" -X POST http://localhost:3987/api/certificates -H \"Content-Type: application/json\" -d '{\"firm\":\"X\",\"date\":\"2026-06-30\"}')",
+      "Bash(curl -s -o b2.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" -X PATCH http://localhost:3987/api/certificates -H \"Content-Type: application/json\" -d '{\"id\":\"abc\",\"firm\":\"X\",\"date\":\"2026-16-07\"}')",
+      "Bash(curl -s -o b3.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" -X POST http://localhost:3987/api/certificates -H \"Content-Type: application/json\" -d 'not-json')",
+      "Bash(curl -s -o b.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" -X POST http://localhost:3987/api/certificates -H \"Content-Type: application/json\" -d '{\"firm\":\"X\",\"date\":\"2026-06-30\"}')",
+      "Bash(npx --no-install kill-port 3987)",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 3987 -State Listen -EA SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -EA SilentlyContinue }')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://localhost:3987/)",
+      "Bash(echo \"port 3987 free: $\\(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://localhost:3987/ 2>/dev/null || echo 'yes \\(no response\\)'\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" --max-time 90 http://localhost:3000/)",
+      "Bash(curl -s -o b.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" --max-time 60 -X POST http://localhost:3000/api/certificates -H \"Content-Type: application/json\" -d '{\"firm\":\"X\",\"date\":\"2026-06-30\"}')",
+      "Bash(curl -s -o d1.txt -w \"HTTP %{http_code} in %{time_total}s\\\\n\" --max-time 60 -X DELETE \"http://localhost:3001/api/certificates?id=00000000-0000-0000-0000-000000000000\")",
+      "Bash(curl -s -o d2.txt -w \"HTTP %{http_code}\\\\n\" --max-time 60 -X DELETE \"http://localhost:3001/api/certificates\")",
+      "Bash(curl -s -o /dev/null -w \"/certifications -> HTTP %{http_code}\\\\n\" --max-time 90 http://localhost:3001/certifications)"
+    ]
+  }
+}

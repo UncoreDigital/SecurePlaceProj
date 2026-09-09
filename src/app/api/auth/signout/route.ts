@@ -11,10 +11,10 @@ export async function POST() {
     {
       cookies: {
         get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options) => {
+        set: (name: string, value: string, options: Record<string, unknown>) => {
           cookieStore.set({ name, value, ...options });
         },
-        remove: (name: string, options) => {
+        remove: (name: string, options: Record<string, unknown>) => {
           cookieStore.set({ name, value: "", ...options });
         },
       },

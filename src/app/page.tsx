@@ -178,14 +178,21 @@ export default function LoginPage() {
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url(https://cdn.pixabay.com/photo/2017/03/28/12/11/chairs-2181960_1280.jpg)",
-          }}
+          // Self-hosted copy of the same image. Loading it from cdn.pixabay.com
+          // set a third-party __cf_bm cookie on every visit to the login page —
+          // Chrome flags it under the third-party cookie phase-out — and made
+          // signing in depend on an external CDN being up.
+          style={{ backgroundImage: "url(/images/login-bg.jpg)" }}
         />
         <div className="absolute inset-0 bg-white opacity-60" />
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <Image src={"/images/logo.png"} height={165} width={165} alt="Logo" />
+          <Image
+            src={"/images/logo.png"}
+            height={165}
+            width={165}
+            alt="Logo"
+            priority
+          />
         </div>
       </div>
 
@@ -210,8 +217,16 @@ export default function LoginPage() {
                     <FormControl>
                       <div className="relative">
                         <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        {/*
+                          Declaring autocomplete explicitly clears Chrome's
+                          FormInputAssignedAutocompleteValueToIdOrNameAttributeError:
+                          the field is named "email", which the browser reads as
+                          an autocomplete token rather than a field name. It also
+                          lets password managers fill the pair correctly.
+                        */}
                         <Input
                           placeholder="name@company.com"
+                          autoComplete="username"
                           {...field}
                           className="pl-10 h-12"
                         />
@@ -233,6 +248,7 @@ export default function LoginPage() {
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="Password"
+                          autoComplete="current-password"
                           {...field}
                           className="pl-10 pr-10 h-12"
                         />

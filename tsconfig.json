@@ -23,5 +23,11 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Deno edge functions. They use Deno globals and npm: specifiers that this
+    // Next.js tsconfig cannot resolve, and they are deployed by the Supabase
+    // CLI rather than compiled here.
+    "supabase"
+  ]
 }

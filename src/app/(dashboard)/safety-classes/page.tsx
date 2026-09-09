@@ -169,10 +169,13 @@ function LoadingSpinner() {
 async function SafetyClassesContent({
   searchParams,
 }: {
-  searchParams: { category?: string; type?: string };
+  searchParams?: Promise<{ category?: string; type?: string }>;
 }) {
-  const category = searchParams?.category ?? "all";
-  const type = searchParams?.type ?? "remote";
+  // searchParams is a Promise in Next 15; reading it synchronously threw the
+  // sync-dynamic-apis error on every request to this page.
+  const sp = await searchParams;
+  const category = sp?.category ?? "all";
+  const type = sp?.type ?? "remote";
 
   const safetyClasses = await getSafetyClasses();
 
@@ -193,10 +196,12 @@ async function SafetyClassesContent({
 export default function SafetyClassesPage({
   searchParams,
 }: {
-  searchParams: { category?: string; type?: string };
+  searchParams?: Promise<{ category?: string; type?: string }>;
 }) {
+  // AdminGuard already allows exactly these three roles, so passing them again
+  // was ignored at runtime and only failed the type check.
   return (
-    <AdminGuard requiredRole={["super_admin", "firm_admin", "location_admin"]}>
+    <AdminGuard>
       <Suspense fallback={<LoadingSpinner />}>
         <SafetyClassesContent searchParams={searchParams} />
       </Suspense>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import FirmManagement from "./FirmManagement.client";
+import { createFirm, updateFirm, deleteFirm } from "./actions";
 import type { Firm } from "@/lib/types";
 import { SuperAdminGuard } from "@/components/AuthGuard";
 import { Suspense } from "react";
@@ -53,90 +54,6 @@ async function getFirms(q?: string): Promise<Firm[]> {
     logoUrl: f.logo_url ?? "",
     createdAt: f.created_at ?? null,
   }));
-}
-
-/* -------------------- SERVER ACTIONS -------------------- */
-
-export async function createFirm(formData: FormData) {
-  "use server";
-  const supabase = await createServerSupabase();
-
-  const name = String(formData.get("name") || "").trim();
-  const description = String(formData.get("description") || "").trim();
-  const industry = String(formData.get("industry") || "").trim() || null;
-  const contactEmail =
-    String(formData.get("contactEmail") || "").trim() || null;
-  const phoneNumber = String(formData.get("phoneNumber") || "").trim() || null;
-  const address = String(formData.get("address") || "").trim() || null;
-
-  // Handle logo as base64
-  const logoBase64 = String(formData.get("logo") || "").trim() || null;
-
-  if (!name || !description) return;
-
-  const { error } = await supabase.from("firms").insert({
-    name,
-    description,
-    industry,
-    contact_email: contactEmail,
-    phone_number: phoneNumber,
-    address,
-    logo_url: logoBase64,
-  });
-
-  if (error) console.error("createFirm error:", error.message);
-  revalidatePath(REVALIDATE_PATH);
-}
-
-export async function updateFirm(formData: FormData) {
-  "use server";
-  const supabase = await createServerSupabase();
-
-  const id = String(formData.get("id") || "");
-  const name = String(formData.get("name") || "").trim();
-  const description = String(formData.get("description") || "").trim();
-  const industry = String(formData.get("industry") || "").trim() || null;
-  const contactEmail =
-    String(formData.get("contactEmail") || "").trim() || null;
-  const phoneNumber = String(formData.get("phoneNumber") || "").trim() || null;
-  const address = String(formData.get("address") || "").trim() || null;
-
-  if (!id || !name || !description) return;
-
-  // Handle logo as base64
-  const logoBase64 = String(formData.get("logo") || "").trim();
-  
-  const updateData: Record<string, unknown> = {
-    name,
-    description,
-    industry,
-    contact_email: contactEmail,
-    phone_number: phoneNumber,
-    address,
-  };
-  
-  // Only update logo if a new one was uploaded (base64 string is not empty)
-  if (logoBase64) {
-    updateData.logo_url = logoBase64;
-  }
-
-  const { error } = await supabase
-    .from("firms")
-    .update(updateData)
-    .eq("id", id);
-
-  if (error) console.error("updateFirm error:", error.message);
-  revalidatePath(REVALIDATE_PATH);
-}
-
-export async function deleteFirm(formData: FormData) {
-  "use server";
-  const supabase = await createServerSupabase();
-  const id = String(formData.get("id") || "");
-  if (!id) return;
-  const { error } = await supabase.from("firms").delete().eq("id", id);
-  if (error) console.error("deleteFirm error:", error.message);
-  revalidatePath(REVALIDATE_PATH);
 }
 
 /* ----------------------------------- PAGE ----------------------------------- */

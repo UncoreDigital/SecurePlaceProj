@@ -50,6 +50,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
+import {
+  ensureFreshSession,
+  withTimeout,
+  UPLOAD_TIMEOUT_MS,
+} from "@/lib/upload";
 
 interface RichTextEditorProps {
   content: string;
@@ -161,9 +166,20 @@ export function RichTextEditor({
       const tId = toast.loading("Uploading image...");
       try {
         const supabase = createBrowserSupabase();
-        const { data, error } = await supabase.storage
-          .from(imageBucket)
-          .upload(fileName, file);
+
+        // An expired session makes the upload block forever instead of
+        // failing, leaving the toast spinning with nothing to report.
+        const sessionProblem = await ensureFreshSession(supabase);
+        if (sessionProblem) {
+          toast.error("Upload failed", { id: tId, description: sessionProblem });
+          return;
+        }
+
+        const { data, error } = await withTimeout(
+          supabase.storage.from(imageBucket).upload(fileName, file),
+          UPLOAD_TIMEOUT_MS,
+          "The upload timed out. Check your connection, then try again.",
+        );
         if (error) {
           toast.error("Upload failed", { id: tId, description: error.message });
           return;

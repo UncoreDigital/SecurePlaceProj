@@ -53,18 +53,21 @@ export function AddFirmButton() {
 
       const data = schema.parse(raw);
 
-      const res = await createFirm({
-        name: data.name,
-        industry: data.industry || "",
-        contactEmail: data.contactEmail || "",
-        phoneNumber: data.phoneNumber || "",
-        address: data.address || "",
-      });
+      // createFirm takes FormData and returns void. This previously called it
+      // with a plain object and read res.error — an API that never existed, on
+      // a module path that did not exist either, so the button could never have
+      // worked. Server failures surface through the catch below.
+      const payload = new FormData();
+      payload.set("name", data.name);
+      // createFirm requires a non-empty description or it returns without
+      // inserting; the dialog has no description field, so seed it from the name.
+      payload.set("description", data.name);
+      payload.set("industry", data.industry || "");
+      payload.set("contactEmail", data.contactEmail || "");
+      payload.set("phoneNumber", data.phoneNumber || "");
+      payload.set("address", data.address || "");
 
-      if ("error" in res && res.error) {
-        setFormError(res.error);
-        return;
-      }
+      await createFirm(payload);
 
       // success
       formRef.current?.reset();

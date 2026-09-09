@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 
+// Supabase Storage serves every uploaded image, so next/image has to be told the
+// host is allowed. The hostname is derived from the project URL rather than
+// hardcoded, so dev and prod each allow their own project and nothing else.
+// The path is pinned to the public object route: without it, this would let the
+// image optimiser be pointed at any path on the host.
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined;
+
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -38,6 +47,15 @@ const nextConfig: NextConfig = {
 
   // Image optimization
   images: {
+    remotePatterns: supabaseHost
+      ? [
+          {
+            protocol: "https" as const,
+            hostname: supabaseHost,
+            pathname: "/storage/v1/object/public/**",
+          },
+        ]
+      : [],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],

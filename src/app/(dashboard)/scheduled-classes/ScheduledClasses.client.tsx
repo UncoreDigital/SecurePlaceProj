@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Play, Clock, Users, Funnel, Calendar, Pencil, X, Check, Eye, Trash2, ChevronDown, ChartNoAxesColumn, Link2, ClipboardCheck } from "lucide-react";
+import { Funnel, X, Check, Eye, ChevronDown, ChartNoAxesColumn, Link2, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Select,
@@ -43,77 +44,6 @@ function setParams(
     else sp.set(k, v);
   });
   router.replace(`${pathname}?${sp.toString()}`);
-}
-
-function CancelModal({
-  open,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
-      <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-lg min-w-[350px]">
-        <Trash2 className="w-16 h-16 text-brand-orange mb-4" />
-        <div className="text-lg font-medium mb-6 text-center">
-          Are you sure cancel this classes
-        </div>
-        <div className="flex gap-4">
-          <Button variant="outline" className="min-w-[70px]" onClick={onClose}>
-            No
-          </Button>
-          <Button className="bg-brand-orange min-w-[70px]" onClick={onConfirm}>
-            Yes
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ApprovalModal({
-  open,
-  onClose,
-  onConfirm,
-  loading = false,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  loading?: boolean;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/70">
-      <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-lg min-w-[350px]">
-        <Check className="w-16 h-16 text-green-500 mb-4" />
-        <div className="text-lg font-medium mb-6 text-center">
-          Are you sure you want to approve this class?
-        </div>
-        <div className="flex gap-4">
-          <Button 
-            variant="outline" 
-            className="min-w-[70px]" 
-            onClick={onClose}
-            disabled={loading}
-          >
-            No
-          </Button>
-          <Button 
-            className="bg-green-500 hover:bg-green-600 min-w-[70px]" 
-            onClick={onConfirm}
-            disabled={loading}
-          >
-            {loading ? "Approving..." : "Yes"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function ScheduledClassesClient({
@@ -185,22 +115,21 @@ export default function ScheduledClassesClient({
   const handleApproveClick = (id: string) => setApproveId(id);
   const handleApproveClose = () => setApproveId(null);
 
-  const handleConfirm = async () => {
+  // Returns a message on failure so the dialog stays open and says why. The
+  // previous version logged to the console and closed regardless, so a class
+  // that was never cancelled looked cancelled until the page was reloaded.
+  const handleConfirm = async (): Promise<string | void> => {
     if (!cancelId) return;
     setCancellingId(cancelId);
     try {
       const result = await cancelScheduledClass(cancelId);
-      if (result.success) {
-        console.log("✅ Class cancelled successfully");
-        router.refresh(); // Refresh to get fresh data
-      } else {
-        console.error("Failed to cancel class");
-      }
+      if (!result.success) return "The class could not be cancelled. Please try again.";
+      router.refresh();
+      setCancelId(null);
     } catch (error) {
-      console.error("Failed to cancel class:", error);
+      return error instanceof Error ? error.message : "The class could not be cancelled.";
     } finally {
       setCancellingId(null);
-      setCancelId(null);
     }
   };
 
@@ -656,17 +585,38 @@ export default function ScheduledClassesClient({
         isSubmitting={isSubmitting}
       /> */}
 
-      <CancelModal
+      <ConfirmDialog
         open={!!cancelId}
-        onClose={handleClose}
+        onOpenChange={(open) => !open && handleClose()}
+        title="Cancel this class?"
+        description={
+          <>
+            <span className="font-medium text-gray-900">
+              {scheduledClasses.find((c) => c.id === cancelId)?.title || "This class"}
+            </span>{" "}
+            will be cancelled. Anyone already booked onto it will lose their place.
+          </>
+        }
+        confirmLabel="Cancel class"
+        cancelLabel="Keep it"
         onConfirm={handleConfirm}
       />
 
-      <ApprovalModal
+      <ConfirmDialog
         open={!!approveId}
-        onClose={handleApproveClose}
+        onOpenChange={(open) => !open && handleApproveClose()}
+        title="Approve this class?"
+        description={
+          <>
+            <span className="font-medium text-gray-900">
+              {scheduledClasses.find((c) => c.id === approveId)?.title || "This class"}
+            </span>{" "}
+            will be approved and become bookable.
+          </>
+        }
+        confirmLabel="Approve class"
+        destructive={false}
         onConfirm={handleApproveConfirm}
-        loading={approvingId === approveId}
       />
     </div>
   );

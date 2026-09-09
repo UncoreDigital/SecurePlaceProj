@@ -55,7 +55,7 @@ async function getScheduledClasses(): Promise<any[]> {
               // Format user_profiles data to match expected structure
               const formattedCreators = userProfiles.map(profile => ({
                 id: profile.id,
-                full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email,
+                full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.official_email,
                 official_email: profile.official_email,
                 role: profile.role,
                 phone: profile.phone,
@@ -310,14 +310,17 @@ function LoadingSpinner() {
 async function ScheduledClassesContent({
   searchParams,
 }: {
-  searchParams: { category?: string; type?: string };
+  searchParams?: Promise<{ category?: string; type?: string }>;
 }) {
   const startTime = Date.now();
   console.log('🚀 ScheduledClassesPage: Starting render');
 
   try {
-    const category = searchParams?.category ?? "all";
-    const type = searchParams?.type ?? "in-person";
+    // searchParams is a Promise in Next 15; reading it synchronously threw the
+    // sync-dynamic-apis error on every request to this page.
+    const sp = await searchParams;
+    const category = sp?.category ?? "all";
+    const type = sp?.type ?? "in-person";
 
     console.log('👤 Auth check completed via AdminGuard');
 
@@ -360,10 +363,12 @@ async function ScheduledClassesContent({
 export default function ScheduledClassesPage({
   searchParams,
 }: {
-  searchParams: { category?: string; type?: string };
+  searchParams?: Promise<{ category?: string; type?: string }>;
 }) {
+  // AdminGuard already allows exactly these three roles, so passing them again
+  // was ignored at runtime and only failed the type check.
   return (
-    <AdminGuard requiredRole={["super_admin", "firm_admin", "location_admin"]}>
+    <AdminGuard>
       <Suspense fallback={<LoadingSpinner />}>
         <ScheduledClassesContent searchParams={searchParams} />
       </Suspense>
